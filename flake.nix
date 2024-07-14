@@ -141,6 +141,10 @@
               source = ./bin;
               recursive = true;
             };
+            ".zsh" = {
+              source = ./zsh;
+              recursive = true;
+            };
           };
 
           # The state version is required and should stay at the version you
