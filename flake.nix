@@ -31,10 +31,20 @@
         # $ nix-env -qaP | grep wget
         environment.systemPackages = with pkgs; [
           _1password-gui
+          tailscale
         ];
 
-        # Auto upgrade nix package and the daemon service.
-        services.nix-daemon.enable = true;
+        fonts.packages = with pkgs; [
+          iosevka-bin
+          (nerdfonts.override { fonts = [ "IosevkaTerm" ]; })
+        ];
+
+        services = {
+          nix-daemon.enable = true;
+          tailscale.enable = true;
+        };
+
+        # Auto upgrade nix package
         nix.package = pkgs.nix;
 
         # Necessary for using flakes on this system.
@@ -43,6 +53,9 @@
         # Create /etc/zshrc that loads the nix-darwin environment.
         programs.zsh.enable = true;
 
+        # TODO: configure gpg integrations
+        # programs.gnupg.agent.enable = true;
+
         # Set Git commit hash for darwin-version.
         system.configurationRevision = self.rev or self.dirtyRev or null;
 
@@ -50,9 +63,10 @@
         # $ darwin-rebuild changelog
         system.stateVersion = 4;
 
-        # The platform the configuration will be used on.
-        nixpkgs.hostPlatform = "aarch64-darwin";
-        nixpkgs.config.allowUnfree = true;
+        nixpkgs = {
+          hostPlatform = "aarch64-darwin";
+          config.allowUnfree = true;
+        };
 
         security.pam.enableSudoTouchIdAuth = true;
       };
@@ -66,26 +80,68 @@
           nixpkgs.config.allowUnfree = true;
           home.packages = with pkgs;
             [
-              # _1password
+              # Desktop apps
+              alacritty
               firefox-bin
               iterm2
-              gh
-              k9s
               keepassxc
-              chezmoi
-              neovim
-              nixpkgs-fmt
               slack
-              starship
-              # syncthing
-              # syncthingtray
-              # tailscale
-              # tailscale-systray
               zoom-us
-              (vscode-with-extensions.override { vscodeExtensions = with vscode-extensions; [ jnoortheen.nix-ide asvetliakov.vscode-neovim ]; })
+              # _1password
+              # tailscale-systray
+
+              # CLI apps
+              bat
+              btop
+              delta
+              k9s
+              neovim
+              tmux
+              translate-shell
+
+              #CLI tools
+              chezmoi
+              curl
+              direnv
+              duf
+              eza
+              fd
+              fzf
+              gh
+              jq
+              ripgrep
+              rsync
+              yq-go
+
+              # astrocommunity.pack.nix deps
+              alejandra
+              deadnix
+              nixd
+              statix
+
+              # neovim plugin deps
+              go
+              nodejs_22
+
+              # shell
+              antidote
+              bash
+              starship
+              zoxide
+              zsh-completions
+
+              # deprecated
+              nixpkgs-fmt
             ];
 
           services.syncthing.enable = true;
+
+          home.file = {
+            ".local/bin" = {
+              source = ./bin;
+              recursive = true;
+            };
+          };
 
           # The state version is required and should stay at the version you
           # originally installed.
