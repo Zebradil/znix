@@ -106,7 +106,6 @@
               yq-go
 
               # shell
-              antidote
               bash
               starship
               zoxide
