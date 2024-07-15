@@ -64,7 +64,8 @@
 
         security.pam.enableSudoTouchIdAuth = true;
       };
-      userConfiguration = { pkgs, ... }: {
+
+      userConfiguration = { ... }: {
         users.users.glashevich = {
           name = "glashevich";
           home = "/Users/glashevich";
