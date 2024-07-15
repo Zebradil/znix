@@ -61,7 +61,13 @@ if [ $commands[hcloud] ]; then source <(hcloud completion zsh); fi
 GPG_TTY=$(tty)
 export GPG_TTY
 
-foreach f ("${ZDOTDIR:-}/zshrc/tools/"*.zsh(N.)) { source "$f" }
+# Iterate over all files in the tools directory and source them
+# `(N.,@)` is a glob qualifier that selects all files in the directory:
+#   - `N` allows the pattern to match zero times (NULL_GLOB)
+#   - `.` selects regular files
+#   - `,` separates the `.` and `@` qualifiers
+#   - `@` selects links
+foreach f ("${ZDOTDIR:-}/zshrc/tools/"*.zsh(N.,@)) { source "$f" }
 
 bindkey -M viins '^[[A' history-beginning-search-backward
 bindkey -M vicmd '^[[A' history-beginning-search-backward
