@@ -1,6 +1,6 @@
 # vim: set filetype=zsh shiftwidth=2 softtabstop=2 expandtab:
 
-tabs 4
+tabs -4
 
 for f in "${ZDOTDIR:-}/zshrc/lib/"*.zsh; do
     source "$f"
