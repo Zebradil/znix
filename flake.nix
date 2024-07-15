@@ -87,7 +87,6 @@
               btop
               delta
               k9s
-              neovim
               tmux
               translate-shell
 
@@ -105,16 +104,6 @@
               ripgrep
               rsync
               yq-go
-
-              # astrocommunity.pack.nix deps
-              alejandra
-              deadnix
-              nixd
-              statix
-
-              # neovim plugin deps
-              go
-              nodejs_22
 
               # shell
               antidote
@@ -138,6 +127,18 @@
               source = ./zsh;
               recursive = true;
             };
+          };
+
+          programs.neovim = {
+            enable = true;
+            extraPackages = with pkgs; [
+              # astrocommunity.pack.nix deps
+              alejandra
+              deadnix
+              nixd
+              statix
+
+            ];
           };
 
           programs.zsh = {
