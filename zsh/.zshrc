@@ -51,13 +51,6 @@ read -r -d '' TIMEFMT <<-EOF
 EOF
 export TIMEFMT
 
-# +=========================+
-# | Autocompletion          |
-# +-------------------------+
-
-if [ $commands[hcloud] ]; then source <(hcloud completion zsh); fi
-
-
 GPG_TTY=$(tty)
 export GPG_TTY
 
