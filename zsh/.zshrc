@@ -25,7 +25,6 @@ bindkey -M vicmd v edit-command-line
 zstyle ':completion:*' completer _complete _ignored _approximate
 zstyle ':completion:*' matcher-list '' 'm:{a-z}={A-Za-z}' 'l:|=* r:|=*' 'r:|[._-]=* r:|=*'
 #zstyle ':completion:*' max-errors 3
-zstyle :compinstall filename '${HOME}/.zshrc'
 
 autoload -Uz compinit
 compinit
