@@ -87,6 +87,7 @@
               btop
               delta
               k9s
+              lazygit
               tmux
               translate-shell
 
