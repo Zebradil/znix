@@ -108,6 +108,7 @@
               fd
               fzf
               gh
+              go-task
               jq
               ripgrep
               rsync
