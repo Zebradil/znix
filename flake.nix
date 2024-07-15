@@ -148,6 +148,29 @@
             };
           };
 
+          programs.zsh = {
+            enable = true;
+            dotDir = ".zsh";
+            antidote = {
+              enable = true;
+              plugins = [
+                "hcgraf/zsh-sudo"
+                "jeffreytse/zsh-vi-mode"
+                "marzocchi/zsh-notify"
+                "robbyrussell/oh-my-zsh path:lib/git.zsh"
+                "robbyrussell/oh-my-zsh path:plugins/docker-machine"
+                "robbyrussell/oh-my-zsh path:plugins/git"
+                "unixorn/git-extra-commands"
+                "zchee/zsh-completions"
+                "zdharma-continuum/history-search-multi-word"
+                "zsh-users/zsh-autosuggestions"
+                "zsh-users/zsh-history-substring-search"
+                "zsh-users/zsh-syntax-highlighting"
+                "djui/alias-tips"
+              ];
+            };
+          };
+
           # The state version is required and should stay at the version you
           # originally installed.
           home.stateVersion = "24.05";
