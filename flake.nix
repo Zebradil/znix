@@ -30,8 +30,6 @@
         # List packages installed in system profile. To search by name, run:
         # $ nix-env -qaP | grep wget
         environment.systemPackages = with pkgs; [
-          _1password-gui
-          tailscale
         ];
 
         fonts.packages = with pkgs; [
@@ -41,7 +39,6 @@
 
         services = {
           nix-daemon.enable = true;
-          tailscale.enable = true;
         };
 
         # Auto upgrade nix package
@@ -87,8 +84,6 @@
               keepassxc
               slack
               zoom-us
-              # _1password
-              # tailscale-systray
 
               # CLI apps
               bat
