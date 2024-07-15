@@ -106,7 +106,6 @@
               yq-go
 
               # shell
-              bash
               starship
               zoxide
               zsh-completions
