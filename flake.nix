@@ -15,14 +15,17 @@
       url = "github:LnL7/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    mac-app-util.url = "github:hraban/mac-app-util";
   };
 
   outputs =
     { self
     , home-manager
+    , mac-app-util
     , nix-darwin
-    , nixpkgs-firefox-darwin
     , nixpkgs
+    , nixpkgs-firefox-darwin
     }:
     let
       systemConfiguration = { pkgs, ... }: {
@@ -117,6 +120,10 @@
             ];
 
           services.syncthing.enable = true;
+
+          imports = [
+            mac-app-util.homeManagerModules.default
+          ];
 
           home.file = {
             ".local/bin" = {
