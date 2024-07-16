@@ -3,7 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    nixpkgs-firefox-darwin.url = "github:bandithedoge/nixpkgs-firefox-darwin";
     # nix-index-database.url = "github:mic92/nix-index-database";
 
     home-manager = {
@@ -25,7 +24,6 @@
     , mac-app-util
     , nix-darwin
     , nixpkgs
-    , nixpkgs-firefox-darwin
     }:
     let
       systemConfiguration = { pkgs, ... }: {
@@ -74,17 +72,18 @@
           home = "/Users/glashevich";
         };
         home-manager.users.glashevich = { pkgs, ... }: {
-          nixpkgs.overlays = [ nixpkgs-firefox-darwin.overlay ];
           nixpkgs.config.allowUnfree = true;
           home.packages = with pkgs;
             [
               # Desktop apps
               alacritty
-              firefox-bin
               iterm2
               keepassxc
               slack
               zoom-us
+              #_1password-gui # doesn't work when installed outside of /Applications
+              #firefox-bin    # 1password extensions doesn't work if FF is installed outside of /Applications
+              # (github:bandithedoge/nixpkgs-firefox-darwin)
 
               # CLI apps
               bat
