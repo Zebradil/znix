@@ -125,6 +125,7 @@
               gh
               go-task
               jq
+              myks
               ripgrep
               rsync
               yq-go
