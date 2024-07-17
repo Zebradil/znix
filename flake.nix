@@ -150,8 +150,8 @@
               source = ./bin;
               recursive = true;
             };
-            ".zsh" = {
-              source = ./zsh;
+            ".zsh/zshrc" = {
+              source = ./zsh/zshrc;
               recursive = true;
             };
           };
@@ -174,6 +174,7 @@
           programs.zsh = {
             enable = true;
             dotDir = ".zsh";
+            initExtra = builtins.readFile ./zsh/zshrc.zsh;
             antidote = {
               enable = true;
               plugins = [
