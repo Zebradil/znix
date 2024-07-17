@@ -106,6 +106,9 @@
               #firefox-bin    # 1password extensions doesn't work if FF is installed outside of /Applications
               # (github:bandithedoge/nixpkgs-firefox-darwin)
 
+              # Desktop-CLI integrations
+              terminal-notifier
+
               # CLI apps
               bat
               btop
