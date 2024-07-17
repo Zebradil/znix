@@ -100,6 +100,7 @@
               iterm2
               keepassxc
               slack
+              youtube-music
               zoom-us
               #_1password-gui # doesn't work when installed outside of /Applications
               #firefox-bin    # 1password extensions doesn't work if FF is installed outside of /Applications
