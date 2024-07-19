@@ -201,7 +201,6 @@
                 "unixorn/git-extra-commands"
                 "zchee/zsh-completions"
                 "zdharma-continuum/history-search-multi-word"
-                "djui/alias-tips"
               ];
             };
             autosuggestion.enable = true;
