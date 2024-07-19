@@ -206,6 +206,10 @@
             };
             historySubstringSearch.enable = true;
             syntaxHighlighting.enable = true;
+
+            shellAliases = {
+              tf = "terraform";
+            };
           };
 
           # The state version is required and should stay at the version you
