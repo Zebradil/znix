@@ -130,6 +130,7 @@
               gh
               go-task
               jq
+              kubeswitch
               myks
               ripgrep
               rsync
