@@ -126,6 +126,7 @@
               eza
               fd
               fzf
+              gcloud
               gh
               go-task
               jq
