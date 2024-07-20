@@ -131,7 +131,7 @@
               eza
               fd
               fzf
-              gcloud
+              google-cloud-sdk
               gh
               go-task
               jq
