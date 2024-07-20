@@ -3,7 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    # nix-index-database.url = "github:mic92/nix-index-database";
 
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -15,6 +14,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     mac-app-util.url = "github:hraban/mac-app-util";
   };
 
@@ -23,6 +27,7 @@
     , home-manager
     , mac-app-util
     , nix-darwin
+    , nix-index-database
     , nixpkgs
     }:
     let
@@ -148,6 +153,7 @@
 
           imports = [
             mac-app-util.homeManagerModules.default
+            nix-index-database.hmModules.nix-index
           ];
 
           home.file = {
@@ -176,12 +182,12 @@
             ];
           };
 
-          programs.command-not-found.enable = true;
           programs.direnv = {
             enable = true;
             enableZshIntegration = true;
             nix-direnv.enable = true;
           };
+          programs.nix-index.enable = true;
           programs.zoxide = {
             enable = true;
             enableZshIntegration = true;
