@@ -7,7 +7,6 @@ for f in "${ZDOTDIR:-}/zshrc/lib/"*.zsh; do
 done
 
 source "${ZDOTDIR:-}/zshrc/paths.zsh"
-source "${ZDOTDIR:-}/zshrc/history.zsh"
 
 # +=========================+
 # | Shell configuration     |
