@@ -176,6 +176,7 @@
             ];
           };
 
+          programs.command-not-found.enable = true;
           programs.direnv = {
             enable = true;
             enableZshIntegration = true;
