@@ -144,9 +144,6 @@
               # shell
               starship
               zsh-completions
-
-              # deprecated
-              nixpkgs-fmt
             ];
 
           services.syncthing.enable = true;
