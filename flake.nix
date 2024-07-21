@@ -131,15 +131,19 @@
               eza
               fd
               fzf
-              google-cloud-sdk
               gh
               go-task
+              google-cloud-sdk
+              goreleaser
               jq
               kubeswitch
               myks
               ripgrep
               rsync
               yq-go
+
+              # languages
+              go
 
               # shell
               starship
