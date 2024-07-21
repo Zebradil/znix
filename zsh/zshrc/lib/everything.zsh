@@ -94,7 +94,7 @@ log::_test() (
 lib::check_commands() {
   for cmd in "$@"; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
-      log::info "Command '$cmd' not found."
+      log::debug "Command '$cmd' not found."
       return 1
     fi
   done
