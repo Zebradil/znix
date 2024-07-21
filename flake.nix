@@ -136,6 +136,7 @@
               google-cloud-sdk
               goreleaser
               jq
+              kubectl
               kubeswitch
               myks
               ripgrep
