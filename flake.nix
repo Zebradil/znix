@@ -124,6 +124,7 @@
               translate-shell
 
               #CLI tools
+              (google-cloud-sdk.withExtraComponents [google-cloud-sdk.components.gke-gcloud-auth-plugin])
               chezmoi
               curl
               direnv
@@ -133,7 +134,6 @@
               fzf
               gh
               go-task
-              google-cloud-sdk
               goreleaser
               jq
               kubectl
