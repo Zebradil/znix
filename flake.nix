@@ -138,6 +138,7 @@
               jq
               kubectl
               kubeswitch
+              moreutils
               myks
               ripgrep
               rsync
