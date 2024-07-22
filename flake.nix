@@ -146,6 +146,9 @@
               # languages
               go
 
+              # services
+              podman
+
               # shell
               starship
               zsh-completions
