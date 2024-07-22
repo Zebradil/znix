@@ -199,6 +199,7 @@
             dotDir = ".zsh";
             initExtra = builtins.readFile ./zsh/zshrc.zsh;
             sessionVariables = {
+              USE_GKE_GCLOUD_AUTH_PLUGIN = "True";
               _ZO_FZF_OPTS = "+s --preview 'exa -l --group-directories-first -T -L5 --color=always --color-scale {2..} | head -200'";
             };
             antidote = {
