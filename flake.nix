@@ -98,6 +98,7 @@
         imports = [
           mac-app-util.homeManagerModules.default
           nix-index-database.hmModules.nix-index
+          ./home-manager/modules/neovim.nix
         ];
 
         nixpkgs.config.allowUnfree = true;
@@ -171,19 +172,6 @@
             recursive = true;
           };
         };
-
-        programs.neovim = {
-          enable = true;
-          extraPackages = with pkgs; [
-            # common
-            nodejs
-
-            # astrocommunity.pack.nix deps
-            alejandra
-            deadnix
-            nixd
-            statix
-          ];
         };
 
         programs.direnv = {
