@@ -4,9 +4,6 @@
     dotDir = ".zsh";
     envExtra = "export ZVM_INIT_MODE=sourcing";
     initExtra = builtins.readFile ./zsh/zshrc.zsh;
-    sessionVariables = {
-      _ZO_FZF_OPTS = "+s --preview 'exa -l --group-directories-first -T -L5 --color=always --color-scale {2..} | head -200'";
-    };
     antidote = {
       enable = true;
       plugins = [
