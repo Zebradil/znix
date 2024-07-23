@@ -98,6 +98,7 @@
         imports = [
           mac-app-util.homeManagerModules.default
           nix-index-database.hmModules.nix-index
+          ./home-manager/modules/google-cloud-sdk.nix
           ./home-manager/modules/neovim.nix
           ./home-manager/modules/zsh.nix
         ];
@@ -128,7 +129,6 @@
           translate-shell
 
           #CLI tools
-          (google-cloud-sdk.withExtraComponents [google-cloud-sdk.components.gke-gcloud-auth-plugin])
           chezmoi
           curl
           direnv
