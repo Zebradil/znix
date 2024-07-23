@@ -142,6 +142,7 @@
               myks
               ripgrep
               rsync
+              velero
               vendir
               yq-go
 
