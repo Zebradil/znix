@@ -95,6 +95,11 @@
         home = "/Users/glashevich";
       };
       home-manager.users.glashevich = {pkgs, ...}: {
+        imports = [
+          mac-app-util.homeManagerModules.default
+          nix-index-database.hmModules.nix-index
+        ];
+
         nixpkgs.config.allowUnfree = true;
         home.packages = with pkgs; [
           # Desktop apps
@@ -155,11 +160,6 @@
         ];
 
         services.syncthing.enable = true;
-
-        imports = [
-          mac-app-util.homeManagerModules.default
-          nix-index-database.hmModules.nix-index
-        ];
 
         home.file = {
           ".local/bin" = {
