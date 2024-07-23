@@ -142,6 +142,7 @@
               myks
               ripgrep
               rsync
+              vendir
               yq-go
 
               # languages
