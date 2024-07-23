@@ -194,6 +194,9 @@
             enable = true;
             nix-direnv.enable = true;
           };
+          programs.fzf = {
+            enable = true;
+          };
           programs.nix-index.enable = true;
           programs.zoxide = {
             enable = true;
@@ -201,6 +204,7 @@
           programs.zsh = {
             enable = true;
             dotDir = ".zsh";
+            envExtra = "export ZVM_INIT_MODE=sourcing";
             initExtra = builtins.readFile ./zsh/zshrc.zsh;
             sessionVariables = {
               USE_GKE_GCLOUD_AUTH_PLUGIN = "True";

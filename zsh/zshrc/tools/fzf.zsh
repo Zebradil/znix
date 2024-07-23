@@ -5,9 +5,6 @@
 if lib::check_commands fzf fd bat exa; then
   log::debug "Configuring fzf"
 
-  source /usr/share/fzf/completion.zsh
-  source /usr/share/fzf/key-bindings.zsh
-
   export FZF_DEFAULT_OPTS='--multi --no-height --extended'
   export FZF_DEFAULT_COMMAND='fd --no-ignore --strip-cwd-prefix --hidden --exclude .git --exclude node_modules --exclude "$HOME/go"'
   export FZF_CTRL_T_COMMAND="${FZF_DEFAULT_COMMAND}"
