@@ -20,14 +20,6 @@ zle -N edit-command-line
 
 bindkey -M vicmd v edit-command-line
 
-# The following lines were added by compinstall
-zstyle ':completion:*' completer _complete _ignored _approximate
-zstyle ':completion:*' matcher-list '' 'm:{a-z}={A-Za-z}' 'l:|=* r:|=*' 'r:|[._-]=* r:|=*'
-#zstyle ':completion:*' max-errors 3
-
-autoload -Uz compinit
-compinit
-# End of lines added by compinstall
 
 export LC_ALL=en_US.UTF-8
 export LC_TIME=en_DK.UTF-8

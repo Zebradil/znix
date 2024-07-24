@@ -4,6 +4,10 @@
     dotDir = ".zsh";
     envExtra = "export ZVM_INIT_MODE=sourcing";
     initExtra = builtins.readFile ./zsh/zshrc.zsh;
+    initExtraBeforeCompInit = ''
+      zstyle ':completion:*' completer _complete _ignored _approximate
+      zstyle ':completion:*' matcher-list "" 'm:{a-z}={A-Za-z}' 'l:|=* r:|=*' 'r:|[._-]=* r:|=*'
+    '';
     antidote = {
       enable = true;
       plugins = [
