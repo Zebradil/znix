@@ -20,7 +20,6 @@ zle -N edit-command-line
 
 bindkey -M vicmd v edit-command-line
 
-
 export LC_ALL=en_US.UTF-8
 export LC_TIME=en_DK.UTF-8
 export LANG=en_US.UTF-8
@@ -57,8 +56,6 @@ bindkey -M viins '^[[A' history-beginning-search-backward
 bindkey -M vicmd '^[[A' history-beginning-search-backward
 bindkey -M viins '^[[B' history-beginning-search-forward
 bindkey -M vicmd '^[[B' history-beginning-search-forward
-bindkey -M viins '^F' fzf-history-widget
-bindkey -M vicmd '^F' fzf-history-widget
 
 source "${ZDOTDIR:-}/zshrc/aliases-and-functions.zsh"
 
