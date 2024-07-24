@@ -10,7 +10,6 @@
         "hcgraf/zsh-sudo"
         "jeffreytse/zsh-vi-mode"
         "marzocchi/zsh-notify"
-        "unixorn/git-extra-commands"
         "zchee/zsh-completions"
       ];
     };
