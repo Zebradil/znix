@@ -150,6 +150,7 @@
           go-task
           goreleaser
           jq
+          just
           kubectl
           kubeswitch
           moreutils
