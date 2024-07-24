@@ -109,6 +109,7 @@
           nix-index-database.hmModules.nix-index
           ./home-manager/modules/google-cloud-sdk.nix
           ./home-manager/modules/neovim.nix
+          ./home-manager/modules/starship.nix
           ./home-manager/modules/zoxide.nix
           ./home-manager/modules/zsh.nix
         ];
@@ -168,7 +169,6 @@
           podman
 
           # shell
-          starship
           zsh-completions
         ];
 
