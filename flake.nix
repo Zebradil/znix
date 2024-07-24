@@ -87,6 +87,15 @@
       system.defaults.universalaccess.closeViewScrollWheelToggle = true;
       system.defaults.universalaccess.closeViewZoomFollowsFocus = true;
       system.keyboard.enableKeyMapping = true;
+
+      system.defaults.CustomUserPreferences = {
+        NSGlobalDomain = {
+          AppleSpacesSwitchOnActivate = true;
+          AppleInterfaceStyle = "Dark";
+          InitialKeyRepeat = 15; # slider values: 120, 94, 68, 35, 25, 15
+          KeyRepeat = 2; # slider values: 120, 90, 60, 30, 12, 6, 2
+        };
+      };
     };
 
     userConfiguration = {...}: {
