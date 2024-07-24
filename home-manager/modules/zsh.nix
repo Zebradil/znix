@@ -14,7 +14,6 @@
         # "robbyrussell/oh-my-zsh path:plugins/git"
         "unixorn/git-extra-commands"
         "zchee/zsh-completions"
-        "zdharma-continuum/history-search-multi-word"
       ];
     };
     autosuggestion.enable = true;

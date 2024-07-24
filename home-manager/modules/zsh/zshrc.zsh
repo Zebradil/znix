@@ -65,8 +65,6 @@ bindkey -M viins '^[[A' history-beginning-search-backward
 bindkey -M vicmd '^[[A' history-beginning-search-backward
 bindkey -M viins '^[[B' history-beginning-search-forward
 bindkey -M vicmd '^[[B' history-beginning-search-forward
-bindkey -M viins '^R' history-search-multi-word
-bindkey -M vicmd '^R' history-search-multi-word
 bindkey -M viins '^F' fzf-history-widget
 bindkey -M vicmd '^F' fzf-history-widget
 
