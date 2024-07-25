@@ -148,6 +148,7 @@
           fd
           fzf
           gh
+          ghorg
           go-task
           goreleaser
           jq
