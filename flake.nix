@@ -140,7 +140,9 @@
           translate-shell
 
           #CLI tools
+          bash
           chezmoi
+          coreutils
           curl
           direnv
           duf
@@ -159,6 +161,7 @@
           myks
           ripgrep
           rsync
+          terraform
           velero
           vendir
           yq-go
