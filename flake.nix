@@ -165,6 +165,7 @@
           terraform
           velero
           vendir
+          wget
           yq-go
 
           # languages
