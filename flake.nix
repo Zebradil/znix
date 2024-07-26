@@ -128,6 +128,7 @@
           # (github:bandithedoge/nixpkgs-firefox-darwin)
 
           # Desktop-CLI integrations
+          tridactyl-native
           terminal-notifier
 
           # CLI apps
