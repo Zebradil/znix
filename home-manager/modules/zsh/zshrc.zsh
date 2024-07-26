@@ -20,16 +20,6 @@ zle -N edit-command-line
 
 bindkey -M vicmd v edit-command-line
 
-export LC_ALL=en_US.UTF-8
-export LC_TIME=en_DK.UTF-8
-export LANG=en_US.UTF-8
-export NVIM_PROFILE_NAME=astro4
-export EDITOR=nv
-export LESS='--mouse --wheel-lines=3 --quit-if-one-screen --ignore-case --tabs=4'
-export MANPAGER='nv +Man!'
-
-export BAT_THEME=OneHalfDark
-
 read -r -d '' TIMEFMT <<-EOF
     %J   %U  user %S system %P cpu %*E total
     avg shared (code):         %X KB
