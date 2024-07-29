@@ -69,7 +69,7 @@ alias glol='git log --graph --pretty="%Cred%h%Creset -%C(auto)%d%Creset %s %Cgre
 alias gl='git pull'
 alias gp='git push'
 
-alias gpsup='git push --set-upstream origin $(git_current_branch)'
+alias gpsup='git push --set-upstream origin $(z::git:current_branch)'
 alias gpoat='git push origin --all && git push origin --tags'
 alias gpod='git push origin --delete'
 
