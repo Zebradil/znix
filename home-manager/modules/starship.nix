@@ -27,7 +27,7 @@
         command = "docker info --format \"{{.Name}}\"";
         when = "[ ! -z $DOCKER_HOST ]";
         style = "blue bold";
-        format = "[$symbol$output]($style)";
+        format = "[${ld}$symbol$output${rd}]($style)";
       };
       gcloud = {
         disabled = true;
@@ -37,7 +37,7 @@
       kubernetes = {
         disabled = false;
         # Removed `in` in the end, because it's placed in the end of the line
-        format = "[$symbol$context( \\($namespace\\))]($style)";
+        format = "[${ld}$symbol$context( \\($namespace\\))${rd}]($style)";
       };
       sudo.disabled = false;
       shlvl.disabled = false;
