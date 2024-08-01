@@ -1,6 +1,7 @@
 {...}: {
   programs.zsh = {
     enable = true;
+    completionInit = "autoload -Uz compinit && compinit -C";
     dotDir = ".zsh";
     envExtra = ''
       export BAT_THEME=OneHalfDark
