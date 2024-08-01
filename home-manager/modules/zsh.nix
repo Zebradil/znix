@@ -37,6 +37,7 @@
     };
     historySubstringSearch.enable = true;
     syntaxHighlighting.enable = true;
+    # zprof.enable = true;
 
     shellAliases = {
       tf = "terraform";
