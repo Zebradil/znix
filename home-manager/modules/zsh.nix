@@ -29,6 +29,7 @@
     };
     autosuggestion.enable = true;
     history = {
+      extended = true;
       ignoreAllDups = true;
       ignoreSpace = true;
       share = true;
