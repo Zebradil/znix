@@ -30,11 +30,11 @@
     nix-index-database,
     nixpkgs,
   }: let
+    user = "glashevich";
     systemConfiguration = {pkgs, ...}: {
       # List packages installed in system profile. To search by name, run:
       # $ nix-env -qaP | grep wget
-      environment.systemPackages = with pkgs; [
-      ];
+      environment.systemPackages = [];
 
       fonts.packages = with pkgs; [
         iosevka-bin
@@ -52,7 +52,7 @@
       nix.settings.experimental-features = "nix-command flakes";
 
       # Allow myself to use substitutes
-      nix.settings.trusted-users = ["glashevich"];
+      nix.settings.trusted-users = [user];
 
       # TODO: configure gpg integrations
       # programs.gnupg.agent.enable = true;
@@ -102,11 +102,11 @@
     };
 
     userConfiguration = {...}: {
-      users.users.glashevich = {
-        name = "glashevich";
-        home = "/Users/glashevich";
+      users.users.${user} = {
+        name = user;
+        home = "/Users/${user}";
       };
-      home-manager.users.glashevich = {pkgs, ...}: {
+      home-manager.users.${user} = {pkgs, ...}: {
         imports = [
           mac-app-util.homeManagerModules.default
           nix-index-database.hmModules.nix-index
