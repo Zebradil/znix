@@ -4,6 +4,7 @@
 
 typeset -TUx PATH path
 
+path=("/opt/homebrew/bin" "${path[@]}")
 path=("$HOME/.cargo/bin" "${path[@]}")
 path=("$HOME/.config/composer/vendor/bin" "${path[@]}")
 path=("$HOME/.krew/bin" "${path[@]}")

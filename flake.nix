@@ -19,14 +19,32 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
+    homebrew-bundle = {
+      url = "github:homebrew/homebrew-bundle";
+      flake = false;
+    };
+    homebrew-core = {
+      url = "github:homebrew/homebrew-core";
+      flake = false;
+    };
+    homebrew-cask = {
+      url = "github:homebrew/homebrew-cask";
+      flake = false;
+    };
+
     mac-app-util.url = "github:hraban/mac-app-util";
   };
 
   outputs = {
     self,
     home-manager,
+    homebrew-bundle,
+    homebrew-cask,
+    homebrew-core,
     mac-app-util,
     nix-darwin,
+    nix-homebrew,
     nix-index-database,
     nixpkgs,
   }: let
@@ -36,14 +54,31 @@
       # $ nix-env -qaP | grep wget
       environment.systemPackages = [];
 
+      # To inititalize shell with nix-darwin environment,
+      # enable zsh in addition to Home Manager's zsh.
+      # See https://github.com/LnL7/nix-darwin/issues/922
+      programs.zsh.enable = true;
+
       fonts.packages = with pkgs; [
         iosevka-bin
         (nerdfonts.override {fonts = ["IosevkaTerm"];})
       ];
 
-      services = {
-        nix-daemon.enable = true;
+      homebrew = {
+        enable = true;
+
+        onActivation = {
+          autoUpdate = true;
+        };
+        taps = [];
+        brews = ["podman"];
+        casks = [
+          # "firefox"
+          # "1password"
+        ];
       };
+
+      services.nix-daemon.enable = true;
 
       # Auto upgrade nix package
       nix.package = pkgs.nix;
@@ -174,9 +209,6 @@
           # languages
           go
 
-          # services
-          podman
-
           # shell
           zsh-completions
         ];
@@ -210,6 +242,21 @@
         systemConfiguration
         home-manager.darwinModules.home-manager
         userConfiguration
+        nix-homebrew.darwinModules.nix-homebrew
+        {
+          nix-homebrew = {
+            inherit user;
+            enable = true;
+            taps = {
+              "homebrew/homebrew-core" = homebrew-core;
+              "homebrew/homebrew-cask" = homebrew-cask;
+              "homebrew/homebrew-bundle" = homebrew-bundle;
+            };
+            mutableTaps = false;
+            enableRosetta = true;
+            autoMigrate = true;
+          };
+        }
       ];
     };
 
