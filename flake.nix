@@ -71,10 +71,11 @@
           autoUpdate = true;
         };
         taps = [];
-        brews = ["podman"];
+        brews = [];
         casks = [
           # "firefox"
           # "1password"
+          "orbstack"
         ];
       };
 
