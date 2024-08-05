@@ -12,6 +12,7 @@
       export LESS='--mouse --wheel-lines=3 --quit-if-one-screen --ignore-case --tabs=4'
       export MANPAGER='nv +Man!'
       export NVIM_PROFILE_NAME=astro4
+      export WORKSPACE=$HOME/Workspace
       export ZVM_INIT_MODE=sourcing
     '';
     initExtra = builtins.readFile ./zsh/zshrc.zsh;

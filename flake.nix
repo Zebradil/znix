@@ -142,7 +142,9 @@
         name = user;
         home = "/Users/${user}";
       };
-      home-manager.users.${user} = {pkgs, ...}: {
+      home-manager.users.${user} = {pkgs, ...}: let
+        xdgHome = "/Users/${user}/Workspace";
+      in {
         imports = [
           mac-app-util.homeManagerModules.default
           nix-index-database.hmModules.nix-index
@@ -152,6 +154,14 @@
           ./home-manager/modules/zoxide.nix
           ./home-manager/modules/zsh.nix
         ];
+
+        xdg = {
+          enable = true;
+          cacheHome = "${xdgHome}/.cache";
+          configHome = "${xdgHome}/.config";
+          dataHome = "${xdgHome}/.local/share";
+          stateHome = "${xdgHome}/.local/state";
+        };
 
         nixpkgs.config.allowUnfree = true;
         home.packages = with pkgs; [
@@ -217,7 +227,7 @@
         services.syncthing.enable = true;
 
         home.file = {
-          ".local/bin" = {
+          "${xdgHome}.local/bin" = {
             source = ./bin;
             recursive = true;
           };

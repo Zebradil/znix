@@ -9,10 +9,10 @@ NVIM_PROFILE_NAME="${NVIM_PROFILE_NAME:-nvim}"
 NVIM_COMMAND="nvim"
 
 usage() (
-    bold_green="$(tput bold)$(tput setaf 2)"
-    bold_yellow="$(tput bold)$(tput setaf 3)"
-    reset="$(tput sgr0)"
-    cat <<EOF
+  bold_green="$(tput bold)$(tput setaf 2)"
+  bold_yellow="$(tput bold)$(tput setaf 3)"
+  reset="$(tput sgr0)"
+  cat <<EOF
 Usage: ${bold_green}$(basename "$0") -h|--help|--list-profiles | [profile] [nvim args]${reset}
 
   ${bold_yellow}profile:${reset}
@@ -30,40 +30,42 @@ EOF
 
 # Print the list of available profiles if they exist.
 print_profiles() (
-    shopt -s nullglob
-    profiles=("$HOME/.config/$NVIM_PROFILES_DIR_NAME"/*)
-    if (( ${#profiles[@]} )); then
-        echo "Available profiles:"
-        for profile in "${profiles[@]}"; do
-            echo " - $(basename "$profile")"
-        done
-    else
-        echo "No profiles found."
-        echo "Create a profile by creating a directory in $HOME/.config/$NVIM_PROFILES_DIR_NAME"
-    fi
+  shopt -s nullglob
+  profiles=("${XDG_CONFIG_HOME:?}/$NVIM_PROFILES_DIR_NAME"/*)
+  if ((${#profiles[@]})); then
+    echo "Available profiles:"
+    for profile in "${profiles[@]}"; do
+      echo " - $(basename "$profile")"
+    done
+  else
+    echo "No profiles found."
+    echo "Create a profile by creating a directory in ${XDG_CONFIG_HOME:?}/$NVIM_PROFILES_DIR_NAME"
+  fi
 )
 
 case "$1" in
-    -h | --help)
-        usage
-        exit 0
-        ;;
-    --list-profiles)
-        print_profiles
-        exit 0
-        ;;
+-h | --help)
+  usage
+  exit 0
+  ;;
+--list-profiles)
+  print_profiles
+  exit 0
+  ;;
 esac
 
-for profile in "$HOME/.config/$NVIM_PROFILES_DIR_NAME"/*; do
-    if [[ "$(basename "$profile")" == "$1" ]]; then
-        NVIM_PROFILE_NAME="$1"
-        shift
-        break
-    fi
+for profile in "${XDG_CONFIG_HOME:?}/$NVIM_PROFILES_DIR_NAME"/*; do
+  if [[ "$(basename "$profile")" == "$1" ]]; then
+    NVIM_PROFILE_NAME="$1"
+    shift
+    break
+  fi
 done
 
 env \
-    XDG_CONFIG_HOME="$HOME/.config/$NVIM_PROFILES_DIR_NAME/${NVIM_PROFILE_NAME}" \
-    XDG_DATA_HOME="$HOME/.local/share/$NVIM_PROFILES_DIR_NAME/${NVIM_PROFILE_NAME}" \
-    XDG_CACHE_HOME="$HOME/.cache/$NVIM_PROFILES_DIR_NAME/${NVIM_PROFILE_NAME}" \
-    ${NVIM_COMMAND} "$@"
+  XDG_CONFIG_HOME="${XDG_CONFIG_HOME:?}/$NVIM_PROFILES_DIR_NAME/${NVIM_PROFILE_NAME}" \
+  XDG_DATA_HOME="${XDG_DATA_HOME:?}/$NVIM_PROFILES_DIR_NAME/${NVIM_PROFILE_NAME}" \
+  XDG_CACHE_HOME="${XDG_CACHE_HOME:?}/$NVIM_PROFILES_DIR_NAME/${NVIM_PROFILE_NAME}" \
+  ${NVIM_COMMAND} "$@"
+
+# vim: ft=bash tabstop=2 shiftwidth=2 softtabstop=2 expandtab:

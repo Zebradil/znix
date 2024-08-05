@@ -2,11 +2,17 @@
 
 tabs -4
 
-for f in "${ZDOTDIR:-}/zshrc/lib/"*.zsh; do
+export WORKSPACE="${WORKSPACE:-$HOME}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$WORKSPACE/.cache}"
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$WORKSPACE/.config}"
+export XDG_DATA_HOME="${XDG_DATA_HOME:-$WORKSPACE/.local/share}"
+export XDG_STATE_HOME="${XDG_STATE_HOME:-$WORKSPACE/.local/state}"
+
+for f in "${ZDOTDIR:?}/zshrc/lib/"*.zsh; do
     source "$f"
 done
 
-source "${ZDOTDIR:-}/zshrc/paths.zsh"
+source "${ZDOTDIR:?}/zshrc/paths.zsh"
 
 # +=========================+
 # | Shell configuration     |
@@ -40,17 +46,17 @@ export GPG_TTY
 #   - `.` selects regular files
 #   - `,` separates the `.` and `@` qualifiers
 #   - `@` selects links
-foreach f ("${ZDOTDIR:-}/zshrc/tools/"*.zsh(N.,@)) { source "$f" }
+foreach f ("${ZDOTDIR:?}/zshrc/tools/"*.zsh(N.,@)) { source "$f" }
 
 bindkey -M viins '^[[A' history-beginning-search-backward
 bindkey -M vicmd '^[[A' history-beginning-search-backward
 bindkey -M viins '^[[B' history-beginning-search-forward
 bindkey -M vicmd '^[[B' history-beginning-search-forward
 
-source "${ZDOTDIR:-}/zshrc/aliases-and-functions.zsh"
+source "${ZDOTDIR:?}/zshrc/aliases-and-functions.zsh"
 
 # +=========================+
 # | Local overrides         |
 # +-------------------------+
 
-[[ -r "$HOME/.zshrc.local" ]] && source $HOME/.zshrc.local
+[[ -r "${WORKSPACE:?}/.zshrc.local" ]] && source ${WORKSPACE:?}/.zshrc.local
