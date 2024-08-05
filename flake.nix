@@ -227,7 +227,7 @@
         services.syncthing.enable = true;
 
         home.file = {
-          "${xdgHome}.local/bin" = {
+          "${xdgHome}/.local/bin" = {
             source = ./bin;
             recursive = true;
           };
