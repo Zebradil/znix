@@ -14,6 +14,7 @@
       export NVIM_PROFILE_NAME=astro4
       export WORKSPACE=$HOME/Workspace
       export ZVM_INIT_MODE=sourcing
+      export STARSHIP_CONFIG=$XDG_CONFIG_HOME/starship.toml
     '';
     initExtra = builtins.readFile ./zsh/zshrc.zsh;
     initExtraBeforeCompInit = ''
