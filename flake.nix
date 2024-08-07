@@ -86,6 +86,7 @@
 
       # Necessary for using flakes on this system.
       nix.settings.experimental-features = "nix-command flakes";
+      nix.settings.extra-nix-path = "nixpkgs=flake:nixpkgs";
 
       # Allow myself to use substitutes
       nix.settings.trusted-users = [user];
