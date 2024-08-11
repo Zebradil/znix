@@ -32,6 +32,10 @@
       url = "github:homebrew/homebrew-cask";
       flake = false;
     };
+    aerospace = {
+      url = "github:nikitabobko/homebrew-tap";
+      flake = false;
+    };
 
     mac-app-util.url = "github:hraban/mac-app-util";
   };
@@ -39,15 +43,13 @@
   outputs = {
     self,
     home-manager,
-    homebrew-bundle,
-    homebrew-cask,
-    homebrew-core,
     mac-app-util,
     nix-darwin,
     nix-homebrew,
     nix-index-database,
     nixpkgs,
-  }: let
+    ...
+  } @ inputs: let
     user = "glashevich";
     systemConfiguration = {pkgs, ...}: {
       # List packages installed in system profile. To search by name, run:
@@ -70,11 +72,11 @@
         onActivation = {
           autoUpdate = true;
         };
-        taps = [];
-        brews = [];
+        brews = ["displayplacer"];
         casks = [
           # "firefox"
           # "1password"
+          "aerospace"
           "orbstack"
         ];
       };
@@ -145,6 +147,13 @@
       };
       home-manager.users.${user} = {pkgs, ...}: let
         xdgHome = "/Users/${user}/Workspace";
+        xdg = {
+          enable = true;
+          cacheHome = "${xdgHome}/.cache";
+          configHome = "${xdgHome}/.config";
+          dataHome = "${xdgHome}/.local/share";
+          stateHome = "${xdgHome}/.local/state";
+        };
       in {
         imports = [
           mac-app-util.homeManagerModules.default
@@ -156,13 +165,7 @@
           ./home-manager/modules/zsh.nix
         ];
 
-        xdg = {
-          enable = true;
-          cacheHome = "${xdgHome}/.cache";
-          configHome = "${xdgHome}/.config";
-          dataHome = "${xdgHome}/.local/share";
-          stateHome = "${xdgHome}/.local/state";
-        };
+        xdg = xdg;
 
         nixpkgs.config.allowUnfree = true;
         home.packages = with pkgs; [
@@ -232,6 +235,7 @@
             source = ./bin;
             recursive = true;
           };
+          "${xdg.configHome}/aerospace/aerospace.toml".source = ./configs/aerospace.toml;
         };
 
         programs.direnv = {
@@ -260,9 +264,10 @@
             inherit user;
             enable = true;
             taps = {
-              "homebrew/homebrew-core" = homebrew-core;
-              "homebrew/homebrew-cask" = homebrew-cask;
-              "homebrew/homebrew-bundle" = homebrew-bundle;
+              "nikitabobko/homebrew-tap" = inputs.aerospace;
+              "homebrew/homebrew-core" = inputs.homebrew-core;
+              "homebrew/homebrew-cask" = inputs.homebrew-cask;
+              "homebrew/homebrew-bundle" = inputs.homebrew-bundle;
             };
             mutableTaps = false;
             enableRosetta = true;
