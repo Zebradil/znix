@@ -77,6 +77,7 @@
           # "firefox"
           # "1password"
           "aerospace"
+          "flameshot"
           "orbstack"
         ];
       };
