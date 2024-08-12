@@ -146,6 +146,7 @@
       daml.format = "[${ld}$symbol${rd}]($style)";
       dart.format = "[${ld}$symbol${rd}]($style)";
       deno.format = "[${ld}$symbol${rd}]($style)";
+      docker_context.format = "[${ld}$symbol$context${rd}]($style)";
       dotnet.format = "[${ld}$symbol${rd}]($style)";
       elixir.format = "[${ld}$symbol${rd}]($style)";
       elm.format = "[${ld}$symbol${rd}]($style)";
