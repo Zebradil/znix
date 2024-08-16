@@ -19,6 +19,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    gke-kubeconfiger = {
+      url = "github:Zebradil/gke-kubeconfiger";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
     homebrew-bundle = {
       url = "github:homebrew/homebrew-bundle";
@@ -169,6 +174,11 @@
         xdg = xdg;
 
         nixpkgs.config.allowUnfree = true;
+        nixpkgs.overlays = [
+          (final: prev: {
+            gke-kubeconfiger = inputs.gke-kubeconfiger.defaultPackage.${final.system};
+          })
+        ];
         home.packages = with pkgs; [
           # Desktop apps
           alacritty
@@ -206,6 +216,7 @@
           fzf
           gh
           ghorg
+          gke-kubeconfiger
           gnused
           go-task
           goreleaser

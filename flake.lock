@@ -100,6 +100,27 @@
         "type": "github"
       }
     },
+    "gke-kubeconfiger": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1723767319,
+        "narHash": "sha256-IKiUOoOMShyS8pF0jVF+WMq7yyWdiYf0c53Ky7ET4Qg=",
+        "owner": "Zebradil",
+        "repo": "gke-kubeconfiger",
+        "rev": "9fc2a2d2a1a63116cc3a142816b750928f9e3370",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Zebradil",
+        "repo": "gke-kubeconfiger",
+        "type": "github"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -332,6 +353,7 @@
     "root": {
       "inputs": {
         "aerospace": "aerospace",
+        "gke-kubeconfiger": "gke-kubeconfiger",
         "home-manager": "home-manager",
         "homebrew-bundle": "homebrew-bundle",
         "homebrew-cask": "homebrew-cask",
