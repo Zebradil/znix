@@ -206,6 +206,7 @@
           fzf
           gh
           ghorg
+          gnused
           go-task
           goreleaser
           jq
