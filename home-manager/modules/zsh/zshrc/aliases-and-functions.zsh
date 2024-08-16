@@ -11,6 +11,10 @@ z:prefix-lines() {
   done
 }
 
+z:diff:yaml() {
+  delta <(yq -P 'sort_keys(..)' "$1") <(yq -P 'sort_keys(..)' "$2")
+}
+
 insist() {
   local delay=1
   local cmd
