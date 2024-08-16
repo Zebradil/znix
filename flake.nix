@@ -222,6 +222,7 @@
           vendir
           wget
           yq-go
+          ytt
 
           # languages
           go
