@@ -205,7 +205,7 @@
           translate-shell
 
           #CLI tools
-          bash
+          bashInteractive
           chezmoi
           coreutils
           curl
