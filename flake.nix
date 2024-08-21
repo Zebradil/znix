@@ -223,6 +223,7 @@
           jq
           just
           kubectl
+          kubernetes-helm
           kubeswitch
           moreutils
           myks
