@@ -239,6 +239,7 @@
 
           # languages
           go
+          gofumpt
 
           # shell
           zsh-completions
