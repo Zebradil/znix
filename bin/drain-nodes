@@ -1,0 +1,178 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+function help {
+    local script_name
+    script_name=$(basename "$0")
+    # shellcheck disable=SC2016,SC2028
+    cat <<HLP
+Usage: $script_name [options] [timeout] <<< <INPUT>
+
+Drain nodes in the cluster one by one.
+The node list is read from the standard input.
+The script waits for the specified timeout before proceeding to the next node.
+
+If the TALK environment variable is set to true, the script will talk to you.
+
+Options:
+  --cordon:  Cordon the nodes before draining
+  --delete:  Delete the nodes after draining
+  --dry-run: Print the node list without draining
+  --help:    Print this help message
+
+Arguments:
+  timeout: Timeout in seconds to wait before proceeding to the next node
+           Default: 180
+
+Input:
+  List of nodes to drain, one node per line
+
+Examples:
+  $script_name <<< \$(printf "node1\nnode2\nnode3")'
+
+  $script_name --dry-run 120 <<< \$( \\
+      kubectl get node \\
+          -o custom-columns=:.metadata.name \\
+          --no-headers -l=pool=general)
+
+  kubectl get node -o custom-columns=:.metadata.name --no-headers -l=pool=general \\
+      | $script_name --cordon 300
+HLP
+}
+
+function log::err {
+    echo -e "\e[1;31m[✗] $*\e[0m" >&2
+}
+
+function log::info {
+    echo -e "\e[1;93m[‼︎] $*\e[0m"
+}
+
+function log::success {
+    echo -e "\e[1;32m[✔] $*\e[0m"
+}
+
+function log::say {
+    if $TALK; then
+        say "$*" &
+    fi
+}
+
+TALK=${TALK:-false}
+
+TM=
+DRY_RUN=false
+CORDON=false
+DELETE=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+    --cordon)
+        CORDON=true
+        shift
+        ;;
+    --delete)
+        DELETE=true
+        shift
+        ;;
+    --dry-run)
+        DRY_RUN=true
+        shift
+        ;;
+    --help)
+        help >&2
+        exit 0
+        ;;
+    *)
+        # If TM is already set, fail the script
+        if [[ -n $TM ]]; then
+            log::err "Timeout is already set"
+            help >&2
+            exit 1
+        fi
+        # If the argument is not a number, fail the script
+        if ! [[ $1 =~ ^[1-9][0-9]*$ ]]; then
+            log::err "Timeout must be a positive integer"
+            help >&2
+            exit 1
+        fi
+        TM=$1
+        shift
+        ;;
+    esac
+done
+
+TM=${TM:-180}
+INFO="Press p to pause, s to skip, any other key to check seconds left, CTRL+C to exit"
+
+log::info "Reading node list from the standard input"
+readarray -t nodes
+
+if $CORDON; then
+    log::info "Cordon nodes"
+    log::say "Cordon nodes"
+    for node in "${nodes[@]}"; do
+        if $DRY_RUN; then
+            log::info "Dry run: Cordon node $node"
+        else
+            log::info "$(kubectl cordon "$node")"
+        fi
+    done
+fi
+
+for i in "${!nodes[@]}"; do
+    n=${nodes[i]}
+    nID="$((i + 1))/${#nodes[@]}: $n"
+    MSG="Draining node $nID"
+    if $DRY_RUN; then
+        log::info "Dry run: $MSG"
+        if $DELETE; then
+            log::info "Dry run: Deleting node $nID"
+        fi
+    else
+        log::info "$MSG"
+        log::say "Draining node"
+        kubectl drain --delete-emptydir-data --ignore-daemonsets "$n"
+        if $DELETE; then
+            read -r project zone <<<"$(
+                kubectl get node "$n" \
+                    -o jsonpath='{.spec.providerID}' |
+                    awk -F/ '{print $3, $4}'
+            )"
+            group="${n%-*}-grp"
+            log::info "Deleting node $n from $project/$zone/$group group"
+            log::say "Deleting node"
+            gcloud compute instance-groups managed delete-instances \
+                --project="$project" \
+                --zone="$zone" \
+                --instances="$n" \
+                "$group"
+        fi
+    fi
+    log::success "Node $nID is drained"
+    if ((i == ${#nodes[@]} - 1)); then
+        break
+    fi
+    log::info "$INFO"
+    deadline=$(($(date +%s) + TM))
+    while true; do
+        time_left=$((deadline - $(date +%s)))
+        log::info "Seconds left: $time_left"
+        if [[ $time_left -le 0 ]]; then
+            break
+        fi
+        log::say "Waiting"
+        read -rsn1 -t $time_left input </dev/tty || true
+        if [[ $input = "p" ]]; then
+            log::info "Paused"
+            read -rsn1 -p "Press any key to continue " </dev/tty
+            echo
+        elif [[ $input = "s" ]]; then
+            break
+        fi
+    done
+done
+
+log::say "All nodes are drained"
+log::success "All nodes are drained"
