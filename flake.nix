@@ -241,6 +241,11 @@
           go
           gofumpt
 
+          cargo
+          clippy
+          rust-analyzer
+          rustfmt
+
           # shell
           zsh-completions
         ];
