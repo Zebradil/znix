@@ -228,6 +228,7 @@
           kubeswitch
           moreutils
           myks
+          rage
           ripgrep
           rsync
           terraform
