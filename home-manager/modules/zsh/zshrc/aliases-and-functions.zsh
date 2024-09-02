@@ -15,6 +15,11 @@ z:diff:yaml() {
   delta <(yq -P 'sort_keys(..)' "$1") <(yq -P 'sort_keys(..)' "$2")
 }
 
+z:delete-host() {
+  local line="${1:?specify line number}"
+  sed -i "${line}d" ~/.ssh/known_hosts
+}
+
 insist() {
   local delay=1
   local cmd
