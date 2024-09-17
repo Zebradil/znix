@@ -202,6 +202,7 @@
           delta
           k9s
           lazygit
+          tailscale
           tmux
           translate-shell
 
