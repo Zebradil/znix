@@ -157,7 +157,8 @@ function z:gke:np:drain-delete() (
     return 1
   fi
   log::info "Disabling autoscaling and autorepair on node pool $np ..."
-  z:gke:np:do update $np --no-enable-autoscaling --no-enable-autorepair
+  z:gke:np:do update $np --no-enable-autoscaling
+  z:gke:np:do update $np --no-enable-autorepair
   log::info "Draining and deleting nodes in node pool $np ..."
   z:gke:np:nodes $np | drain-nodes --delete $@
   log::info "Deleting node pool $np ..."
