@@ -24,6 +24,28 @@ function z:gke:cluster:info() (
   echo "$cluster_name $project_id $location"
 )
 
+# Run a gcloud command on the current GKE cluster
+# Usage: z:gke:cluster:do <command> [args...]
+# Args:
+#   <command>  gcloud container clusters command to run on the cluster
+#   [args...]  additional arguments to pass to the command
+function z:gke:cluster:do() (
+  set -euo pipefail
+  local cmd=${1:?command missing}
+  shift
+  local cluster_name project_id location info
+  info=$(z:gke:cluster:info)
+  if [[ -z $info ]]; then
+    return 1
+  fi
+  read -r cluster_name project_id location <<< "$info"
+  log::info "Running command: $cmd on cluster $cluster_name ..."
+  gcloud container clusters "${cmd}" "$cluster_name" \
+    --project "$project_id" \
+    --location "$location" \
+    "$@"
+)
+
 # List all node pools in the current GKE cluster
 # Usage: z:gke:np:list
 function z:gke:np:list() (
