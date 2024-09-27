@@ -222,6 +222,7 @@
           gnused
           go-task
           goreleaser
+          inetutils
           jq
           just
           kubectl
@@ -235,6 +236,7 @@
           terraform
           velero
           vendir
+          watchexec
           wget
           yq-go
           ytt
