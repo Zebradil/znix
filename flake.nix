@@ -233,6 +233,7 @@
           rage
           ripgrep
           rsync
+          skopeo
           terraform
           velero
           vendir
