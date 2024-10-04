@@ -218,6 +218,7 @@
           fzf
           gh
           ghorg
+          git
           gke-kubeconfiger
           gnused
           go-task
