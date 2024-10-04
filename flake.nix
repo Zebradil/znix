@@ -228,7 +228,6 @@
           just
           kubectl
           kubernetes-helm
-          kubeswitch
           moreutils
           myks
           rage

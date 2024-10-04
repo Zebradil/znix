@@ -11,20 +11,60 @@ if lib::check_commands kubectl; then
   source <(kubectl completion zsh | sed '/"-f"/d')
 fi
 
-if lib::check_commands stern; then
-  source <(stern --completion zsh)
-fi
-
-if lib::check_commands kubie; then
-  alias kc="kubie ctx"
-  alias kn="kubie ns"
-fi
-
-if lib::check_commands switcher; then
-  source <(switcher init zsh)
-  alias s=switch
-fi
-
-my:k8s:set_kubeconfig_var() {
-  export KUBECONFIG="$(echo ~/.kube/*clusters/*.y?ml(N) | tr ' ' ':')"
+function z:k8s:kubeconfig:list-files() {
+  echo ~/.kube/*clusters/*.y?ml(N)
 }
+
+function z:k8s:kubeconfig:set() {
+  export KUBECONFIG="${(j.:.)$(z:k8s:kubeconfig:list-files)}"
+}
+
+function z:k8s:context:generate-kubeconfig() (
+  set -euo pipefail
+  local ctx=${1:-}
+  local prefix="zctx_"
+  local context_override_dir="${XDG_STATE_HOME:?}/k8s/contexts"
+  local kubeconfig_items=(${(s.:.)KUBECONFIG})
+  if [[ -z $ctx ]]; then
+    kubectl config get-contexts \
+      | fzf --header-lines=1 \
+      | awk '{print $1}' \
+      | read -r ctx _
+  fi
+  if [[ $ctx == "*" ]]; then
+    return 0
+  fi
+  mkdir -p "$context_override_dir"
+  local ctx_override_file="$context_override_dir/$prefix$ctx.yaml"
+  if [[ ! -f $ctx_override_file ]]; then
+    echo "current-context: \"$ctx\"" >"$ctx_override_file"
+  fi
+  echo "$ctx_override_file:${(j.:.)${(@)kubeconfig_items:#$context_override_dir/*}}"
+)
+
+function z:k8s:context:switch() {
+  new_kubeconfig=$(z:k8s:context:generate-kubeconfig $1)
+  if [[ $? -ne 0 ]]; then
+    return 1
+  fi
+  if [[ -z $new_kubeconfig ]]; then
+    return 1
+  fi
+  export KUBECONFIG="$new_kubeconfig"
+}
+
+function z:k8s:contexts:do-parralel() {
+  local suffix=$1
+  shift
+  for ctx in $(kubectl config get-contexts -oname); do
+    (
+      z:k8s:switch_context $ctx
+      log::info "☐ $ctx"
+      eval "$@" >"${ctx}${suffix}"
+      log::success "☑︎ $ctx"
+    ) &
+  done
+}
+
+alias kc=z:k8s:context:switch
+alias kk='kc && k9s'

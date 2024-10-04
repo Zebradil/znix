@@ -43,7 +43,6 @@
 
     shellAliases = {
       tf = "terraform";
-      kk = "s && k9s";
     };
   };
 
