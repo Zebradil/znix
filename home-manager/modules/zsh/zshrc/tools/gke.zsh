@@ -5,9 +5,17 @@
 # Outputs the current cluster name, project ID and location
 function z:gke:cluster:info() (
   set -euo pipefail
-  local cluster_name project_id location kubeconfig="${KUBECONFIG:?}"
+  local context cluster_name project_id location kubeconfig="${KUBECONFIG:?}"
+  context=$(kubectl config current-context)
   read -r cluster_name project_id location \
-      < <(yq -r '.gkeMetadata | "\(.clusterName) \(.projectID) \(.location)"' "$kubeconfig")
+    < <(context=$context yq eval-all '
+        (.contexts[] | select(.name == strenv(context)) | .context.cluster) as $cluster
+        | .clusters[]
+        | select(.name == $cluster)
+        | .cluster.gkeMetadata
+        | select(.clusterName or .projectID or .location)
+        | "\(.clusterName) \(.projectID) \(.location)"' \
+      ${(s.:.)kubeconfig})
   if [[ -z $cluster_name ]]; then
     log::error "Could not determine the current GKE cluster"
     return 1
