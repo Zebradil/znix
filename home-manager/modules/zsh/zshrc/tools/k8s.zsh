@@ -2,15 +2,6 @@
 # | Kubernetes configuration |
 # +--------------------------+
 
-if lib::check_commands kubectl; then
-  alias k="kubectl"
-  alias kd="kubectl describe"
-  alias kgy="kubectl get -oyaml"
-  alias kga="kubectl get -A"
-
-  source <(kubectl completion zsh | sed '/"-f"/d')
-fi
-
 function z:k8s:kubeconfig:list-files() {
   echo ~/.kube/*clusters/*.y?ml(N)
 }
@@ -74,6 +65,17 @@ function z:k8s:contexts:do-parralel() {
     log::warn "No contexts found"
   fi
 }
+
+z:k8s:kubeconfig:init
+
+if lib::check_commands kubectl; then
+  source <(kubectl completion zsh | sed '/"-f"/d')
+fi
+
+alias k="kubectl"
+alias kd="kubectl describe"
+alias kgy="kubectl get -oyaml"
+alias kga="kubectl get -A"
 
 alias kc=z:k8s:context:switch
 alias kk='kc && k9s'
