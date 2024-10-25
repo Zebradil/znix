@@ -118,6 +118,7 @@
 
       system.defaults.dock.autohide = true;
       system.defaults.dock.mru-spaces = false;
+      system.defaults.dock.orientation = "right";
       system.defaults.dock.show-recents = false;
       system.defaults.dock.static-only = true;
       system.defaults.dock.tilesize = 32;
