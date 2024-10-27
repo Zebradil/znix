@@ -57,7 +57,7 @@
         "KC_C",
         "KC_R",
         "KC_L",
-        "KC_BSPACE"
+        "KC_DELETE"
       ],
       [
         "KC_D",
@@ -80,7 +80,7 @@
         "TD(3)",
         "TD(7)",
         "TD(1)",
-        "TD(9)",
+        "KC_RALT",
         "KC_APPLICATION"
       ]
     ],
@@ -768,28 +768,28 @@
       "KC_LGUI",
       "KC_NO",
       "KC_NO",
-      200
+      150
     ],
     [
       "KC_SPACE",
       "KC_RGUI",
       "KC_NO",
       "KC_NO",
-      200
+      150
     ],
     [
       "TG(1)",
       "MO(1)",
       "TG(3)",
       "MO(3)",
-      200
+      150
     ],
     [
       "TG(2)",
       "MO(2)",
       "KC_NO",
       "KC_NO",
-      200
+      150
     ],
     [
       "KC_NO",
@@ -801,30 +801,30 @@
     [
       "KC_NO",
       "KC_NO",
-      "KC_NO",
-      "KC_NO",
-      200
-    ],
-    [
-      "KC_DELETE",
-      "KC_LCTRL",
-      "KC_NO",
-      "KC_NO",
-      200
-    ],
-    [
-      "KC_BSPACE",
-      "KC_RCTRL",
       "KC_NO",
       "KC_NO",
       200
     ],
     [
       "KC_ESCAPE",
+      "KC_LCTRL",
+      "KC_NO",
+      "KC_NO",
+      150
+    ],
+    [
+      "KC_BSPACE",
+      "KC_RCTRL",
+      "KC_NO",
+      "KC_NO",
+      150
+    ],
+    [
+      "KC_CAPSLOCK",
       "KC_LALT",
       "KC_NO",
       "KC_NO",
-      200
+      150
     ],
     [
       "KC_CAPSLOCK",
