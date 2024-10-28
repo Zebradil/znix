@@ -14,6 +14,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/0.1";
+
     nix-index-database = {
       url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -47,6 +49,7 @@
 
   outputs = {
     self,
+    determinate,
     home-manager,
     mac-app-util,
     nix-darwin,
@@ -89,12 +92,8 @@
 
       services.nix-daemon.enable = true;
 
-      # Auto upgrade nix package
-      nix.package = pkgs.nix;
-
       # Necessary for using flakes on this system.
       nix.settings.experimental-features = "nix-command flakes";
-      nix.settings.extra-nix-path = "nixpkgs=flake:nixpkgs";
 
       # Allow myself to use substitutes
       nix.settings.trusted-users = [user];
@@ -283,6 +282,7 @@
     # $ darwin-rebuild build --flake .#trv4250
     darwinConfigurations."trv4250" = nix-darwin.lib.darwinSystem {
       modules = [
+        determinate.darwinModules.default
         systemConfiguration
         home-manager.darwinModules.home-manager
         userConfiguration
