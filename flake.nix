@@ -98,6 +98,8 @@
       # Allow myself to use substitutes
       nix.settings.trusted-users = [user];
 
+      nix.settings.build-dir = "/Users/nixbld/workspace";
+
       # TODO: configure gpg integrations
       # programs.gnupg.agent.enable = true;
 
