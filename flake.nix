@@ -230,6 +230,7 @@
           kubernetes-helm
           moreutils
           myks
+          ncdu
           rage
           ripgrep
           rsync
