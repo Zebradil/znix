@@ -17,7 +17,7 @@
         "KC_DOT",
         "KC_COMMA",
         "KC_QUOTE",
-        "KC_TAB"
+        "SGUI_T(KC_TAB)"
       ],
       [
         "KC_I",
@@ -33,15 +33,15 @@
         "KC_J",
         "KC_Q",
         "KC_SCOLON",
-        "KC_NO"
+        "KC_MINUS"
       ],
       [
         "KC_MUTE",
         "TD(2)",
-        "TD(6)",
-        "TD(0)",
-        "TD(8)",
-        "KC_NO"
+        "LCTL_T(KC_ESCAPE)",
+        "LGUI_T(KC_ENTER)",
+        "LALT_T(KC_CAPSLOCK)",
+        "TD(9)"
       ],
       [
         "KC_6",
@@ -73,13 +73,13 @@
         "KC_W",
         "KC_V",
         "KC_Z",
-        "KC_NO"
+        "KC_BSLASH"
       ],
       [
         "KC_NO",
         "TD(3)",
-        "TD(7)",
-        "TD(1)",
+        "RCTL_T(KC_BSPACE)",
+        "RGUI_T(KC_SPACE)",
         "KC_RALT",
         "KC_APPLICATION"
       ]
@@ -768,28 +768,28 @@
       "KC_LGUI",
       "KC_NO",
       "KC_NO",
-      150
+      200
     ],
     [
       "KC_SPACE",
       "KC_RGUI",
       "KC_NO",
       "KC_NO",
-      150
+      200
     ],
     [
       "TG(1)",
       "MO(1)",
       "TG(3)",
       "MO(3)",
-      150
+      200
     ],
     [
       "TG(2)",
       "MO(2)",
       "KC_NO",
       "KC_NO",
-      150
+      200
     ],
     [
       "KC_NO",
@@ -810,25 +810,25 @@
       "KC_LCTRL",
       "KC_NO",
       "KC_NO",
-      150
+      200
     ],
     [
       "KC_BSPACE",
       "KC_RCTRL",
       "KC_NO",
       "KC_NO",
-      150
+      200
     ],
     [
       "KC_CAPSLOCK",
       "KC_LALT",
       "KC_NO",
       "KC_NO",
-      150
+      200
     ],
     [
-      "KC_CAPSLOCK",
-      "KC_RALT",
+      "TG(3)",
+      "MO(3)",
       "KC_NO",
       "KC_NO",
       200
@@ -1512,7 +1512,7 @@
     "5": 5,
     "6": 5000,
     "7": 200,
-    "8": 0,
+    "8": 1,
     "9": 5,
     "10": 20,
     "11": 1,
