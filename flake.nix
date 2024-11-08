@@ -174,12 +174,15 @@
 
         xdg = xdg;
 
-        nixpkgs.config.allowUnfree = true;
-        nixpkgs.overlays = [
-          (final: prev: {
-            gke-kubeconfiger = inputs.gke-kubeconfiger.defaultPackage.${final.system};
-          })
-        ];
+        nixpkgs = {
+          config.allowUnfree = true;
+          overlays = [
+            (final: _prev: {
+              gke-kubeconfiger = inputs.gke-kubeconfiger.defaultPackage.${final.system};
+            })
+          ];
+        };
+
         home.packages = with pkgs; [
           # Desktop apps
           alacritty
