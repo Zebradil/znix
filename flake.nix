@@ -39,10 +39,6 @@
       url = "github:homebrew/homebrew-cask";
       flake = false;
     };
-    aerospace = {
-      url = "github:nikitabobko/homebrew-tap";
-      flake = false;
-    };
 
     mac-app-util.url = "github:hraban/mac-app-util";
   };
@@ -84,7 +80,6 @@
         casks = [
           # "firefox"
           # "1password"
-          "aerospace"
           "flameshot"
           "notunes"
           "orbstack"
@@ -271,7 +266,6 @@
             source = ./bin;
             recursive = true;
           };
-          "${xdg.configHome}/aerospace/aerospace.toml".source = ./configs/aerospace.toml;
         };
 
         programs.direnv = {
@@ -301,7 +295,6 @@
             inherit user;
             enable = true;
             taps = {
-              "nikitabobko/homebrew-tap" = inputs.aerospace;
               "homebrew/homebrew-core" = inputs.homebrew-core;
               "homebrew/homebrew-cask" = inputs.homebrew-cask;
               "homebrew/homebrew-bundle" = inputs.homebrew-bundle;
