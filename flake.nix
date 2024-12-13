@@ -239,6 +239,7 @@
           myks
           ncdu
           rage
+          rancher
           ripgrep
           rsync
           skopeo
