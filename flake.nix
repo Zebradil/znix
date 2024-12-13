@@ -118,7 +118,8 @@
       system.defaults.dock.static-only = true;
       system.defaults.dock.tilesize = 32;
       system.defaults.finder.AppleShowAllExtensions = true;
-      system.defaults.finder.CreateDesktop = false;
+      # yabai needs CreateDesktop to be enabled
+      # system.defaults.finder.CreateDesktop = false;
       system.defaults.finder.FXDefaultSearchScope = "SCcf";
       system.defaults.finder.FXPreferredViewStyle = "Nlsv";
       system.defaults.finder.QuitMenuItem = true;
@@ -187,7 +188,9 @@
           alacritty
           iterm2
           keepassxc
+          skhd
           slack
+          yabai
           youtube-music
           zoom-us
           #_1password-gui # doesn't work when installed outside of /Applications
