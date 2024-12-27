@@ -44,6 +44,11 @@ function z:k8s:context:switch() {
   export KUBECONFIG="$new_kubeconfig"
 }
 
+function z:k8s:context:switch-k9s() {
+  z:k8s:context:switch $1
+  k9s
+}
+
 function z:k8s:contexts:do-parralel() {
   if (( $# < 2 )); then
     log::error "Too few arguments"
@@ -78,7 +83,4 @@ alias kgy="kubectl get -oyaml"
 alias kga="kubectl get -A"
 
 alias kc=z:k8s:context:switch
-alias kk='kc && k9s'
-
-# DEPRECATED
-alias s=kc
+alias kk=z:k8s:context:switch-k9s
