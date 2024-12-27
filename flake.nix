@@ -45,7 +45,7 @@
     mac-app-util.url = "github:hraban/mac-app-util";
   };
 
-  outputs = inputs @ {
+  outputs = {
     determinate,
     flake-utils,
     gke-kubeconfiger,
@@ -69,7 +69,7 @@
 
     darwinConfiguration = {...}: {
       nixpkgs = {
-        hostPlatform = "aarch64-darwin";
+        hostPlatform = system;
         config.allowUnfree = true;
       };
 
@@ -175,9 +175,9 @@
             inherit user;
             enable = true;
             taps = {
-              "homebrew/homebrew-core" = inputs.homebrew-core;
-              "homebrew/homebrew-cask" = inputs.homebrew-cask;
-              "homebrew/homebrew-bundle" = inputs.homebrew-bundle;
+              "homebrew/homebrew-core" = homebrew-core;
+              "homebrew/homebrew-cask" = homebrew-cask;
+              "homebrew/homebrew-bundle" = homebrew-bundle;
             };
             mutableTaps = false;
             enableRosetta = true;
