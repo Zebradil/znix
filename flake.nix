@@ -45,19 +45,23 @@
     mac-app-util.url = "github:hraban/mac-app-util";
   };
 
-  outputs = {
-    self,
+  outputs = inputs @ {
     determinate,
     flake-utils,
+    gke-kubeconfiger,
     home-manager,
+    homebrew-bundle,
+    homebrew-cask,
+    homebrew-core,
     mac-app-util,
     nix-darwin,
     nix-homebrew,
     nix-index-database,
     nixpkgs,
-    ...
-  } @ inputs: let
+    self,
+  }: let
     user = "glashevich";
+    system = "aarch64-darwin";
     systemConfiguration = {pkgs, ...}: {
       nix.settings.experimental-features = "nix-command flakes";
 
@@ -152,135 +156,18 @@
         name = user;
         home = "/Users/${user}";
       };
-      home-manager.users.${user} = {pkgs, ...}: let
-        xdgHome = "/Users/${user}/Workspace";
-        xdg = {
-          enable = true;
-          cacheHome = "${xdgHome}/.cache";
-          configHome = "${xdgHome}/.config";
-          dataHome = "${xdgHome}/.local/share";
-          stateHome = "${xdgHome}/.local/state";
-        };
-      in {
-        imports = [
-          mac-app-util.homeManagerModules.default
-          nix-index-database.hmModules.nix-index
-          ./home-manager/modules/google-cloud-sdk.nix
-          ./home-manager/modules/neovim.nix
-          ./home-manager/modules/starship.nix
-          ./home-manager/modules/zoxide.nix
-          ./home-manager/modules/zsh.nix
-        ];
-
-        xdg = xdg;
-
-        nixpkgs = {
-          config.allowUnfree = true;
-          overlays = [
-            (final: _prev: {
-              gke-kubeconfiger = inputs.gke-kubeconfiger.defaultPackage.${final.system};
-            })
-          ];
-        };
-
-        home.packages = with pkgs; [
-          # Desktop apps
-          alacritty
-          iterm2
-          keepassxc
-          skhd
-          slack
-          yabai
-          youtube-music
-          zoom-us
-          #_1password-gui # doesn't work when installed outside of /Applications
-          #firefox-bin    # 1password extensions doesn't work if FF is installed outside of /Applications
-          # (github:bandithedoge/nixpkgs-firefox-darwin)
-
-          # Desktop-CLI integrations
-          tridactyl-native
-          terminal-notifier
-
-          # CLI apps
-          bat
-          btop
-          delta
-          k9s
-          lazygit
-          tailscale
-          tmux
-          translate-shell
-
-          #CLI tools
-          bashInteractive
-          chezmoi
-          coreutils
-          curl
-          direnv
-          duf
-          eza
-          fd
-          fzf
-          gh
-          ghorg
-          git
-          gke-kubeconfiger
-          gnused
-          go-task
-          goreleaser
-          inetutils
-          jq
-          just
-          kubectl
-          kubernetes-helm
-          moreutils
-          myks
-          ncdu
-          rage
-          rancher
-          ripgrep
-          rsync
-          skopeo
-          terraform
-          velero
-          vendir
-          watchexec
-          wget
-          yq-go
-          ytt
-
-          # languages
-          go
-          gofumpt
-
-          cargo
-          clippy
-          rust-analyzer
-          rustfmt
-
-          # shell
-          zsh-completions
-        ];
-
-        services.syncthing.enable = true;
-
-        home.file = {
-          "${xdgHome}/.local/bin" = {
-            source = ./bin;
-            recursive = true;
-          };
-        };
-
-        programs.direnv = {
-          enable = true;
-          nix-direnv.enable = true;
-        };
-        programs.fzf.enable = true;
-        programs.nix-index.enable = true;
-
-        # The state version is required and should stay at the version you originally installed.
-        home.stateVersion = "24.05";
-      };
+      home-manager.users.${user} = (
+        import ./home-manager {
+          inherit
+            gke-kubeconfiger
+            mac-app-util
+            nix-index-database
+            nixpkgs
+            system
+            user
+            ;
+        }
+      );
     };
   in {
     # Build darwin flake using:
