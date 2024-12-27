@@ -4,6 +4,8 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/8809585e6937d0b07fc066792c8c9abf9c3fe5c4";
 
+    flake-utils.url = "github:numtide/flake-utils";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -46,6 +48,7 @@
   outputs = {
     self,
     determinate,
+    flake-utils,
     home-manager,
     mac-app-util,
     nix-darwin,
@@ -56,19 +59,32 @@
   } @ inputs: let
     user = "glashevich";
     systemConfiguration = {pkgs, ...}: {
-      # List packages installed in system profile. To search by name, run:
-      # $ nix-env -qaP | grep wget
-      environment.systemPackages = [];
+      nix.settings.experimental-features = "nix-command flakes";
 
-      # To inititalize shell with nix-darwin environment,
-      # enable zsh in addition to Home Manager's zsh.
-      # See https://github.com/LnL7/nix-darwin/issues/922
-      programs.zsh.enable = true;
+      # Allow myself to use substitutes
+      nix.settings.trusted-users = [user];
 
       fonts.packages = with pkgs; [
         iosevka-bin
         (nerdfonts.override {fonts = ["IosevkaTerm"];})
       ];
+
+      services.nix-daemon.enable = true;
+
+      # TODO: configure gpg integrations
+      # programs.gnupg.agent.enable = true;
+    };
+
+    darwinConfiguration = {...}: {
+      nixpkgs = {
+        hostPlatform = "aarch64-darwin";
+        config.allowUnfree = true;
+      };
+
+      # To inititalize shell with nix-darwin environment,
+      # enable zsh in addition to Home Manager's zsh.
+      # See https://github.com/LnL7/nix-darwin/issues/922
+      programs.zsh.enable = true;
 
       homebrew = {
         enable = true;
@@ -84,29 +100,6 @@
           "notunes"
           "orbstack"
         ];
-      };
-
-      services.nix-daemon.enable = true;
-
-      # Necessary for using flakes on this system.
-      nix.settings.experimental-features = "nix-command flakes";
-
-      # Allow myself to use substitutes
-      nix.settings.trusted-users = [user];
-
-      # TODO: configure gpg integrations
-      # programs.gnupg.agent.enable = true;
-
-      # Set Git commit hash for darwin-version.
-      system.configurationRevision = self.rev or self.dirtyRev or null;
-
-      # Used for backwards compatibility, please read the changelog before changing.
-      # $ darwin-rebuild changelog
-      system.stateVersion = 4;
-
-      nixpkgs = {
-        hostPlatform = "aarch64-darwin";
-        config.allowUnfree = true;
       };
 
       security.pam.enableSudoTouchIdAuth = true;
@@ -142,9 +135,16 @@
           "com.apple.scrollwheel.scaling" = -1;
         };
         "digital.twisted.noTunes" = {
-          replacement = "/Users/glashevich/Applications/Home Manager Trampolines/YouTube Music.app";
+          replacement = "/Users/${user}/Applications/Home Manager Trampolines/YouTube Music.app";
         };
       };
+
+      # Set Git commit hash for darwin-version.
+      system.configurationRevision = self.rev or self.dirtyRev or null;
+
+      # Used for backwards compatibility, please read the changelog before changing.
+      # $ darwin-rebuild changelog
+      system.stateVersion = 4;
     };
 
     userConfiguration = {...}: {
@@ -278,8 +278,7 @@
         programs.fzf.enable = true;
         programs.nix-index.enable = true;
 
-        # The state version is required and should stay at the version you
-        # originally installed.
+        # The state version is required and should stay at the version you originally installed.
         home.stateVersion = "24.05";
       };
     };
@@ -290,6 +289,7 @@
       modules = [
         determinate.darwinModules.default
         systemConfiguration
+        darwinConfiguration
         home-manager.darwinModules.home-manager
         userConfiguration
         nix-homebrew.darwinModules.nix-homebrew
@@ -309,8 +309,5 @@
         }
       ];
     };
-
-    # Expose the package set, including overlays, for convenience.
-    darwinPackages = self.darwinConfigurations."trv4250".pkgs;
   };
 }
