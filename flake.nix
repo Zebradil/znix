@@ -1,5 +1,5 @@
 {
-  description = "Example Darwin system flake";
+  description = "My Darwin system + Home Manager flake";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/8809585e6937d0b07fc066792c8c9abf9c3fe5c4";
@@ -62,21 +62,9 @@
   }: let
     user = "glashevich";
     system = "aarch64-darwin";
-    systemConfiguration = {pkgs, ...}: {
-      nix.settings.experimental-features = "nix-command flakes";
-
-      # Allow myself to use substitutes
-      nix.settings.trusted-users = [user];
-
-      fonts.packages = with pkgs; [
-        iosevka-bin
-        (nerdfonts.override {fonts = ["IosevkaTerm"];})
-      ];
-
-      services.nix-daemon.enable = true;
-
-      # TODO: configure gpg integrations
-      # programs.gnupg.agent.enable = true;
+    pkgs = import nixpkgs {
+      inherit system;
+      config.allowUnfree = true;
     };
 
     darwinConfiguration = {...}: {
@@ -175,7 +163,9 @@
     darwinConfigurations."trv4250" = nix-darwin.lib.darwinSystem {
       modules = [
         determinate.darwinModules.default
-        systemConfiguration
+        (import ./hosts/shared.nix {
+          inherit pkgs user;
+        })
         darwinConfiguration
         home-manager.darwinModules.home-manager
         userConfiguration
