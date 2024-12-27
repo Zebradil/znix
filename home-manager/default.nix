@@ -2,14 +2,9 @@
   gke-kubeconfiger,
   mac-app-util,
   nix-index-database,
-  nixpkgs,
-  system,
+  pkgs,
   user,
 }: let
-  pkgs = import nixpkgs {
-    inherit system;
-    config.allowUnfree = true;
-  };
   xdgHome = "/Users/${user}/Workspace";
   xdg = {
     enable = true;
