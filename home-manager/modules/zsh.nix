@@ -12,7 +12,7 @@
       export LESS='--mouse --wheel-lines=3 --quit-if-one-screen --ignore-case --tabs=4'
       export MANPAGER='nv +Man!'
       export NVIM_PROFILE_NAME=astro4
-      export WORKSPACE=$HOME/Workspace
+      export WORKSPACE=$HOME
       export ZVM_INIT_MODE=sourcing
       export STARSHIP_CONFIG=$XDG_CONFIG_HOME/starship.toml
     '';

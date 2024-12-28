@@ -5,7 +5,7 @@
   pkgs,
   user,
 }: let
-  xdgHome = "/Users/${user}/Workspace";
+  xdgHome = "/Users/${user}";
   xdg = {
     enable = true;
     cacheHome = "${xdgHome}/.cache";
