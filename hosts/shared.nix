@@ -10,7 +10,7 @@
 
   fonts.packages = with pkgs; [
     iosevka-bin
-    (nerdfonts.override {fonts = ["IosevkaTerm"];})
+    nerd-fonts.iosevka-term
   ];
 
   services.nix-daemon.enable = true;

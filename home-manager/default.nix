@@ -50,8 +50,8 @@ in {
     # (github:bandithedoge/nixpkgs-firefox-darwin)
 
     # Desktop-CLI integrations
-    tridactyl-native
     terminal-notifier
+    tridactyl-native
 
     # CLI apps
     bat
