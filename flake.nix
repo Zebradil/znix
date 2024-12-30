@@ -76,7 +76,7 @@
     );
   in {
     darwinConfigurations = (
-      import ./hosts/darwin.nix {
+      import ./hosts/darwin {
         inherit
           determinate
           home-manager

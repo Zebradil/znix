@@ -28,6 +28,8 @@
   };
 
   darwinConfiguration = {...}: {
+    imports = [./yabai.nix];
+
     programs.zsh.enable = true;
 
     nixpkgs.hostPlatform = system;
@@ -35,9 +37,7 @@
     homebrew = {
       enable = true;
 
-      onActivation = {
-        autoUpdate = true;
-      };
+      onActivation.autoUpdate = true;
       brews = ["displayplacer"];
       casks = [
         # "firefox"
@@ -96,7 +96,7 @@ in {
   ${host} = nix-darwin.lib.darwinSystem {
     modules = [
       determinate.darwinModules.default
-      (import ./shared.nix {inherit pkgs user;})
+      (import ../shared.nix {inherit pkgs user;})
       darwinConfiguration
       home-manager.darwinModules.home-manager
       userConfiguration

@@ -42,7 +42,6 @@ in {
     keepassxc
     skhd
     slack
-    yabai
     youtube-music
     zoom-us
     #_1password-gui # doesn't work when installed outside of /Applications
