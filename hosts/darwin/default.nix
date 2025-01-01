@@ -45,6 +45,7 @@
         "flameshot"
         "notunes"
         "orbstack"
+        "orcaslicer"
       ];
     };
 
