@@ -3,7 +3,7 @@
     enable = true;
     config = {
       debug_output = "on";
-      external_bar = "off:40:0";
+      external_bar = "all:0:0";
       menubar_opacity = 1.0;
       mouse_follows_focus = "on";
       focus_follows_mouse = "autofocus";
@@ -38,6 +38,7 @@
       yabai -m rule --add app="^System Preferences$" manage=off
       yabai -m rule --add title="Preferences$"       manage=off
       yabai -m rule --add title="Settings$"          manage=off
+      yabai -m rule --add title="Archive Utility"    manage=off
 
       # workspace management
       yabai -m space 1  --label www
