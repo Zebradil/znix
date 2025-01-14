@@ -86,6 +86,7 @@ in {
     kubernetes-helm
     moreutils
     myks
+    nmap
     ncdu
     rage
     rancher
