@@ -42,6 +42,7 @@ in {
     keepassxc
     skhd
     slack
+    utm
     youtube-music
     zoom-us
     #_1password-gui # doesn't work when installed outside of /Applications
