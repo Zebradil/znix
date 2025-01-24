@@ -81,6 +81,7 @@ in {
     go-task
     goreleaser
     inetutils
+    ipcalc
     jq
     just
     kubectl
