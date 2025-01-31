@@ -42,6 +42,7 @@
     # zprof.enable = true;
 
     shellAliases = {
+      ndr = "nix-direnv-reload";
       tf = "terraform";
     };
   };
