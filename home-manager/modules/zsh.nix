@@ -1,4 +1,5 @@
-{...}: {
+{ ... }:
+{
   programs.zsh = {
     enable = true;
     completionInit = "autoload -Uz compinit && compinit -C";

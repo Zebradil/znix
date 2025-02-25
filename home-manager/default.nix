@@ -1,21 +1,14 @@
 {
   gke-kubeconfiger,
-  mac-app-util,
   nix-index-database,
   pkgs,
   user,
-}: let
-  xdgHome = "/Users/${user}";
-  xdg = {
-    enable = true;
-    cacheHome = "${xdgHome}/.cache";
-    configHome = "${xdgHome}/.config";
-    dataHome = "${xdgHome}/.local/share";
-    stateHome = "${xdgHome}/.local/state";
-  };
-in {
+}:
+let
+  xdgHome = if pkgs.stdenv.isDarwin then "/Users/${user}" else "/home/${user}";
+in
+{
   imports = [
-    mac-app-util.homeManagerModules.default
     nix-index-database.hmModules.nix-index
     ./modules/google-cloud-sdk.nix
     ./modules/neovim.nix
@@ -24,7 +17,16 @@ in {
     ./modules/zsh.nix
   ];
 
-  xdg = xdg;
+  home.username = user;
+  home.homeDirectory = xdgHome;
+
+  xdg = {
+    enable = true;
+    cacheHome = "${xdgHome}/.cache";
+    configHome = "${xdgHome}/.config";
+    dataHome = "${xdgHome}/.local/share";
+    stateHome = "${xdgHome}/.local/state";
+  };
 
   nixpkgs = {
     config.allowUnfree = true;
@@ -38,19 +40,12 @@ in {
   home.packages = with pkgs; [
     # Desktop apps
     alacritty
-    iterm2
     keepassxc
-    skhd
     slack
-    utm
     youtube-music
     zoom-us
-    #_1password-gui # doesn't work when installed outside of /Applications
-    #firefox-bin    # 1password extensions doesn't work if FF is installed outside of /Applications
-    # (github:bandithedoge/nixpkgs-firefox-darwin)
 
     # Desktop-CLI integrations
-    terminal-notifier
     tridactyl-native
 
     # CLI apps
@@ -65,7 +60,6 @@ in {
 
     #CLI tools
     bashInteractive
-    chezmoi
     coreutils
     curl
     direnv
@@ -80,6 +74,7 @@ in {
     gnused
     go-task
     goreleaser
+    home-manager
     inetutils
     ipcalc
     jq

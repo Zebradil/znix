@@ -2,11 +2,12 @@
   pkgs,
   user,
   ...
-}: {
+}:
+{
   nix.settings.experimental-features = "nix-command flakes";
 
   # Allow the user to use substitutes
-  nix.settings.trusted-users = [user];
+  nix.settings.trusted-users = [ user ];
 
   fonts.packages = with pkgs; [
     iosevka-bin

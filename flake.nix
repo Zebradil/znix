@@ -45,51 +45,75 @@
     mac-app-util.url = "github:hraban/mac-app-util";
   };
 
-  outputs = {
-    determinate,
-    flake-utils,
-    gke-kubeconfiger,
-    home-manager,
-    homebrew-bundle,
-    homebrew-cask,
-    homebrew-core,
-    mac-app-util,
-    nix-darwin,
-    nix-homebrew,
-    nix-index-database,
-    nixpkgs,
-    self,
-  }: let
-    home-manager-user-configuration = {
-      pkgs,
-      user,
-    }: (
-      import ./home-manager {
-        inherit
-          gke-kubeconfiger
-          mac-app-util
-          nix-index-database
-          pkgs
-          user
-          ;
-      }
-    );
-  in {
-    darwinConfigurations = (
-      import ./hosts/darwin {
-        inherit
-          determinate
-          home-manager
-          home-manager-user-configuration
-          homebrew-bundle
-          homebrew-cask
-          homebrew-core
-          nix-darwin
-          nix-homebrew
-          nixpkgs
-          self
-          ;
-      }
-    );
-  };
+  outputs =
+    {
+      determinate,
+      flake-utils,
+      gke-kubeconfiger,
+      home-manager,
+      homebrew-bundle,
+      homebrew-cask,
+      homebrew-core,
+      mac-app-util,
+      nix-darwin,
+      nix-homebrew,
+      nix-index-database,
+      nixpkgs,
+      self,
+    }:
+    let
+      home-manager-user-configuration =
+        {
+          pkgs,
+          user,
+        }:
+        (import ./home-manager {
+          inherit
+            gke-kubeconfiger
+            nix-index-database
+            pkgs
+            user
+            ;
+        });
+    in
+    {
+      darwinConfigurations = (
+        import ./hosts/darwin {
+          inherit
+            determinate
+            home-manager
+            home-manager-user-configuration
+            homebrew-bundle
+            homebrew-cask
+            homebrew-core
+            nix-darwin
+            nix-homebrew
+            nixpkgs
+            self
+            ;
+        }
+      );
+
+      homeConfigurations =
+        let
+          user = "zebradil";
+          pkgs = import nixpkgs {
+            system = "x86_64-linux";
+            config.allowUnfree = true;
+          };
+        in
+        {
+          ${user} = home-manager.lib.homeManagerConfiguration {
+            inherit pkgs;
+            modules = [
+              (home-manager-user-configuration {
+                inherit
+                  pkgs
+                  user
+                  ;
+              })
+            ];
+          };
+        };
+    };
 }
