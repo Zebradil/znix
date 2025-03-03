@@ -14,8 +14,6 @@
     nerd-fonts.iosevka-term
   ];
 
-  services.nix-daemon.enable = true;
-
   # TODO: configure gpg integrations
   # programs.gnupg.agent.enable = true;
 }

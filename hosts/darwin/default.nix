@@ -27,13 +27,16 @@ let
         name = user;
         home = "/Users/${user}";
       };
-      home-manager.users.${user} = home-manager-user-configuration { inherit pkgs user; } // {
-        home.packages = with pkgs; [
-          iterm2
-          terminal-notifier
-          skhd
-        ];
-      };
+      home-manager.users.${user} = nixpkgs.lib.mkMerge [
+        (home-manager-user-configuration { inherit pkgs user; })
+        {
+          home.packages = with pkgs; [
+            iterm2
+            terminal-notifier
+            skhd
+          ];
+        }
+      ];
     };
 
   darwinConfiguration =
@@ -60,7 +63,7 @@ let
         ];
       };
 
-      security.pam.enableSudoTouchIdAuth = true;
+      security.pam.services.sudo_local.touchIdAuth = true;
 
       system.defaults.dock.autohide = true;
       system.defaults.dock.mru-spaces = false;
