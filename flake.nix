@@ -16,8 +16,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/0.1";
-
     nix-index-database = {
       url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -47,7 +45,6 @@
 
   outputs =
     {
-      determinate,
       flake-utils,
       gke-kubeconfiger,
       home-manager,
@@ -80,7 +77,6 @@
       darwinConfigurations = (
         import ./hosts/darwin {
           inherit
-            determinate
             home-manager
             home-manager-user-configuration
             homebrew-bundle

@@ -1,5 +1,4 @@
 {
-  determinate,
   home-manager,
   home-manager-user-configuration,
   homebrew-bundle,
@@ -46,6 +45,7 @@ let
 
       programs.zsh.enable = true;
 
+      nix.enable = false;
       nixpkgs.hostPlatform = system;
 
       homebrew = {
@@ -111,7 +111,6 @@ in
 {
   ${host} = nix-darwin.lib.darwinSystem {
     modules = [
-      determinate.darwinModules.default
       (import ../shared.nix { inherit pkgs user; })
       darwinConfiguration
       home-manager.darwinModules.home-manager
