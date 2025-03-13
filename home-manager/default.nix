@@ -52,6 +52,7 @@ in
     bat
     btop
     delta
+    htop
     k9s
     lazygit
     tailscale
