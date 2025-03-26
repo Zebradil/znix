@@ -67,6 +67,7 @@ in
     duf
     eza
     fd
+    formatjson5
     fzf
     gh
     ghorg
