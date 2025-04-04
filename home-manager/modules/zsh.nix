@@ -5,7 +5,6 @@
     completionInit = "autoload -Uz compinit && compinit -C";
     dotDir = ".zsh";
     envExtra = ''
-      export BAT_THEME=OneHalfDark
       export EDITOR=nv
       export LANG=en_US.UTF-8
       export LC_ALL=en_US.UTF-8
