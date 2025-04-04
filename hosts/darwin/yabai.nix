@@ -53,12 +53,17 @@
       yabai -m rule --add app="Firefox" space=www
 
       yabai -m rule --add app="iTerm2" space=code
+      yabai -m rule --add app="^Ghostty$" space=code
 
       yabai -m rule --add app="Slack" space=chat
 
       yabai -m rule --add app="YouTube Music" space=media
 
       yabai -m rule --add app="Personal Firefox" space=personal
+
+      # workarounds
+      yabai -m signal --add app='^Ghostty$' event=window_created action='yabai -m space --layout bsp'
+      yabai -m signal --add app='^Ghostty$' event=window_destroyed action='yabai -m space --layout bsp'
     '';
   };
 }
