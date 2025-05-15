@@ -73,6 +73,7 @@ in
     ghorg
     git
     gke-kubeconfiger
+    gnumake
     gnused
     go-task
     goreleaser
