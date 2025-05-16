@@ -113,6 +113,10 @@ if lib::check_commands fzf rg bat; then
       | fzf -d ':' --ansi --no-sort --preview-window 'up,70%,+{2}/2' \
       --preview 'bat --terminal-width=$FZF_PREVIEW_COLUMNS --style=numbers --color=always --highlight-line {2} {1}'
   )
+
+  function frgn() (
+    nv $(frg "$@" | awk -F: '{print "\"" $1 "\"" " +" $2}')
+  )
 fi
 
 if lib::check_commands alacritty-colorscheme fzf exa bat; then
