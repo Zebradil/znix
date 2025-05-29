@@ -26,7 +26,8 @@
       plugins = [
         "hcgraf/zsh-sudo"
         "jeffreytse/zsh-vi-mode"
-        "marzocchi/zsh-notify"
+        # "marzocchi/zsh-notify"
+        "MichaelAquilina/zsh-auto-notify"
         "zchee/zsh-completions"
       ];
     };
