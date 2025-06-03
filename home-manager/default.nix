@@ -82,6 +82,7 @@ in
     ipcalc
     jq
     just
+    krew
     kubectl
     kubernetes-helm
     moreutils
