@@ -115,7 +115,8 @@ if lib::check_commands fzf rg bat; then
   )
 
   function frgn() (
-    nv $(frg "$@" | awk -F: '{print "\"" $1 "\"" " +" $2}')
+    IFS=: found=($(frg "$@"))
+    nv "${found[1]}" "+${found[2]}"
   )
 fi
 
