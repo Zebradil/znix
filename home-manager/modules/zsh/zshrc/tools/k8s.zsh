@@ -52,13 +52,24 @@ function z:k8s:context:switch-k9s() {
 function z:k8s:contexts:do-parallel() {
   if (( $# < 2 )); then
     log::error "Too few arguments"
-    log::info "Usage: z:k8s:contexts:do-parallel <suffix> <command> [args...]"
+    log::info "Usage: ${funcstack[1]} <file suffix> <command> [args...]"
     return 1
   fi
-  local suffix=$1
-  shift
+  z:k8s:contexts:do-parallel-filter ".*" "$1" "${@:2}"
+}
+
+
+function z:k8s:contexts:do-parallel-filter() {
+  if (( $# < 3 )); then
+    log::error "Too few arguments"
+    log::info "Usage: ${funcstack[1]} <rg pattern> <file suffix> <command> [args...]"
+    return 1
+  fi
+  local rg_pattern=$1
+  local suffix=$2
+  shift 2
   local worked=0
-  for ctx in $(kubectl config get-contexts -oname); do
+  for ctx in $(kubectl config get-contexts -oname | rg "$rg_pattern"); do
     worked=1
     (
       set -euo pipefail
