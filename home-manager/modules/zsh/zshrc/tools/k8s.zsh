@@ -49,10 +49,10 @@ function z:k8s:context:switch-k9s() {
   k9s
 }
 
-function z:k8s:contexts:do-parralel() {
+function z:k8s:contexts:do-parallel() {
   if (( $# < 2 )); then
     log::error "Too few arguments"
-    log::info "Usage: z:k8s:contexts:do-parralel <suffix> <command> [args...]"
+    log::info "Usage: z:k8s:contexts:do-parallel <suffix> <command> [args...]"
     return 1
   fi
   local suffix=$1
