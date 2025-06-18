@@ -48,6 +48,11 @@ let
       nix.enable = false;
       nixpkgs.hostPlatform = system;
 
+      environment.etc."nix/nix.custom.conf".text = ''
+        trusted-users = ${user}
+        lazy-trees = true
+      '';
+
       homebrew = {
         enable = true;
 
