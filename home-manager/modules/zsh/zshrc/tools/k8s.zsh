@@ -95,3 +95,15 @@ alias kga="kubectl get -A"
 
 alias kc=z:k8s:context:switch
 alias kk=z:k8s:context:switch-k9s
+
+function _z:k8s:contexts:list() {
+  local contexts
+  contexts=($(kubectl config get-contexts -o name | sort -u))
+  if [[ -n $contexts ]]; then
+    _describe -t contexts "Kubernetes contexts" contexts
+  else
+    _message "No Kubernetes contexts found"
+  fi
+}
+
+compdef _z:k8s:contexts:list z:k8s:context:switch z:k8s:context:switch-k9s
