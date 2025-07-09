@@ -2,6 +2,11 @@
 # | Kubernetes configuration |
 # +--------------------------+
 
+if lib::check_commands krew; then
+  export KREW_ROOT="${XDG_DATA_HOME:?}/krew"
+  path+=("${KREW_ROOT:?}/bin")
+fi
+
 function z:k8s:kubeconfig:list-files() {
   echo ~/.kube/*clusters/*.y?ml(N)
 }
