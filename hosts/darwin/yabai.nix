@@ -1,7 +1,7 @@
 { ... }:
 {
   services.yabai = {
-    enable = true;
+    enable = false;
     config = {
       auto_balance = "off";
       bottom_padding = 0;
@@ -64,6 +64,8 @@
       # workarounds
       yabai -m signal --add app='^Ghostty$' event=window_created action='yabai -m space --layout bsp'
       yabai -m signal --add app='^Ghostty$' event=window_destroyed action='yabai -m space --layout bsp'
+
+      yabai -m rule --add app='^Zoom.*' manage=off
     '';
   };
 }
