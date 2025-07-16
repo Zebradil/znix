@@ -1,4 +1,4 @@
-{ ... }:
+{ lib, ... }:
 {
   programs.zsh = {
     enable = true;
@@ -16,11 +16,13 @@
       export ZVM_INIT_MODE=sourcing
       export STARSHIP_CONFIG=$XDG_CONFIG_HOME/starship.toml
     '';
-    initExtra = builtins.readFile ./zsh/zshrc.zsh;
-    initExtraBeforeCompInit = ''
-      zstyle ':completion:*' completer _complete _ignored _approximate
-      zstyle ':completion:*' matcher-list "" 'm:{a-z}={A-Za-z}' 'l:|=* r:|=*' 'r:|[._-]=* r:|=*'
-    '';
+    initContent = lib.mkMerge [
+      (lib.mkOrder 550 ''
+        zstyle ':completion:*' completer _complete _ignored _approximate
+        zstyle ':completion:*' matcher-list "" 'm:{a-z}={A-Za-z}' 'l:|=* r:|=*' 'r:|[._-]=* r:|=*'
+      '')
+      (builtins.readFile ./zsh/zshrc.zsh)
+    ];
     antidote = {
       enable = true;
       plugins = [
