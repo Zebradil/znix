@@ -9,7 +9,7 @@ let
 in
 {
   imports = [
-    nix-index-database.hmModules.nix-index
+    nix-index-database.homeModules.nix-index
     ./modules/google-cloud-sdk.nix
     ./modules/neovim.nix
     ./modules/starship.nix
