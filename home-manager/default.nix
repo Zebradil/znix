@@ -60,6 +60,7 @@ in
     translate-shell
 
     #CLI tools
+    _1password-cli
     bashInteractive
     coreutils
     curl
