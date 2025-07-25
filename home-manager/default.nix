@@ -53,6 +53,7 @@ in
     btop
     delta
     htop
+    jnv
     k9s
     lazygit
     tailscale

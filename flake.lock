@@ -133,11 +133,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1753294394,
-        "narHash": "sha256-1Dfgq09lHZ8AdYB2Deu/mYP1pMNpob8CgqT5Mzo44eI=",
+        "lastModified": 1753387274,
+        "narHash": "sha256-Y1hAI9h+9DLBbgKvZBsHaeptFIcRw4iC6ySPmzyqmlM=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "1fde6fb1be6cd5dc513dc1c287d69e4eb2de973e",
+        "rev": "a35f6b60430ff0c7803bd2a727df84c87569c167",
         "type": "github"
       },
       "original": {
@@ -165,11 +165,11 @@
     "homebrew-cask": {
       "flake": false,
       "locked": {
-        "lastModified": 1753353278,
-        "narHash": "sha256-zJUzR7c+kti3gajHOZ/+IxLtK2zfL6Gas4XsvKLy74s=",
+        "lastModified": 1753429813,
+        "narHash": "sha256-YWCavfMhnowmJpO4A971V7obKSYcFrwyZUN5rWGxUvE=",
         "owner": "homebrew",
         "repo": "homebrew-cask",
-        "rev": "b84635fe5debfadb7aaa9bc092f5a5509ebf4c38",
+        "rev": "d26d551fdeee8ecc2a79da573061ebd5e49d0da4",
         "type": "github"
       },
       "original": {
@@ -181,11 +181,11 @@
     "homebrew-core": {
       "flake": false,
       "locked": {
-        "lastModified": 1753358548,
-        "narHash": "sha256-AxY2jAd+us+VFz4ep456ydD7ppnU8z8QtXyO7uXdwG4=",
+        "lastModified": 1753432630,
+        "narHash": "sha256-w6Ry3Qn+7+n8i/JyOqplgVrc8DrcTRpqeUULDrdDZr8=",
         "owner": "homebrew",
         "repo": "homebrew-core",
-        "rev": "47a74ca9443a62df138deff095ef92b428019913",
+        "rev": "ef01932fa6cb6846f1d18b4cbf5895f709940424",
         "type": "github"
       },
       "original": {
@@ -225,13 +225,14 @@
       "locked": {
         "lastModified": 1751313918,
         "narHash": "sha256-HsJM3XLa43WpG+665aGEh8iS8AfEwOIQWk3Mke3e7nk=",
-        "owner": "LnL7",
+        "owner": "nix-darwin",
         "repo": "nix-darwin",
         "rev": "e04a388232d9a6ba56967ce5b53a8a6f713cdfcf",
         "type": "github"
       },
       "original": {
-        "owner": "LnL7",
+        "owner": "nix-darwin",
+        "ref": "master",
         "repo": "nix-darwin",
         "type": "github"
       }
