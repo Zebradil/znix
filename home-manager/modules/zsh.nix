@@ -1,9 +1,9 @@
-{ lib, ... }:
+{ lib, config, ... }:
 {
   programs.zsh = {
     enable = true;
     completionInit = "autoload -Uz compinit && compinit -C";
-    dotDir = ".zsh";
+    dotDir = "${config.home.homeDirectory}/.zsh";
     envExtra = ''
       export EDITOR=nv
       export LANG=en_US.UTF-8
