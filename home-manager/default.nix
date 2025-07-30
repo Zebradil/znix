@@ -96,6 +96,7 @@ in
     ripgrep
     rsync
     skopeo
+    stern
     terraform
     velero
     vendir
