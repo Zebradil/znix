@@ -84,6 +84,8 @@ function z:k8s:contexts:do-parallel-filter() {
   done
   if (( worked == 0 )); then
     log::warn "No contexts found"
+  else
+    wait
   fi
 }
 
