@@ -109,6 +109,8 @@ in
     go
     gofumpt
 
+    python3
+
     cargo
     clippy
     rust-analyzer
