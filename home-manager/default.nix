@@ -112,10 +112,7 @@ in
 
     python3
 
-    cargo
-    clippy
-    rust-analyzer
-    rustfmt
+    rustup
 
     # shell
     zsh-completions
