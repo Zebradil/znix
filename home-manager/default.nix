@@ -42,7 +42,8 @@ in
     alacritty
     keepassxc
     slack
-    youtube-music
+    # Buggy, replaced by Edge PWA
+    #youtube-music
     zoom-us
 
     # Desktop-CLI integrations
@@ -60,7 +61,7 @@ in
     tmux
     translate-shell
 
-    #CLI tools
+    # CLI tools
     _1password-cli
     bashInteractive
     coreutils

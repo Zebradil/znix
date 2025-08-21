@@ -102,7 +102,7 @@ let
           "com.apple.scrollwheel.scaling" = -1;
         };
         "digital.twisted.noTunes" = {
-          replacement = "/Users/${user}/Applications/Home Manager Trampolines/YouTube Music.app";
+          replacement = "/Users/${user}/Applications/Edge Apps.localized/YouTube Music.app";
         };
       };
 
