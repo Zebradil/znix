@@ -67,6 +67,7 @@ in
     coreutils
     curl
     direnv
+    dive
     duf
     eza
     fd
@@ -94,6 +95,7 @@ in
     ncdu
     rage
     rancher
+    repgrep
     ripgrep
     rsync
     skopeo
