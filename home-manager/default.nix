@@ -41,10 +41,10 @@ in
     # Desktop apps
     alacritty
     keepassxc
-    slack
+    #slack
     # Buggy, replaced by Edge PWA
     #youtube-music
-    zoom-us
+    #zoom-us
 
     # Desktop-CLI integrations
     tridactyl-native
@@ -57,7 +57,7 @@ in
     jnv
     k9s
     lazygit
-    tailscale
+    #tailscale
     tmux
     translate-shell
 
