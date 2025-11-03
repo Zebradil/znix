@@ -68,4 +68,14 @@ if lib::check_commands fzf fd bat exa; then
   zle -N fzf-find-command-widget
   bindkey '\ex' fzf-find-command-widget
 
+  fzf-terraform-state-show() {
+    local address
+    address=$(
+      terraform state list \
+        | fzf --preview "terraform state show -no-color {} | ${FZF_TEXT_FILE_PREVIEW_CMD} -ltf"
+    ) && terraform state show "$address"
+  }
+
+  alias ftfs='fzf-terraform-state-show'
+
 fi
