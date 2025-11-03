@@ -30,6 +30,10 @@ function z:k8s:context:generate-kubeconfig() (
   if [[ $ctx == "*" ]]; then
     return 0
   fi
+  if ! kubectl config get-contexts "$ctx" &>/dev/null; then
+    log::error "Context '$ctx' does not exist"
+    return 1
+  fi
   mkdir -p "$context_override_dir"
   local ctx_override_file="$context_override_dir/$prefix$ctx.yaml"
   if [[ ! -f $ctx_override_file ]]; then
@@ -50,8 +54,7 @@ function z:k8s:context:switch() {
 }
 
 function z:k8s:context:switch-k9s() {
-  z:k8s:context:switch $1
-  k9s
+  z:k8s:context:switch $1 && k9s
 }
 
 function z:k8s:contexts:do-parallel() {
