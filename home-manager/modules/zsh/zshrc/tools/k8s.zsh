@@ -15,6 +15,10 @@ function z:k8s:kubeconfig:init() {
   export KUBECONFIG="${(j.:.)${(s: :)$(z:k8s:kubeconfig:list-files)}}"
 }
 
+# Generate a kubeconfig file that overrides the current context to the specified one.
+# If no context is specified, prompt the user to select one via fzf.
+# Returns the new KUBECONFIG value that includes the override file.
+# If the specified context is already the current context, returns exit code 100 and no output.
 function z:k8s:context:generate-kubeconfig() (
   set -euo pipefail
   local ctx=${1:-}
@@ -27,8 +31,9 @@ function z:k8s:context:generate-kubeconfig() (
       | awk '{print $1}' \
       | read -r ctx _
   fi
+  # "*" means that the desired context is already selected
   if [[ $ctx == "*" ]]; then
-    return 0
+    return 100
   fi
   if ! kubectl config get-contexts "$ctx" &>/dev/null; then
     log::error "Context '$ctx' does not exist"
@@ -43,14 +48,15 @@ function z:k8s:context:generate-kubeconfig() (
 )
 
 function z:k8s:context:switch() {
-  new_kubeconfig=$(z:k8s:context:generate-kubeconfig $1)
-  if [[ $? -ne 0 ]]; then
-    return 1
-  fi
-  if [[ -z $new_kubeconfig ]]; then
-    return 1
-  fi
-  export KUBECONFIG="$new_kubeconfig"
+  local context="$1"
+  local new_kubeconfig
+  new_kubeconfig="$(z:k8s:context:generate-kubeconfig "$context")"
+  ret=$?
+  case $ret in
+    100) log::info "Already on context '$context'" ; return 0 ;;
+    0) export KUBECONFIG="$new_kubeconfig" ;;
+    *) log::error "Failed to switch context to '$context'"; return $ret ;;
+  esac
 }
 
 function z:k8s:context:switch-k9s() {
