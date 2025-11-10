@@ -2,7 +2,7 @@
   description = "My Darwin system + Home Manager flake";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/45d495d75a58c7dd896dfdfe3f6c2002b7ca64d5";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     flake-utils.url = "github:numtide/flake-utils";
 
