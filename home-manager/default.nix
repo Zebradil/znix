@@ -116,6 +116,8 @@ in
 
     rustup
 
+    uv
+
     # shell
     zsh-completions
   ];
