@@ -47,7 +47,7 @@ in
     jnv
     k9s
     lazygit
-    #tailscale
+    tailscale
     tmux
     translate-shell
 
