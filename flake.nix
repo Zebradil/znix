@@ -66,7 +66,6 @@
         }:
         (import ./home-manager {
           inherit
-            gke-kubeconfiger
             nix-index-database
             pkgs
             user

@@ -1,5 +1,4 @@
 {
-  gke-kubeconfiger,
   nix-index-database,
   pkgs,
   user,
@@ -26,15 +25,6 @@ in
     configHome = "${xdgHome}/.config";
     dataHome = "${xdgHome}/.local/share";
     stateHome = "${xdgHome}/.local/state";
-  };
-
-  nixpkgs = {
-    config.allowUnfree = true;
-    overlays = [
-      (final: _prev: {
-        gke-kubeconfiger = gke-kubeconfiger.defaultPackage.${final.system};
-      })
-    ];
   };
 
   home.packages = with pkgs; [

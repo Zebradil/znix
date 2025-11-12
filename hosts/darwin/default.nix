@@ -17,6 +17,11 @@ let
   pkgs = import nixpkgs {
     inherit system;
     config.allowUnfree = true;
+    overlays = [
+      (_final: _prev: {
+        gke-kubeconfiger = self.inputs.gke-kubeconfiger.packages.${system}.gke-kubeconfiger;
+      })
+    ];
   };
 
   userConfiguration =
