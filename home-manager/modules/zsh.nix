@@ -38,7 +38,9 @@
       extended = true;
       ignoreAllDups = true;
       ignoreSpace = true;
+      save = 100000;
       share = true;
+      size = 100000;
     };
     historySubstringSearch.enable = true;
     syntaxHighlighting.enable = true;
