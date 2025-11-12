@@ -35,9 +35,10 @@ if lib::check_commands tailscale; then
       if [[ -z $cluster_name ]]; then
         continue
       fi
-      export KUBECONFIG="$configs_dir/$cluster_name.yaml"
       log::info "  - $cluster_name"
+      export KUBECONFIG="$configs_dir/$cluster_name.yaml"
       tailscale configure kubeconfig "$cluster_name"
+      yq -i 'del(.current-context) | .contexts[0].name = "'"$cluster_name"'"' "$KUBECONFIG"
     done <<<"$clusters"
   )
 fi
