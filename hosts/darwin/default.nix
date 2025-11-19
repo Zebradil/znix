@@ -36,8 +36,9 @@ let
         {
           home.packages = with pkgs; [
             iterm2
-            terminal-notifier
+            monitorcontrol
             skhd
+            terminal-notifier
           ];
         }
       ];
