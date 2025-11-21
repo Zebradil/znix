@@ -1,0 +1,38 @@
+name: Regular Nix Flake Update
+
+on:
+  schedule:
+    # Run at midnight every day
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nix-flake-update
+  cancel-in-progress: true
+
+jobs:
+  update-and-build:
+    runs-on: macos-14
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v16
+
+      - name: Use Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Update flake.lock
+        run: nix flake update
+
+      - name: Build darwin configuration
+        run: nix build .#darwinConfigurations.trv4250.config.system.build.toplevel
+
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update flake.lock"
+          file_pattern: flake.lock
