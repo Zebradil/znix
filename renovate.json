@@ -1,4 +1,16 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:best-practices", "helpers:pinGitHubActionDigestsToSemver"]
+  "extends": [
+    "config:best-practices",
+    "helpers:pinGitHubActionDigestsToSemver"
+  ],
+  "packageRules": [
+    {
+      "description": "Group all GitHub Action updates into a single PR",
+      "matchManagers": ["github-actions"],
+      "groupName": "all GitHub Actions",
+      "groupSlug": "github-actions",
+      "addLabels": ["github-actions", "dependencies"]
+    }
+  ]
 }
