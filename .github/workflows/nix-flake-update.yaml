@@ -12,12 +12,12 @@ concurrency:
 
 jobs:
   update-and-build:
-    runs-on: macos-14
+    runs-on: macos-15
     permissions:
       contents: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v16
@@ -32,7 +32,7 @@ jobs:
         run: nix build .#darwinConfigurations.trv4250.config.system.build.toplevel
 
       - name: Commit and push changes
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@28e16e81777b558cc906c8750092100bbb34c5e3 # v7.0.0
         with:
           commit_message: "chore: update flake.lock"
           file_pattern: flake.lock
