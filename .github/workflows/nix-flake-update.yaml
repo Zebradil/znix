@@ -17,7 +17,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v16
@@ -32,7 +32,7 @@ jobs:
         run: nix build .#darwinConfigurations.trv4250.config.system.build.toplevel
 
       - name: Commit and push changes
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@b863ae1933cb653a53c021fe36dbb774e1fb9403 # v5
         with:
           commit_message: "chore: update flake.lock"
           file_pattern: flake.lock
