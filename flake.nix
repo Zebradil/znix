@@ -43,6 +43,15 @@
     mac-app-util.url = "github:hraban/mac-app-util";
   };
 
+  nixConfig = {
+    extra-substituters = [
+      "https://znix.zebradil.dev"
+    ];
+    extra-trusted-public-keys = [
+      "znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw="
+    ];
+  };
+
   outputs =
     {
       flake-utils,
