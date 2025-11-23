@@ -17,7 +17,7 @@ jobs:
       - name: Cache Nix store
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
-          path: /nix/store
+          path: ${{ runner.workspace }}/nix-store
           # TODO: Uncomment this when the hashFiles on MacOS works again
           # See https://github.com/actions/runner-images/issues/13341
           # key: store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
@@ -27,6 +27,10 @@ jobs:
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31.8.4
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            store = ${{ runner.workspace }}/nix-store
 
       - name: Check flake
         run: nix flake check
