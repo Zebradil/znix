@@ -19,14 +19,19 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@c5a866b6ab867e88becbed4467b93592bce69f8a # v21
-
-      - name: Use Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
         with:
-          use-flakehub: false
+          determinate: false
+
+      - name: Set up Attic
+        run: |
+          nix run github:zhaofengli/attic -- login homelab '${{ secrets.ATTIC_ENDPOINT }}' '${{ secrets.ATTIC_TOKEN }}'
+          nix run github:zhaofengli/attic -- use znix
 
       - name: Check flake
         run: nix flake check
 
       - name: Build darwin configuration
         run: nix build .#darwinConfigurations.trv4250.config.system.build.toplevel
+
+      - name: Push darwin configuration
+        run: nix run github:zhaofengli/attic -- push znix ./result
