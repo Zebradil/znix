@@ -14,14 +14,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      - name: List directory
-        run: ls -la
-
       - name: Cache Nix store
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: /nix/store
-          key: store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+          # TODO: Uncomment this when the hashFiles on MacOS works again
+          # See https://github.com/actions/runner-images/issues/13341
+          # key: store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+          key: store-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
             store-${{ runner.os }}-
 
