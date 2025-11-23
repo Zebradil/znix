@@ -1,9 +1,6 @@
 name: Test Flake
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
 
 concurrency:
