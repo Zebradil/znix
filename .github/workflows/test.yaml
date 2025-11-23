@@ -1,4 +1,4 @@
-name: CI
+name: Test Flake
 
 on:
   push:
@@ -18,12 +18,7 @@ jobs:
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@c5a866b6ab867e88becbed4467b93592bce69f8a # v21
-
-      - name: Use Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
-        with:
-          use-flakehub: false
+        uses: cachix/install-nix-action@v31.8.4
 
       - name: Check flake
         run: nix flake check

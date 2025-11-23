@@ -20,12 +20,15 @@ jobs:
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@c5a866b6ab867e88becbed4467b93592bce69f8a # v21
-
-      - name: Use Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
+        uses: cachix/install-nix-action@v31.8.4
         with:
-          use-flakehub: false
+          extra_nix_config: |
+            secret-key-files = ${{ github.workspace }}/cache-priv-key.pem
+
+      - name: Configure Nix for signing
+        run: |
+          echo '${{ secrets.CACHE_PRIVATE_KEY }}' > cache-priv-key.pem
+          chmod 600 cache-priv-key.pem
 
       - name: Update flake.lock
         run: nix flake update
@@ -38,3 +41,10 @@ jobs:
         with:
           commit_message: 'chore: update flake.lock'
           file_pattern: flake.lock
+
+      - name: Publish to binary cache
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          nix copy --to 's3://${{ secrets.CACHE_URL }}' .#darwinConfigurations.trv4250.config.system.build.toplevel
