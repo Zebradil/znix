@@ -13,6 +13,12 @@ concurrency:
   group: nix-flake-update
   cancel-in-progress: true
 
+env:
+  NIX_CACHE_PATH: ${{ github.workspace }}/nix-cache.bin
+  NIX_CACHE_URL: file://${{ github.workspace }}/nix-cache.bin?compression=zstd&parallel-compression=true
+  DARWIN_CONFIG: .#darwinConfigurations.trv4250.config.system.build.toplevel
+  CACHE_KEY_FILE: cache-priv-key.pem
+
 jobs:
   update-and-build:
     runs-on: macos-15
@@ -22,39 +28,41 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      # FIXME: MacOS doesn't seem to support changing the nix store path.
-      # Configuring `store = ${{ runner.workspace }}/nix-store` in nix.conf leads to:
-      # error: building using a diverted store is not supported on this platform
-      # - name: Cache Nix store
-      #   uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-      #   with:
-      #     path: ${{ runner.workspace }}/nix-store
-      #     # TODO: Uncomment this when the hashFiles on MacOS works again
-      #     # See https://github.com/actions/runner-images/issues/13341
-      #     # key: store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
-      #     key: store-${{ runner.os }}-${{ github.sha }}
-      #     restore-keys: |
-      #       store-${{ runner.os }}-
+      - name: Cache Nix sources
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/nix
+          key: nix-cache-${{ hashFiles('flake.lock') }}
+
+      - name: Cache Nix store
+        id: cache-nix-store
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: '${{ env.NIX_CACHE_PATH }}'
+          key: store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+          restore-keys: |
+            store-${{ runner.os }}-
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31.8.4
         with:
           extra_nix_config: |
             accept-flake-config = true
-            secret-key-files = ${{ github.workspace }}/cache-priv-key.pem
             download-buffer-size = 524288000
+            secret-key-files = ${{ github.workspace }}/${{ env.CACHE_KEY_FILE }}
+            substituters = file://${{ github.workspace }}/nix-cache.bin?trusted=1 https://cache.nixos.org
 
       - name: Configure Nix for signing
         run: |
-          echo '${{ secrets.CACHE_PRIVATE_KEY }}' > cache-priv-key.pem
-          chmod 600 cache-priv-key.pem
+          echo '${{ secrets.CACHE_PRIVATE_KEY }}' > '${{ env.CACHE_KEY_FILE }}'
+          chmod 600 '${{ env.CACHE_KEY_FILE }}'
 
       - name: Update flake.lock
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: nix flake update
 
       - name: Build darwin configuration
-        run: nix build .#darwinConfigurations.trv4250.config.system.build.toplevel
+        run: nix build '${{ env.DARWIN_CONFIG }}'
 
       - name: Commit and push changes
         uses: stefanzweifel/git-auto-commit-action@28e16e81777b558cc906c8750092100bbb34c5e3 # v7.0.0
@@ -62,13 +70,14 @@ jobs:
           commit_message: 'chore: update flake.lock'
           file_pattern: flake.lock
 
+      - name: Updated local binary cache
+        run: nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
+
       - name: Publish to binary cache
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: |
-          nix copy --to 's3://${{ secrets.CACHE_URL }}' .#darwinConfigurations.trv4250.config.system.build.toplevel
+          AWS_ACCESS_KEY_ID: '${{ secrets.AWS_ACCESS_KEY_ID }}'
+          AWS_SECRET_ACCESS_KEY: '${{ secrets.AWS_SECRET_ACCESS_KEY }}'
+        run: nix copy --to 's3://${{ secrets.CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
 
       - name: Show storage size
-        run: |
-          nix path-info --json --all | jq 'map(.narSize) | add'
+        run: nix path-info --json --all | jq 'map(.narSize) | add'
