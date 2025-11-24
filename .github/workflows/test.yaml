@@ -32,9 +32,6 @@ jobs:
         run: |
           cat > ${{ github.workspace }}/nix-post-build-hook.sh << 'EOF'
           #!/bin/sh
-          set -x
-          set -eu
-          set -f # disable globbing
           export IFS=' '
           echo "Uploading paths" $OUT_PATHS
           exec nix copy --to '${{ env.NIX_CACHE_URL }}' $OUT_PATHS
