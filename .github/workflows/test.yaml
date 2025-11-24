@@ -23,16 +23,19 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/nix
-          key: nix-cache-${{ hashFiles('flake.lock') }}
+          key: nix-cache-${{ hashFiles('flake.lock') }}-${{ github.sha }}
+          restore-keys: |
+            nix-cache-${{ hashFiles('flake.lock') }}-
+            nix-cache-
 
       - name: Cache Nix store
-        id: cache-nix-store
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: '${{ env.NIX_CACHE_PATH }}'
-          key: store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+          key: nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}
           restore-keys: |
-            store-${{ runner.os }}-
+            nix-store-${{ hashFiles('flake.lock') }}-
+            nix-store-${{ runner.os }}-
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31.8.4
