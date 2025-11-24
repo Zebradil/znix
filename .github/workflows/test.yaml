@@ -40,7 +40,7 @@ jobs:
           extra_nix_config: |
             accept-flake-config = true
             download-buffer-size = 524288000
-            substituters = file://${{ github.workspace }}/nix-cache.bin?trusted=1 https://cache.nixos.org
+            substituters = file://${{ github.workspace }}/nix-cache.bin?trusted=1&want-mass-query=1 https://cache.nixos.org
 
       - name: Check flake
         run: nix flake check

@@ -50,7 +50,7 @@ jobs:
             accept-flake-config = true
             download-buffer-size = 524288000
             secret-key-files = ${{ github.workspace }}/${{ env.CACHE_KEY_FILE }}
-            substituters = file://${{ github.workspace }}/nix-cache.bin?trusted=1 https://cache.nixos.org
+            substituters = file://${{ github.workspace }}/nix-cache.bin?trusted=1&want-mass-query=1 https://cache.nixos.org
 
       - name: Configure Nix for signing
         run: |
@@ -69,6 +69,10 @@ jobs:
         with:
           commit_message: 'chore: update flake.lock'
           file_pattern: flake.lock
+
+      - name: Set local binary cache permissions
+        run: |
+          sudo chown -R $(whoami) '${{ env.NIX_CACHE_PATH }}'
 
       - name: Updated local binary cache
         run: nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
