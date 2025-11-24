@@ -40,6 +40,7 @@ jobs:
         uses: cachix/install-nix-action@v31.8.4
         with:
           extra_nix_config: |
+            accept-flake-config = true
             secret-key-files = ${{ github.workspace }}/cache-priv-key.pem
 
       - name: Configure Nix for signing
