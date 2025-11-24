@@ -39,6 +39,12 @@ jobs:
 
       - name: Unpack local binary cache
         run: |
+          echo "--- NIX_CACHE_PATH contents ---"
+          ls -la '${{ env.NIX_CACHE_PATH }}'
+          echo "--- GitHub workspace contents ---"
+          ls -la '${{ github.workspace }}'
+          echo "--- Current directory contents ---"
+          ls -la
           if [ -f '${{ env.NIX_CACHE_PATH }}' ]; then
             echo "Restoring Nix store from cache..."
             nix copy --from '${{ env.NIX_CACHE_URL }}' --all
