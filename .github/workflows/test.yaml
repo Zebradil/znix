@@ -19,6 +19,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
+      - name: Cache Nix sources
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/nix
+          key: nix-cache-${{ hashFiles('flake.lock') }}
+
       - name: Cache Nix store
         id: cache-nix-store
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -45,7 +51,7 @@ jobs:
             accept-flake-config = true
             download-buffer-size = 524288000
             substituters = file://${{ github.workspace }}/nix-cache.bin?trusted=1 https://cache.nixos.org
-            post-build-hook = ${{ github.workspace }}/nix-post-build-hook.sh
+          # post-build-hook = ${{ github.workspace }}/nix-post-build-hook.sh
 
       - name: Check flake
         run: nix flake check
