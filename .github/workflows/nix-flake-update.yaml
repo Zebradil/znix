@@ -28,6 +28,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
+      - name: Cache Nix sources
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/nix
+          key: nix-cache-${{ hashFiles('flake.lock') }}
+
       - name: Cache Nix store
         id: cache-nix-store
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -42,18 +48,14 @@ jobs:
         with:
           extra_nix_config: |
             accept-flake-config = true
-            secret-key-files = ${{ github.workspace }}/${{ env.CACHE_KEY_FILE }}
             download-buffer-size = 524288000
+            secret-key-files = ${{ github.workspace }}/${{ env.CACHE_KEY_FILE }}
+            substituters = file://${{ github.workspace }}/nix-cache.bin?trusted=1 https://cache.nixos.org
 
       - name: Configure Nix for signing
         run: |
           echo '${{ secrets.CACHE_PRIVATE_KEY }}' > '${{ env.CACHE_KEY_FILE }}'
           chmod 600 '${{ env.CACHE_KEY_FILE }}'
-
-      - name: Unpack local binary cache
-        if: steps.cache-nix-store.outputs.cache-hit == 'true'
-        run: |
-          nix copy --from '${{ env.NIX_CACHE_URL }}' --all
 
       - name: Update flake.lock
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -69,16 +71,13 @@ jobs:
           file_pattern: flake.lock
 
       - name: Updated local binary cache
-        run: |
-          nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
+        run: nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
 
       - name: Publish to binary cache
         env:
           AWS_ACCESS_KEY_ID: '${{ secrets.AWS_ACCESS_KEY_ID }}'
           AWS_SECRET_ACCESS_KEY: '${{ secrets.AWS_SECRET_ACCESS_KEY }}'
-        run: |
-          nix copy --to 's3://${{ secrets.CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
+        run: nix copy --to 's3://${{ secrets.CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
 
       - name: Show storage size
-        run: |
-          nix path-info --json --all | jq 'map(.narSize) | add'
+        run: nix path-info --json --all | jq 'map(.narSize) | add'
