@@ -41,7 +41,7 @@ jobs:
       - name: Unpack local binary cache
         if: steps.cache-nix-store.outputs.cache-hit == 'true'
         run: |
-          nix copy --from '${{ env.NIX_CACHE_URL }}' --all
+          nix copy --from '${{ env.NIX_CACHE_URL }}' --all || true
 
       - name: Build darwin configuration
         run: nix build '${{ env.DARWIN_CONFIG }}'
