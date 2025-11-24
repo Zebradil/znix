@@ -7,6 +7,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  NIX_CACHE_PATH: nix-cache.bin
+  NIX_CACHE_URL: file://./nix-cache.bin?compression=zstd&parallel-compression=true
+  DARWIN_CONFIG: .#darwinConfigurations.trv4250.config.system.build.toplevel
+
 jobs:
   check-and-build:
     runs-on: macos-15
@@ -17,7 +22,7 @@ jobs:
       - name: Cache Nix store
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
-          path: nix-cache.bin
+          path: '${{ env.NIX_CACHE_PATH }}'
           key: store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
           restore-keys: |
             store-${{ runner.os }}-
@@ -34,11 +39,16 @@ jobs:
 
       - name: Unpack local binary cache
         run: |
-          nix copy --from 'file://./nix-cache.bin?compression=zstd&parallel-compression=true' --all
+          if [ -f '${{ env.NIX_CACHE_PATH }}' ]; then
+            echo "Restoring Nix store from cache..."
+            nix copy --from '${{ env.NIX_CACHE_URL }}' --all
+          else
+            echo "No Nix store cache found."
+          fi
 
       - name: Build darwin configuration
-        run: nix build .#darwinConfigurations.trv4250.config.system.build.toplevel
+        run: nix build '${{ env.DARWIN_CONFIG }}'
 
       - name: Updated local binary cache
         run: |
-          nix copy --to 'file://./nix-cache.bin?compression=zstd&parallel-compression=true' .#darwinConfigurations.trv4250.config.system.build.toplevel
+          nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'

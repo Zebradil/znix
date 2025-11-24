@@ -13,6 +13,12 @@ concurrency:
   group: nix-flake-update
   cancel-in-progress: true
 
+env:
+  NIX_CACHE_PATH: nix-cache.bin
+  NIX_CACHE_URL: file://./nix-cache.bin?compression=zstd&parallel-compression=true
+  DARWIN_CONFIG: .#darwinConfigurations.trv4250.config.system.build.toplevel
+  CACHE_KEY_FILE: cache-priv-key.pem
+
 jobs:
   update-and-build:
     runs-on: macos-15
@@ -25,7 +31,7 @@ jobs:
       - name: Cache Nix store
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
-          path: nix-cache.bin
+          path: '${{ env.NIX_CACHE_PATH }}'
           key: store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
           restore-keys: |
             store-${{ runner.os }}-
@@ -35,24 +41,24 @@ jobs:
         with:
           extra_nix_config: |
             accept-flake-config = true
-            secret-key-files = ${{ github.workspace }}/cache-priv-key.pem
+            secret-key-files = ${{ github.workspace }}/${{ env.CACHE_KEY_FILE }}
             download-buffer-size = 524288000
 
       - name: Configure Nix for signing
         run: |
-          echo '${{ secrets.CACHE_PRIVATE_KEY }}' > cache-priv-key.pem
-          chmod 600 cache-priv-key.pem
+          echo '${{ secrets.CACHE_PRIVATE_KEY }}' > '${{ env.CACHE_KEY_FILE }}'
+          chmod 600 '${{ env.CACHE_KEY_FILE }}'
 
       - name: Unpack local binary cache
         run: |
-          nix copy --from 'file://./nix-cache.bin?compression=zstd&parallel-compression=true' --all
+          nix copy --from '${{ env.NIX_CACHE_URL }}' --all
 
       - name: Update flake.lock
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: nix flake update
 
       - name: Build darwin configuration
-        run: nix build .#darwinConfigurations.trv4250.config.system.build.toplevel
+        run: nix build '${{ env.DARWIN_CONFIG }}'
 
       - name: Commit and push changes
         uses: stefanzweifel/git-auto-commit-action@28e16e81777b558cc906c8750092100bbb34c5e3 # v7.0.0
@@ -62,14 +68,14 @@ jobs:
 
       - name: Updated local binary cache
         run: |
-          nix copy --to 'file://./nix-cache.bin?compression=zstd&parallel-compression=true' .#darwinConfigurations.trv4250.config.system.build.toplevel
+          nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
 
       - name: Publish to binary cache
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ACCESS_KEY_ID: '${{ secrets.AWS_ACCESS_KEY_ID }}'
+          AWS_SECRET_ACCESS_KEY: '${{ secrets.AWS_SECRET_ACCESS_KEY }}'
         run: |
-          nix copy --to 's3://${{ secrets.CACHE_URL }}' .#darwinConfigurations.trv4250.config.system.build.toplevel
+          nix copy --to 's3://${{ secrets.CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
 
       - name: Show storage size
         run: |
