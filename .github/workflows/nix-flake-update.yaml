@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NIX_CACHE_PATH: nix-cache.bin
+  NIX_CACHE_PATH: ${{ github.workspace }}/nix-cache.bin
   NIX_CACHE_URL: file://${{ github.workspace }}/nix-cache.bin?compression=zstd&parallel-compression=true
   DARWIN_CONFIG: .#darwinConfigurations.trv4250.config.system.build.toplevel
   CACHE_KEY_FILE: cache-priv-key.pem
