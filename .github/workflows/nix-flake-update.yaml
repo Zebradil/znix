@@ -71,4 +71,4 @@ jobs:
 
       - name: Show storage size
         run: |
-          nix path-info --json --all | jq 'map(.narSize) | add' | numfmt --to=iec-i
+          nix path-info --json --all | jq 'map(.narSize) | add'
