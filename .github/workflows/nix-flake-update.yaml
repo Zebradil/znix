@@ -10,7 +10,7 @@ on:
       - main
 
 concurrency:
-  group: nix-flake-update
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -27,21 +27,26 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          ssh-key: '${{ secrets.CI_PUSH_DEPLOY_KEY }}'
 
       - name: Cache Nix sources
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/nix
-          key: nix-cache-${{ hashFiles('flake.lock') }}
+          key: nix-cache-${{ hashFiles('flake.lock') }}-${{ github.sha }}
+          restore-keys: |
+            nix-cache-${{ hashFiles('flake.lock') }}-
+            nix-cache-
 
       - name: Cache Nix store
-        id: cache-nix-store
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: '${{ env.NIX_CACHE_PATH }}'
-          key: store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+          key: nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}
           restore-keys: |
-            store-${{ runner.os }}-
+            nix-store-${{ hashFiles('flake.lock') }}-
+            nix-store-${{ runner.os }}-
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31.8.4
@@ -50,7 +55,7 @@ jobs:
             accept-flake-config = true
             download-buffer-size = 524288000
             secret-key-files = ${{ github.workspace }}/${{ env.CACHE_KEY_FILE }}
-            substituters = file://${{ github.workspace }}/nix-cache.bin?trusted=1 https://cache.nixos.org
+            substituters = file://${{ github.workspace }}/nix-cache.bin?trusted=1&want-mass-query=1 https://cache.nixos.org
 
       - name: Configure Nix for signing
         run: |
@@ -67,8 +72,12 @@ jobs:
       - name: Commit and push changes
         uses: stefanzweifel/git-auto-commit-action@28e16e81777b558cc906c8750092100bbb34c5e3 # v7.0.0
         with:
-          commit_message: 'chore: update flake.lock'
+          commit_message: 'chore: update flake.lock [skip ci]'
           file_pattern: flake.lock
+
+      - name: Set local binary cache permissions
+        run: |
+          sudo chown -R $(whoami) '${{ env.NIX_CACHE_PATH }}'
 
       - name: Updated local binary cache
         run: nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
