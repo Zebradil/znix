@@ -34,16 +34,6 @@ jobs:
           restore-keys: |
             store-${{ runner.os }}-
 
-      - name: Setup post-build hook
-        run: |
-          cat > ${{ github.workspace }}/nix-post-build-hook.sh << 'EOF'
-          #!/bin/sh
-          export IFS=' '
-          echo "Uploading paths" $OUT_PATHS
-          exec nix copy --to '${{ env.NIX_CACHE_URL }}' $OUT_PATHS
-          EOF
-          chmod +x ${{ github.workspace }}/nix-post-build-hook.sh
-
       - name: Install Nix
         uses: cachix/install-nix-action@v31.8.4
         with:
@@ -51,7 +41,6 @@ jobs:
             accept-flake-config = true
             download-buffer-size = 524288000
             substituters = file://${{ github.workspace }}/nix-cache.bin?trusted=1 https://cache.nixos.org
-          # post-build-hook = ${{ github.workspace }}/nix-post-build-hook.sh
 
       - name: Check flake
         run: nix flake check
@@ -60,5 +49,4 @@ jobs:
         run: nix build '${{ env.DARWIN_CONFIG }}'
 
       - name: Updated local binary cache
-        run: |
-          nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
+        run: nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
