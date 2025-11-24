@@ -33,6 +33,7 @@ jobs:
         with:
           extra_nix_config: |
             accept-flake-config = true
+            download-buffer-size = 524288000
 
       - name: Check flake
         run: nix flake check
