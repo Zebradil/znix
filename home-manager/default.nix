@@ -79,6 +79,7 @@ in
     krew
     kubectl
     kubernetes-helm
+    mise
     moreutils
     myks
     nmap
