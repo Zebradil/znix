@@ -20,6 +20,7 @@ jobs:
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
       - name: Cache Nix store
+        id: cache-nix-store
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: '${{ env.NIX_CACHE_PATH }}'
@@ -38,19 +39,9 @@ jobs:
         run: nix flake check
 
       - name: Unpack local binary cache
+        if: steps.cache-nix-store.outputs.cache-hit == 'true'
         run: |
-          echo "--- NIX_CACHE_PATH contents ---"
-          ls -la '${{ env.NIX_CACHE_PATH }}'
-          echo "--- GitHub workspace contents ---"
-          ls -la '${{ github.workspace }}'
-          echo "--- Current directory contents ---"
-          ls -la
-          if [ -f '${{ env.NIX_CACHE_PATH }}' ]; then
-            echo "Restoring Nix store from cache..."
-            nix copy --from '${{ env.NIX_CACHE_URL }}' --all
-          else
-            echo "No Nix store cache found."
-          fi
+          nix copy --from '${{ env.NIX_CACHE_URL }}' --all
 
       - name: Build darwin configuration
         run: nix build '${{ env.DARWIN_CONFIG }}'
