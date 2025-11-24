@@ -11,6 +11,10 @@
       "groupName": "all GitHub Actions",
       "groupSlug": "github-actions",
       "addLabels": ["github-actions", "dependencies"]
+    },
+    {
+      "description": "Automerge all updates",
+      "automerge": true
     }
   ]
 }
