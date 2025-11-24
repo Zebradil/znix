@@ -48,5 +48,13 @@ jobs:
       - name: Build darwin configuration
         run: nix build '${{ env.DARWIN_CONFIG }}'
 
+      - name: Debug nix copy permissions
+        run: |
+          ls -la '${{ env.NIX_CACHE_PATH }}'
+          whoami
+          touch '${{ env.NIX_CACHE_PATH }}/test'
+          stat '${{ env.NIX_CACHE_PATH }}/test'
+          rm '${{ env.NIX_CACHE_PATH }}/test'
+
       - name: Updated local binary cache
         run: nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
