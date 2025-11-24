@@ -14,19 +14,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      - name: Cache Nix store
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: /nix/store
-          # TODO: Uncomment this when the hashFiles on MacOS works again
-          # See https://github.com/actions/runner-images/issues/13341
-          # key: store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
-          key: store-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            store-${{ runner.os }}-
+      # FIXME: MacOS doesn't seem to support changing the nix store path.
+      # Configuring `store = ${{ runner.workspace }}/nix-store` in nix.conf leads to:
+      # error: building using a diverted store is not supported on this platform
+      # - name: Cache Nix store
+      #   uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      #   with:
+      #     path: ${{ runner.workspace }}/nix-store
+      #     # TODO: Uncomment this when the hashFiles on MacOS works again
+      #     # See https://github.com/actions/runner-images/issues/13341
+      #     # key: store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+      #     key: store-${{ runner.os }}-${{ github.sha }}
+      #     restore-keys: |
+      #       store-${{ runner.os }}-
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31.8.4
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
 
       - name: Check flake
         run: nix flake check
