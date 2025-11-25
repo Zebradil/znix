@@ -10,10 +10,12 @@
       "matchManagers": ["github-actions"],
       "groupName": "all GitHub Actions",
       "groupSlug": "github-actions",
-      "addLabels": ["github-actions", "dependencies"]
+      "addLabels": ["github-actions", "dependencies"],
+      "automerge": true
     },
     {
       "description": "Automerge all updates",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true
     }
   ]
