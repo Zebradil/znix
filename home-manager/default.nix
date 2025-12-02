@@ -10,10 +10,11 @@ in
   imports = [
     nix-index-database.homeModules.nix-index
     ./modules/google-cloud-sdk.nix
-    ./modules/neovim.nix
+    ./modules/neovim
     ./modules/starship.nix
     ./modules/zoxide.nix
     ./modules/zsh.nix
+    ./modules/wezterm
   ];
 
   home.username = user;
@@ -27,11 +28,17 @@ in
     stateHome = "${xdgHome}/.local/state";
   };
 
+  programs.home-manager.enable = true;
+
   home.packages = with pkgs; [
     # Desktop apps
     alacritty
+    antigravity-fhs
     keepassxc
-    #slack
+    kitty
+    slack
+    telegram-desktop
+    vscode-fhs
     # Buggy, replaced by Edge PWA
     #youtube-music
     #zoom-us
@@ -66,12 +73,12 @@ in
     gh
     ghorg
     git
-    gke-kubeconfiger
+    # gke-kubeconfiger
     gnumake
     gnused
     go-task
     goreleaser
-    home-manager
+
     inetutils
     ipcalc
     jq
@@ -99,6 +106,9 @@ in
     yq-go
     ytt
 
+    # Fonts
+    nerd-fonts.iosevka
+
     # languages
     go
     gofumpt
@@ -111,6 +121,9 @@ in
 
     # shell
     zsh-completions
+
+    # Wayland
+    wl-clipboard
   ];
 
   services.syncthing.enable = true;
@@ -128,6 +141,15 @@ in
   };
   programs.fzf.enable = true;
   programs.nix-index.enable = true;
+
+  fonts = {
+    fontconfig = {
+      enable = true;
+      defaultFonts = {
+        monospace = [ "Iosevka NFM" ];
+      };
+    };
+  };
 
   # The state version is required and should stay at the version you originally installed.
   home.stateVersion = "24.05";

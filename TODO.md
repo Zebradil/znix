@@ -1,0 +1,7 @@
+- sops-nix
+- private ssh keys
+- gpg keys (to sign commits)
+- firefox chrome css to hide ui elements
+- telegram
+- hyprland
+- font rendering
