@@ -1,3 +1,4 @@
+- set umask
 - sops-nix
 - private ssh keys
 - gpg keys (to sign commits)
