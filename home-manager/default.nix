@@ -103,6 +103,9 @@ in
     go
     gofumpt
 
+    nixd
+    nixfmt
+
     python3
 
     rustup
