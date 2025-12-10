@@ -5,6 +5,12 @@ on:
     # Run at midnight every day
     - cron: '0 0 * * *'
   workflow_dispatch:
+    inputs:
+      optimize_store:
+        description: 'Run garbage collection and store optimization'
+        required: false
+        default: false
+        type: boolean
   push:
     branches:
       - main
@@ -68,6 +74,14 @@ jobs:
 
       - name: Build darwin configuration
         run: nix build '${{ env.DARWIN_CONFIG }}'
+
+      - name: Collect garbage from Nix store
+        if: github.event_name == 'schedule' || inputs.optimize_store
+        run: nix-collect-garbage -d
+
+      - name: Optimize Nix store
+        if: github.event_name == 'schedule' || inputs.optimize_store
+        run: nix store optimise
 
       - name: Commit and push changes
         uses: stefanzweifel/git-auto-commit-action@28e16e81777b558cc906c8750092100bbb34c5e3 # v7.0.0
