@@ -90,6 +90,7 @@ in
     ripgrep
     rsync
     skopeo
+    sops
     stern
     terraform
     velero

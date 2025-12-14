@@ -14,14 +14,14 @@ function z:rke2:nodes:do-parallel-filter() {
   local worked=0
   while read -r node ip; do
     if rg -q "$rg_pattern" <<<"$node"; then
+      echo "> '$node' ($ip)..."
       worked=1
       (
         set -euo pipefail
-        eval "$@" >"${node}${suffix}"
+        ssh "$ip" "$@" >"${node}${suffix}"
       ) &
     fi
-  done < <(kubectl get nodes -o yaml \
-    | yq '.items[] | .metadata | [.name, .annotations["rke2.io/internal-ip"] | split(",")[0]] | @tsv')
+  done < <(z:rke2:node:list)
   if ((worked == 0)); then
     log::warn "No nodes found"
   else
@@ -36,4 +36,33 @@ function z:rke2:nodes:do-parallel() {
     return 1
   fi
   z:rke2:nodes:do-parallel-filter ".*" "$1" "${@:2}"
+}
+
+function z:rke2:node:list() {
+  kubectl get nodes -o yaml \
+    | yq -r '.items[] | .metadata | [.name, .annotations["rke2.io/internal-ip"] | split(",")[0]] | @tsv'
+}
+
+function z:rke2:node:select() {
+  local node ip
+  while read -r node ip; do
+    echo "$node ($ip)"
+  done < <(z:rke2:node:list) | fzf --header-lines=1 | awk '{print $1}'
+}
+
+function z:rke2:node:ssh() {
+  local node=${1:?node name missing}
+  local ip
+  if [[ $node == "-" ]]; then
+    node=$(z:rke2:node:select)
+  fi
+  if [[ -z $node ]]; then
+    return 1
+  fi
+  ip=$(z:rke2:node:list | rg "^${node}\s" | awk '{print $2}')
+  if [[ -z $ip ]]; then
+    log::error "Node '$node' not found"
+    return 1
+  fi
+  ssh "$ip"
 }
