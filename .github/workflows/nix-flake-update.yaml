@@ -57,6 +57,7 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@4e002c8ec80594ecd40e759629461e26c8abed15 # v31.9.0
         with:
+          install_url: 'https://releases.nixos.org/nix/nix-2.32.4/install'
           extra_nix_config: |
             accept-flake-config = true
             download-buffer-size = 524288000
