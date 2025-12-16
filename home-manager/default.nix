@@ -104,6 +104,7 @@ in
     go
     gofumpt
 
+    nil
     nixd
     nixfmt
 
