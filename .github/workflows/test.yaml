@@ -34,7 +34,7 @@ jobs:
           path: '${{ env.NIX_CACHE_PATH }}'
           key: nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}
           restore-keys: |
-            nix-store-${{ hashFiles('flake.lock') }}-
+            nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-
             nix-store-${{ runner.os }}-
 
       - name: Install Nix
