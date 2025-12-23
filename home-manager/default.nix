@@ -82,6 +82,7 @@ in
     mise
     moreutils
     myks
+    (lib.hiPrio nixos-rebuild-ng)
     nmap
     ncdu
     rage
