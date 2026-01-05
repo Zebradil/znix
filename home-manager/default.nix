@@ -103,7 +103,10 @@ in
 
     # languages
     go
+    go-tools
     gofumpt
+    golangci-lint
+    gopls
 
     nil
     nixd
