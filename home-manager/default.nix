@@ -54,6 +54,7 @@ in
     # CLI tools
     _1password-cli
     bashInteractive
+    comma
     coreutils
     curl
     direnv
@@ -82,18 +83,20 @@ in
     mise
     moreutils
     myks
+    ncdu
     (lib.hiPrio nixos-rebuild-ng)
     nmap
-    ncdu
     rage
     rancher
     repgrep
     ripgrep
     rsync
+    sd
     skopeo
     sops
     stern
     terraform
+    vals
     velero
     vendir
     watchexec
