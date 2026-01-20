@@ -111,7 +111,8 @@ if lib::check_commands fzf rg bat; then
   function frg() (
     rg --line-number --color=always "$@" \
       | fzf -d ':' --ansi --no-sort --preview-window 'up,70%,+{2}/2' \
-      --preview 'bat --terminal-width=$FZF_PREVIEW_COLUMNS --style=numbers --color=always --highlight-line {2} {1}'
+      --preview 'bat --terminal-width=$FZF_PREVIEW_COLUMNS --style=numbers --color=always --highlight-line {2} {1}' \
+      --bind 'ctrl-o:become(nv +{2} {1})'
   )
 
   function frgn() (
