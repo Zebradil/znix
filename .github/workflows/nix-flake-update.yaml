@@ -37,7 +37,7 @@ jobs:
           ssh-key: '${{ secrets.CI_PUSH_DEPLOY_KEY }}'
 
       - name: Cache Nix sources
-        uses: actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7 # v5.0.2
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           path: ~/.cache/nix
           key: nix-cache-${{ hashFiles('flake.lock') }}-${{ github.sha }}-${{ github.run_id }}
@@ -47,7 +47,7 @@ jobs:
             nix-cache-
 
       - name: Cache Nix store
-        uses: actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7 # v5.0.2
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           path: '${{ env.NIX_CACHE_PATH }}'
           key: nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}-${{ github.run_id }}
