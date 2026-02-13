@@ -14,7 +14,7 @@ function z:rke2:nodes:do-parallel-filter() {
   local worked=0
   while read -r node ip; do
     if rg -q "$rg_pattern" <<<"$node"; then
-      echo "> '$node' ($ip)..."
+      echo "> '$node' (${ip:?missing IP})"
       worked=1
       (
         set -euo pipefail
@@ -40,13 +40,20 @@ function z:rke2:nodes:do-parallel() {
 
 function z:rke2:node:list() {
   kubectl get nodes -o yaml \
-    | yq -r '.items[] | .metadata | [.name, .annotations["rke2.io/internal-ip"] | split(",")[0]] | @tsv'
+    | yq -r '.items[]
+            | .metadata
+            | [
+              .name,
+              (.annotations | .["rke2.io/internal-ip"] // .["k3s.io/internal-ip"])
+                | split(",")[0]
+            ]
+            | @tsv'
 }
 
 function z:rke2:node:select() {
   local node ip
   while read -r node ip; do
-    echo "$node ($ip)"
+    echo "$node (${ip:-unknown})"
   done < <(z:rke2:node:list) | fzf --header-lines=1 | awk '{print $1}'
 }
 
