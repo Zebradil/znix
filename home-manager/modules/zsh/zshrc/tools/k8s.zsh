@@ -31,6 +31,10 @@ function z:k8s:context:generate-kubeconfig() (
       | awk '{print $1}' \
       | read -r ctx _
   fi
+  if [[ -z $ctx ]]; then
+    log::error "No context selected"
+    return 101
+  fi
   # "*" means that the desired context is already selected
   if [[ $ctx == "*" ]]; then
     return 100
@@ -53,6 +57,7 @@ function z:k8s:context:switch() {
   new_kubeconfig="$(z:k8s:context:generate-kubeconfig "$context")"
   ret=$?
   case $ret in
+    101) log::info "Aborted" ; return 1 ;;
     100) log::info "Already on context '$context'" ; return 0 ;;
     0) export KUBECONFIG="$new_kubeconfig" ;;
     *) log::error "Failed to switch context to '$context'"; return $ret ;;
