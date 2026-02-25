@@ -10,7 +10,7 @@
       alejandra
       deadnix
       nixd
-      nixfmt-rfc-style
+      nixfmt
       statix
     ];
   };
