@@ -40,21 +40,31 @@ function z:rke2:nodes:do-parallel() {
 
 function z:rke2:node:list() {
   kubectl get nodes -o yaml \
-    | yq -r '.items[]
-            | .metadata
-            | [
-              .name,
-              (.annotations | .["rke2.io/internal-ip"] // .["k3s.io/internal-ip"])
-                | split(",")[0]
-            ]
-            | @tsv'
+    | yq -r '
+  .items[].metadata
+  | [
+    .name,
+    .annotations
+      | .["rke2.io/internal-ip"] // .["k3s.io/internal-ip"]
+      | split(",")[0],
+    [
+      .labels
+      | to_entries[]
+      | select(.key == "node-role.kubernetes.io/*").key
+      | split("/")[1]
+    ] | join(",")
+  ] | @tsv'
 }
 
 function z:rke2:node:select() {
   local node ip
-  while read -r node ip; do
-    echo "$node (${ip:-unknown})"
-  done < <(z:rke2:node:list) | fzf --no-multi | awk '{print $1}'
+  {
+    echo "NAME IP ROLES"
+    z:rke2:node:list
+  } \
+    | column -t \
+    | fzf --header-lines=1 --no-multi \
+    | awk '{print $1}'
 }
 
 function z:rke2:node:ssh() {
