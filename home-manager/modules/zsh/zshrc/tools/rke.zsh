@@ -54,7 +54,7 @@ function z:rke2:node:select() {
   local node ip
   while read -r node ip; do
     echo "$node (${ip:-unknown})"
-  done < <(z:rke2:node:list) | fzf --header-lines=1 | awk '{print $1}'
+  done < <(z:rke2:node:list) | fzf --no-multi | awk '{print $1}'
 }
 
 function z:rke2:node:ssh() {
