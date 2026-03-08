@@ -1,123 +1,53 @@
+# DO-NOT-EDIT. This file was auto-generated using github:vic/flake-file.
+# Use `nix run .#write-flake` to regenerate it.
 {
-  description = "My Darwin system + Home Manager flake";
+
+  outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-
-    flake-utils.url = "github:numtide/flake-utils";
-
-    home-manager = {
-      url = "github:nix-community/home-manager";
+    disko = {
       inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:nix-community/disko";
     };
-
-    nix-darwin = {
-      url = "github:nix-darwin/nix-darwin/master";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    nix-index-database = {
-      url = "github:nix-community/nix-index-database";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
+    flake-file.url = "github:vic/flake-file";
+    flake-parts.url = "github:hercules-ci/flake-parts";
     gke-kubeconfiger = {
-      url = "github:Zebradil/gke-kubeconfiger";
       inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:Zebradil/gke-kubeconfiger";
     };
-
-    nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
+    hardware.url = "github:NixOS/nixos-hardware";
+    home-manager = {
+      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:nix-community/home-manager";
+    };
     homebrew-bundle = {
+      flake = false;
       url = "github:homebrew/homebrew-bundle";
-      flake = false;
-    };
-    homebrew-core = {
-      url = "github:homebrew/homebrew-core";
-      flake = false;
     };
     homebrew-cask = {
-      url = "github:homebrew/homebrew-cask";
       flake = false;
+      url = "github:homebrew/homebrew-cask";
     };
-
-    mac-app-util.url = "github:hraban/mac-app-util";
+    homebrew-core = {
+      flake = false;
+      url = "github:homebrew/homebrew-core";
+    };
+    impermanence.url = "github:nix-community/impermanence";
+    import-tree.url = "github:vic/import-tree";
+    nix-darwin = {
+      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:LnL7/nix-darwin";
+    };
+    nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
+    nix-index-database = {
+      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:nix-community/nix-index-database";
+    };
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    sops-nix = {
+      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:Mic92/sops-nix";
+    };
   };
 
-  nixConfig = {
-    extra-substituters = [
-      "https://znix.zebradil.dev"
-    ];
-    extra-trusted-public-keys = [
-      "znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw="
-    ];
-  };
-
-  outputs =
-    {
-      flake-utils,
-      gke-kubeconfiger,
-      home-manager,
-      homebrew-bundle,
-      homebrew-cask,
-      homebrew-core,
-      mac-app-util,
-      nix-darwin,
-      nix-homebrew,
-      nix-index-database,
-      nixpkgs,
-      self,
-    }:
-    let
-      home-manager-user-configuration =
-        {
-          pkgs,
-          user,
-        }:
-        (import ./home-manager {
-          inherit
-            nix-index-database
-            pkgs
-            user
-            ;
-        });
-    in
-    {
-      darwinConfigurations = (
-        import ./hosts/darwin {
-          inherit
-            home-manager
-            home-manager-user-configuration
-            homebrew-bundle
-            homebrew-cask
-            homebrew-core
-            nix-darwin
-            nix-homebrew
-            nixpkgs
-            self
-            ;
-        }
-      );
-
-      homeConfigurations =
-        let
-          user = "zebradil";
-          pkgs = import nixpkgs {
-            system = "x86_64-linux";
-            config.allowUnfree = true;
-          };
-        in
-        {
-          ${user} = home-manager.lib.homeManagerConfiguration {
-            inherit pkgs;
-            modules = [
-              (home-manager-user-configuration {
-                inherit
-                  pkgs
-                  user
-                  ;
-              })
-            ];
-          };
-        };
-    };
 }

@@ -1,0 +1,24 @@
+keys:
+  # Users
+  - users:
+      - &zebradil age188h98rs643kglmetvqt3hhnllw0ga45jg94p8xar2qe0c987k59q9qxv3v
+  # Hosts
+  - hosts:
+      - &tuxedo age1nqcqaf0e2jzj7w9pj3d3cdlf8havcmzdfth8gzvgm0drwlqrnveq8eu8j2
+
+creation_rules:
+  - path_regex: secrets/users/zebradil\.ya?ml$
+    key_groups:
+      - age:
+          - *tuxedo
+          - *zebradil
+  - path_regex: secrets/hosts/common\.ya?ml$
+    key_groups:
+      - age:
+          - *tuxedo
+          - *zebradil
+  - path_regex: secrets/hosts/tuxedo/ssh_host_ed25519\.key$
+    key_groups:
+      - age:
+          - *tuxedo
+          - *zebradil
