@@ -11,22 +11,29 @@ function z:rke2:nodes:do-parallel-filter() {
   local rg_pattern=$1
   local suffix=$2
   shift 2
-  local worked=0
-  while read -r node ip; do
+  local -a cmd_args=("$@")
+
+  local -a items=()
+  local node ip _rest
+  while read -r node ip _rest; do
     if rg -q "$rg_pattern" <<<"$node"; then
-      echo "> '$node' (${ip:?missing IP})"
-      worked=1
-      (
-        set -euo pipefail
-        ssh "$ip" "$@" >"${node}${suffix}"
-      ) &
+      items+=("${node}::${ip}")
     fi
   done < <(z:rke2:node:list)
-  if ((worked == 0)); then
+
+  if (( ${#items} == 0 )); then
     log::warn "No nodes found"
-  else
-    wait
+    return 0
   fi
+
+  _z_rke2_parallel_job() {
+    local item=$1
+    local node=${item%%::*}
+    local ip=${item#*::}
+    ssh "$ip" "${cmd_args[@]}" >"${node}${suffix}"
+  }
+
+  lib::parallel::run -c _z_rke2_parallel_job -- "${items[@]}"
 }
 
 function z:rke2:nodes:do-parallel() {

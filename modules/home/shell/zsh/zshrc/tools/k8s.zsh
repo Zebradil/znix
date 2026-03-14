@@ -87,20 +87,23 @@ function z:k8s:contexts:do-parallel-filter() {
   local rg_pattern=$1
   local suffix=$2
   shift 2
-  local worked=0
-  for ctx in $(kubectl config get-contexts -oname | rg "$rg_pattern"); do
-    worked=1
-    (
-      set -euo pipefail
-      z:k8s:context:switch $ctx
-      eval "$@" >"${ctx}${suffix}"
-    ) &
-  done
-  if (( worked == 0 )); then
+  local -a cmd_args=("$@")
+
+  local -a contexts
+  contexts=(${(f)"$(kubectl config get-contexts -oname | rg "$rg_pattern")"})
+
+  if (( ${#contexts} == 0 )); then
     log::warn "No contexts found"
-  else
-    wait
+    return 0
   fi
+
+  _z_k8s_parallel_job() {
+    local ctx=$1
+    z:k8s:context:switch "$ctx"
+    eval "${cmd_args[@]}" >"${ctx}${suffix}"
+  }
+
+  lib::parallel::run -c _z_k8s_parallel_job -- "${contexts[@]}"
 }
 
 z:k8s:kubeconfig:init
