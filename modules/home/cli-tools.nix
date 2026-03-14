@@ -13,8 +13,10 @@
 
         # CLI apps
         bat
+        broot
         btop
         delta
+        difftastic
         htop
         jnv
         k9s
@@ -55,6 +57,7 @@
         ncdu
         (lib.hiPrio nixos-rebuild-ng)
         nmap
+        nodejs
         rage
         rancher
         repgrep
