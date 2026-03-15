@@ -8,19 +8,21 @@
   flake.modules.nixos.tuxedo = {
     imports =
       (with inputs.self.modules.nixos; [
-        nix-settings
-        sops
-        openssh
-        fonts
         boot
         ephemeral-btrfs
-        impermanence
-        wireless
-        laptop
         fido
+        fonts
+        gdm
         home-manager
-        tuxedo-hardware
+        hyprland
+        impermanence
+        laptop
+        nix-settings
+        openssh
+        sops
         tuxedo-disko
+        tuxedo-hardware
+        wireless
         zebradil
       ])
       ++ [ inputs.disko.nixosModules.disko ];
