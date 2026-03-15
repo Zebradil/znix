@@ -26,7 +26,6 @@
         translate-shell
 
         # CLI tools
-        _1password-cli
         bashInteractive
         comma
         coreutils
