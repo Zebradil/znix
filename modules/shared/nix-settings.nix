@@ -1,8 +1,8 @@
 { inputs, self, ... }:
 let
-  flakeInputs = inputs.nixpkgs.lib.filterAttrs
-    (n: v: n != "self" && inputs.nixpkgs.lib.isType "flake" v)
-    inputs;
+  flakeInputs = inputs.nixpkgs.lib.filterAttrs (
+    n: v: n != "self" && inputs.nixpkgs.lib.isType "flake" v
+  ) inputs;
 
   nixosModule =
     { lib, ... }:

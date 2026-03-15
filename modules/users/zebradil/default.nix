@@ -40,7 +40,7 @@
 
       home-manager.useGlobalPkgs = true;
       home-manager.users.zebradil = {
-        imports = (builtins.attrValues self.modules.homeManager) ++ [ ./home.nix ];
+        imports = (builtins.attrValues self.modules.homeManager) ++ [ ./_home.nix ];
         home = {
           username = "zebradil";
           homeDirectory = "/home/zebradil";
