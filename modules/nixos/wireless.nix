@@ -14,28 +14,30 @@
 
         sops.secrets.wireless = {
           sopsFile = ../../secrets/hosts/common.yaml;
-          neededForUsers = true;
+          owner = "wpa_supplicant";
+          group = "wpa_supplicant";
         };
 
         networking.wireless = {
           enable = true;
           fallbackToWPA2 = false;
           secretsFile = config.sops.secrets.wireless.path;
-          networks = lib.genAttrs [
-            "DUST"
-            "DUSTY"
-            "DUSK"
-          ] (_ssid: { pskRaw = "ext:psk_home"; });
+          networks =
+            lib.genAttrs
+              [
+                "DUST"
+                "DUSTY"
+                "DUSK"
+              ]
+              (_ssid: {
+                pskRaw = "ext:psk_home";
+              });
 
           allowAuxiliaryImperativeNetworks = true;
-          extraConfig = ''
-            ctrl_interface=DIR=/run/wpa_supplicant GROUP=${config.users.groups.network.name}
-            update_config=1
-          '';
+          userControlled = true;
         };
 
         users.groups.network = { };
-        systemd.services.wpa_supplicant.preStart = "touch /etc/wpa_supplicant.conf";
       };
     };
 }
