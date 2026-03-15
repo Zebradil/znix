@@ -58,5 +58,11 @@
           };
         };
       };
+
+      sops.secrets."u2f_keys/${config.networking.hostName}" = lib.mkIf config.znix.fido.enable {
+        path = "/home/zebradil/.config/Yubico/u2f_keys";
+        owner = "zebradil";
+        mode = "0400";
+      };
     };
 }
