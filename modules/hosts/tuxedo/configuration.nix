@@ -29,6 +29,9 @@
 
     networking.hostName = "tuxedo";
     networking.domain = "zebradil.dev";
+    networking.dhcpcd.extraConfig = ''
+      hostname
+    '';
     system.stateVersion = "22.05";
 
     znix = {
