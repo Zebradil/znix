@@ -45,6 +45,17 @@
           username = "zebradil";
           homeDirectory = "/home/zebradil";
           stateVersion = "22.05";
+          persistence."/persist" = lib.mkIf config.znix.impermanence.enable {
+            directories = [
+              ".local/share/nix" # trusted settings and repl history
+              "code" # code projects
+
+              "Documents"
+              "Downloads"
+              "Pictures"
+              "Videos"
+            ];
+          };
         };
       };
     };
