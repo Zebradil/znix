@@ -1,7 +1,12 @@
 { ... }:
 {
   flake.modules.homeManager.zsh =
-    { lib, config, ... }:
+    {
+      lib,
+      config,
+      osConfig,
+      ...
+    }:
     {
       programs.zsh = {
         enable = true;
@@ -19,6 +24,7 @@
           export ZVM_INIT_MODE=sourcing
           export STARSHIP_CONFIG=$XDG_CONFIG_HOME/starship.toml
         '';
+        sessionVariables.USE_GKE_GCLOUD_AUTH_PLUGIN = "True";
         initContent = lib.mkMerge [
           (lib.mkOrder 550 ''
             zstyle ':completion:*' completer _complete _ignored _approximate
@@ -58,6 +64,8 @@
         recursive = true;
       };
 
-      programs.zsh.sessionVariables.USE_GKE_GCLOUD_AUTH_PLUGIN = "True";
+      home.persistence."/persist" = lib.mkIf (osConfig.znix.impermanence.enable or false) {
+        files = [ ".zsh/.zsh_history" ];
+      };
     };
 }
