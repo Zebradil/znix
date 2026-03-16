@@ -55,6 +55,7 @@ jobs:
           fi
 
       - name: Upload flake.lock artifact
+        if: steps.check.outputs.has_changes == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: flake-lock
@@ -62,6 +63,7 @@ jobs:
 
   build-darwin:
     needs: update-flake
+    if: needs.update-flake.outputs.has-changes == 'true'
     runs-on: macos-15
     permissions:
       contents: read
@@ -140,6 +142,7 @@ jobs:
 
   build-linux:
     needs: update-flake
+    if: needs.update-flake.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
