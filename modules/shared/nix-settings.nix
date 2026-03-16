@@ -31,14 +31,18 @@ let
       nix.nixPath = lib.mapAttrsToList (n: _: "${n}=flake:${n}") flakeInputs;
 
       nixpkgs.config.allowUnfree = true;
-      nixpkgs.overlays = [ self.overlays.default ];
+      nixpkgs.overlays = [
+        self.overlays.default
+      ];
     };
 
   darwinModule =
     { config, lib, ... }:
     {
       nixpkgs.config.allowUnfree = true;
-      nixpkgs.overlays = [ self.overlays.default ];
+      nixpkgs.overlays = [
+        self.overlays.default
+      ];
 
       nix.settings = lib.mkIf config.nix.enable {
         trusted-users = [
