@@ -22,37 +22,68 @@ concurrency:
 env:
   NIX_CACHE_PATH: ${{ github.workspace }}/nix-cache.bin
   NIX_CACHE_URL: file://${{ github.workspace }}/nix-cache.bin?compression=zstd&parallel-compression=true
-  DARWIN_CONFIG: .#darwinConfigurations.trv4250.config.system.build.toplevel
   CACHE_KEY_FILE: cache-priv-key.pem
 
 jobs:
-  update-and-build:
-    runs-on: macos-15
+  update-lock:
+    runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      sha: ${{ steps.commit.outputs.commit_hash || github.sha }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ssh-key: '${{ secrets.CI_PUSH_DEPLOY_KEY }}'
 
+      - name: Install Nix
+        uses: cachix/install-nix-action@1ca7d21a94afc7c957383a2d217460d980de4934 # v31.10.1
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+
+      - name: Update flake.lock
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: nix flake update
+
+      - name: Commit and push changes
+        id: commit
+        uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9 # v7.1.0
+        with:
+          commit_message: 'chore: update flake.lock [skip ci]'
+          file_pattern: flake.lock
+
+  build-darwin:
+    needs: update-lock
+    runs-on: macos-15
+    permissions:
+      contents: read
+    env:
+      DARWIN_CONFIG: .#darwinConfigurations.trv4250.config.system.build.toplevel
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.update-lock.outputs.sha }}
+
       - name: Cache Nix sources
         uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           path: ~/.cache/nix
-          key: nix-cache-${{ hashFiles('flake.lock') }}-${{ github.sha }}-${{ github.run_id }}
+          key: nix-cache-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ needs.update-lock.outputs.sha }}-${{ github.run_id }}
           restore-keys: |
-            nix-cache-${{ hashFiles('flake.lock') }}-${{ github.sha }}-
-            nix-cache-${{ hashFiles('flake.lock') }}-
-            nix-cache-
+            nix-cache-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ needs.update-lock.outputs.sha }}-
+            nix-cache-${{ runner.os }}-${{ hashFiles('flake.lock') }}-
+            nix-cache-${{ runner.os }}-
 
       - name: Cache Nix store
         uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           path: '${{ env.NIX_CACHE_PATH }}'
-          key: nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}-${{ github.run_id }}
+          key: nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ needs.update-lock.outputs.sha }}-${{ github.run_id }}
           restore-keys: |
-            nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}-
+            nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ needs.update-lock.outputs.sha }}-
             nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-
             nix-store-${{ runner.os }}-
 
@@ -71,10 +102,6 @@ jobs:
           echo '${{ secrets.CACHE_PRIVATE_KEY }}' > '${{ env.CACHE_KEY_FILE }}'
           chmod 600 '${{ env.CACHE_KEY_FILE }}'
 
-      - name: Update flake.lock
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        run: nix flake update
-
       - name: Build darwin configuration
         run: nix build '${{ env.DARWIN_CONFIG }}'
 
@@ -86,17 +113,11 @@ jobs:
         if: github.event_name == 'schedule' || inputs.optimize_store
         run: nix store optimise
 
-      - name: Commit and push changes
-        uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9 # v7.1.0
-        with:
-          commit_message: 'chore: update flake.lock [skip ci]'
-          file_pattern: flake.lock
-
       - name: Set local binary cache permissions
         run: |
           sudo chown -R $(whoami) '${{ env.NIX_CACHE_PATH }}'
 
-      - name: Updated local binary cache
+      - name: Update local binary cache
         run: nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
 
       - name: Publish to binary cache
@@ -104,6 +125,77 @@ jobs:
           AWS_ACCESS_KEY_ID: '${{ secrets.AWS_ACCESS_KEY_ID }}'
           AWS_SECRET_ACCESS_KEY: '${{ secrets.AWS_SECRET_ACCESS_KEY }}'
         run: nix copy --to 's3://${{ secrets.CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
+
+      - name: Show storage size
+        run: nix path-info --json --all | jq 'map(.narSize) | add'
+
+  build-linux:
+    needs: update-lock
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      NIXOS_CONFIG: .#nixosConfigurations.tuxedo.config.system.build.toplevel
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.update-lock.outputs.sha }}
+
+      - name: Cache Nix sources
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: ~/.cache/nix
+          key: nix-cache-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ needs.update-lock.outputs.sha }}-${{ github.run_id }}
+          restore-keys: |
+            nix-cache-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ needs.update-lock.outputs.sha }}-
+            nix-cache-${{ runner.os }}-${{ hashFiles('flake.lock') }}-
+            nix-cache-${{ runner.os }}-
+
+      - name: Cache Nix store
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: '${{ env.NIX_CACHE_PATH }}'
+          key: nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ needs.update-lock.outputs.sha }}-${{ github.run_id }}
+          restore-keys: |
+            nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ needs.update-lock.outputs.sha }}-
+            nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-
+            nix-store-${{ runner.os }}-
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@1ca7d21a94afc7c957383a2d217460d980de4934 # v31.10.1
+        with:
+          install_url: 'https://releases.nixos.org/nix/nix-2.32.4/install'
+          extra_nix_config: |
+            accept-flake-config = true
+            download-buffer-size = 524288000
+            secret-key-files = ${{ github.workspace }}/${{ env.CACHE_KEY_FILE }}
+            substituters = file://${{ github.workspace }}/nix-cache.bin?trusted=1&want-mass-query=1 https://cache.nixos.org
+
+      - name: Configure Nix for signing
+        run: |
+          echo '${{ secrets.CACHE_PRIVATE_KEY }}' > '${{ env.CACHE_KEY_FILE }}'
+          chmod 600 '${{ env.CACHE_KEY_FILE }}'
+
+      - name: Build NixOS configuration
+        run: nix build '${{ env.NIXOS_CONFIG }}'
+
+      - name: Collect garbage from Nix store
+        if: github.event_name == 'schedule' || inputs.optimize_store
+        run: nix-collect-garbage -d
+
+      - name: Optimize Nix store
+        if: github.event_name == 'schedule' || inputs.optimize_store
+        run: nix store optimise
+
+      - name: Update local binary cache
+        run: nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.NIXOS_CONFIG }}'
+
+      - name: Publish to binary cache
+        env:
+          AWS_ACCESS_KEY_ID: '${{ secrets.AWS_ACCESS_KEY_ID }}'
+          AWS_SECRET_ACCESS_KEY: '${{ secrets.AWS_SECRET_ACCESS_KEY }}'
+        run: nix copy --to 's3://${{ secrets.CACHE_URL }}' '${{ env.NIXOS_CONFIG }}'
 
       - name: Show storage size
         run: nix path-info --json --all | jq 'map(.narSize) | add'

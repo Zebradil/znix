@@ -10,11 +10,14 @@ concurrency:
 env:
   NIX_CACHE_PATH: ${{ github.workspace }}/nix-cache.bin
   NIX_CACHE_URL: file://${{ github.workspace }}/nix-cache.bin?compression=zstd&parallel-compression=true
-  DARWIN_CONFIG: .#darwinConfigurations.trv4250.config.system.build.toplevel
 
 jobs:
-  check-and-build:
+  check-and-build-darwin:
     runs-on: macos-15
+    permissions:
+      contents: read
+    env:
+      DARWIN_CONFIG: .#darwinConfigurations.trv4250.config.system.build.toplevel
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -23,10 +26,10 @@ jobs:
         uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           path: ~/.cache/nix
-          key: nix-cache-${{ hashFiles('flake.lock') }}-${{ github.sha }}
+          key: nix-cache-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}
           restore-keys: |
-            nix-cache-${{ hashFiles('flake.lock') }}-
-            nix-cache-
+            nix-cache-${{ runner.os }}-${{ hashFiles('flake.lock') }}-
+            nix-cache-${{ runner.os }}-
 
       - name: Cache Nix store
         uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
@@ -55,5 +58,47 @@ jobs:
         run: |
           sudo chown -R $(whoami) '${{ env.NIX_CACHE_PATH }}'
 
-      - name: Updated local binary cache
+      - name: Update local binary cache
         run: nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
+
+  build-linux:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      NIXOS_CONFIG: .#nixosConfigurations.tuxedo.config.system.build.toplevel
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Cache Nix sources
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: ~/.cache/nix
+          key: nix-cache-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}
+          restore-keys: |
+            nix-cache-${{ runner.os }}-${{ hashFiles('flake.lock') }}-
+            nix-cache-${{ runner.os }}-
+
+      - name: Cache Nix store
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: '${{ env.NIX_CACHE_PATH }}'
+          key: nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}
+          restore-keys: |
+            nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-
+            nix-store-${{ runner.os }}-
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@1ca7d21a94afc7c957383a2d217460d980de4934 # v31.10.1
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            download-buffer-size = 524288000
+            substituters = file://${{ github.workspace }}/nix-cache.bin?trusted=1&want-mass-query=1 https://cache.nixos.org
+
+      - name: Build NixOS configuration
+        run: nix build '${{ env.NIXOS_CONFIG }}'
+
+      - name: Update local binary cache
+        run: nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.NIXOS_CONFIG }}'
