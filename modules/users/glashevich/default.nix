@@ -18,7 +18,9 @@ in
 
       home-manager.useGlobalPkgs = true;
       home-manager.users."${username}" = {
-        imports = (builtins.attrValues self.modules.homeManager) ++ [ ./_home.nix ];
+        imports = (builtins.attrValues (removeAttrs self.modules.homeManager [ "firefox" ])) ++ [
+          ./_home.nix
+        ];
         home = {
           username = "${username}";
           homeDirectory = "/Users/${username}";
