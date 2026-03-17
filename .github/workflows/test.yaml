@@ -12,15 +12,18 @@ env:
   NIX_CACHE_URL: file://${{ github.workspace }}/nix-cache.bin?compression=zstd&parallel-compression=true
 
 jobs:
-  check-and-build-darwin:
+  check-and-build:
     strategy:
       matrix:
         include:
-          - os: macos-15
+          - name: trv4250
+            os: macos-15
             config: .#darwinConfigurations.trv4250.config.system.build.toplevel
-          - os: ubuntu-latest
+          - name: tuxedo
+            os: ubuntu-latest
             config: .#nixosConfigurations.tuxedo.config.system.build.toplevel
     runs-on: ${{ matrix.os }}
+    name: Check and build ${{ matrix.name }}
     permissions:
       contents: read
     env:
