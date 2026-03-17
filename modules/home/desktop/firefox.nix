@@ -190,7 +190,7 @@
         };
 
       };
-      impermanence = lib.mkIf (osConfig.znix.impermanence.enable or false) {
+      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
         home.persistence."/persist".directories = [ ".mozilla/firefox" ];
       };
     in

@@ -10,11 +10,24 @@ concurrency:
 env:
   NIX_CACHE_PATH: ${{ github.workspace }}/nix-cache.bin
   NIX_CACHE_URL: file://${{ github.workspace }}/nix-cache.bin?compression=zstd&parallel-compression=true
-  DARWIN_CONFIG: .#darwinConfigurations.trv4250.config.system.build.toplevel
 
 jobs:
   check-and-build:
-    runs-on: macos-15
+    strategy:
+      matrix:
+        include:
+          - name: trv4250
+            os: macos-15
+            config: .#darwinConfigurations.trv4250.config.system.build.toplevel
+          - name: tuxedo
+            os: ubuntu-latest
+            config: .#nixosConfigurations.tuxedo.config.system.build.toplevel
+    runs-on: ${{ matrix.os }}
+    name: Check and build ${{ matrix.name }}
+    permissions:
+      contents: read
+    env:
+      TARGET_CONFIG: ${{ matrix.config }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -23,10 +36,10 @@ jobs:
         uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           path: ~/.cache/nix
-          key: nix-cache-${{ hashFiles('flake.lock') }}-${{ github.sha }}
+          key: nix-cache-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}
           restore-keys: |
-            nix-cache-${{ hashFiles('flake.lock') }}-
-            nix-cache-
+            nix-cache-${{ runner.os }}-${{ hashFiles('flake.lock') }}-
+            nix-cache-${{ runner.os }}-
 
       - name: Cache Nix store
         uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
@@ -48,12 +61,12 @@ jobs:
       - name: Check flake
         run: nix flake check
 
-      - name: Build darwin configuration
-        run: nix build '${{ env.DARWIN_CONFIG }}'
+      - name: Build target configuration
+        run: nix build '${{ env.TARGET_CONFIG }}'
 
       - name: Set local binary cache permissions
         run: |
           sudo chown -R $(whoami) '${{ env.NIX_CACHE_PATH }}'
 
-      - name: Updated local binary cache
-        run: nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.DARWIN_CONFIG }}'
+      - name: Update local binary cache
+        run: nix copy --to '${{ env.NIX_CACHE_URL }}' '${{ env.TARGET_CONFIG }}'
