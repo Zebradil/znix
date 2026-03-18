@@ -9,6 +9,7 @@
     imports =
       (with inputs.self.modules.nixos; [
         boot
+        diff
         ephemeral-btrfs
         fido
         fonts
@@ -36,6 +37,7 @@
 
     znix = {
       boot.enable = true;
+      diff.enable = true;
       ephemeral-btrfs.enable = true;
       impermanence.enable = true;
       wireless.enable = true;

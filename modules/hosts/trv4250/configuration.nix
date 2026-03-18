@@ -17,6 +17,7 @@
 
   flake.modules.darwin.trv4250 = {
     imports = with inputs.self.modules.darwin; [
+      diff
       nix-settings
       fonts
       defaults
@@ -25,6 +26,8 @@
       home-manager
       glashevich
     ];
+
+    znix.diff.enable = true;
 
     nix.enable = false;
     environment.etc."nix/nix.custom.conf".text = ''
