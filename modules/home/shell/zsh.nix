@@ -14,13 +14,12 @@
           completionInit = "autoload -Uz compinit && compinit -C";
           dotDir = "${config.home.homeDirectory}/.zsh";
           envExtra = ''
-            export EDITOR=nv
+            export EDITOR=nvim
             export LANG=en_US.UTF-8
             export LC_ALL=en_US.UTF-8
             export LC_TIME=en_DK.UTF-8
             export LESS='--mouse --wheel-lines=3 --quit-if-one-screen --ignore-case --tabs=4'
-            export MANPAGER='nv +Man!'
-            export NVIM_PROFILE_NAME=astro4
+            export MANPAGER='nvim +Man!'
             export WORKSPACE=$HOME
             export ZVM_INIT_MODE=sourcing
             export STARSHIP_CONFIG=$XDG_CONFIG_HOME/starship.toml
