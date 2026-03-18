@@ -21,13 +21,13 @@
         jnv
         k9s
         lazygit
+        nh
         tailscale
         tmux
         translate-shell
 
         # CLI tools
         bashInteractive
-        comma
         coreutils
         curl
         dive
@@ -42,7 +42,6 @@
         gnused
         go-task
         goreleaser
-        home-manager
         inetutils
         ipcalc
         jq
@@ -54,7 +53,6 @@
         moreutils
         myks
         ncdu
-        (lib.hiPrio nixos-rebuild-ng)
         nmap
         nodejs
         rage
