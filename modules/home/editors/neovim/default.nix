@@ -9,8 +9,6 @@
       ...
     }:
     let
-      # TODO: consider a global znix.repoDir option so other modules can also use out-of-store symlinks
-      znixDir = "${config.home.homeDirectory}/code/github.com/zebradil/znix";
       base = {
         programs.neovim = {
           enable = true;
@@ -23,7 +21,7 @@
           ];
         };
         # Symlink the entire nvim dir so all configs remain writable (edit without rebuilding)
-        xdg.configFile."nvim".source = config.lib.file.mkOutOfStoreSymlink "${znixDir}/modules/home/editors/neovim/nvim";
+        xdg.configFile."nvim".source = config.lib.file.mkOutOfStoreSymlink "${config.znix.repoDir}/modules/home/editors/neovim/nvim";
       };
       impermanence = lib.mkIf osConfig.znix.impermanence.enable {
         home.persistence."/persist".directories = [

@@ -56,13 +56,12 @@
           shellAliases = {
             ndr = "nix-direnv-reload";
             tf = "terraform";
+            nv = "nvim";
           };
         };
 
-        home.file.".zsh/zshrc" = {
-          source = ./zsh/zshrc;
-          recursive = true;
-        };
+        home.file.".zsh/zshrc".source =
+          config.lib.file.mkOutOfStoreSymlink "${config.znix.repoDir}/modules/home/shell/zsh/zshrc";
       };
 
       impermanence = lib.mkIf osConfig.znix.impermanence.enable {

@@ -60,12 +60,13 @@ fi
 
 if lib::check_commands openstack acme.sh yq; then
   my:openstack:acme.sh() {
-    env $(\
-        yq eval --output-format props \
+    env $(
+      yq eval --output-format props \
         '.clouds[env(OS_CLOUD)] | explode(.) | (with_entries(select(.key != "auth")), .auth)' \
         ~/.config/openstack/clouds.yaml \
         | sed -r 's/^(\w+) = (.*)/\UOS_\1\E=\2/' \
-      | xargs -d '\n') \
+        | xargs -d '\n'
+    ) \
       acme.sh --issue --dns dns_openstack --domain "${@}"
   }
 fi
@@ -111,21 +112,21 @@ if lib::check_commands fzf rg bat; then
   function frg() (
     rg --line-number --color=always "$@" \
       | fzf -d ':' --ansi --no-sort --preview-window 'up,70%,+{2}/2' \
-      --preview 'bat --terminal-width=$FZF_PREVIEW_COLUMNS --style=numbers --color=always --highlight-line {2} {1}' \
-      --bind 'ctrl-o:become(nv +{2} {1})'
+        --preview 'bat --terminal-width=$FZF_PREVIEW_COLUMNS --style=numbers --color=always --highlight-line {2} {1}' \
+        --bind "ctrl-o:become($EDITOR +{2} {1})"
   )
 
   function frgn() (
     IFS=: found=($(frg "$@"))
-    nv "${found[1]}" "+${found[2]}"
+    $EDITOR "${found[1]}" "+${found[2]}"
   )
 fi
 
 if lib::check_commands alacritty-colorscheme fzf exa bat; then
   function chct() (
     local alclr=alacritty-colorscheme
-    $alclr list |
-    fzf "$@" --preview "
+    $alclr list \
+      | fzf "$@" --preview "
         $alclr apply {}
         bat --color=always --plain --line-range 52:68 ~/.zshrc
         echo
@@ -142,7 +143,7 @@ if lib::check_commands fzf fd; then
   # f 'echo Selected music:' --extention mp3
   # fm rm # To rm files in current directory
   f() {
-    sels=( "${(@f)$(fd "${fd_default[@]}" "${@:2}"| fzf)}" )
+    sels=("${(@f)$(fd "${fd_default[@]}" "${@:2}" | fzf)}")
     test -n "$sels" && print -z -- "$1 ${sels[@]:q:q}"
   }
 
@@ -157,14 +158,20 @@ if lib::check_commands fzf git; then
     branches=$(
       git --no-pager branch --all \
         --format="%(if)%(HEAD)%(then)%(else)%(if:equals=HEAD)%(refname:strip=3)%(then)%(else)%1B[0;34;1mbranch%09%1B[m%(refname:short)%(end)%(end)" \
-      | sed '/^$/d') || return
+        | sed '/^$/d'
+    ) || return
     tags=$(
-    git --no-pager tag | awk '{print "\x1b[35;1mtag\x1b[m\t" $1}') || return
+      git --no-pager tag | awk '{print "\x1b[35;1mtag\x1b[m\t" $1}'
+    ) || return
     target=$(
-      (echo "$branches"; echo "$tags") |
-      fzf --no-hscroll --no-multi -n 2 \
-      --ansi --preview="git --no-pager log -150 --pretty=format:%s '..{2}'") || return
-    git checkout $(awk '{print $2}' <<<"$target" )
+      (
+        echo "$branches"
+        echo "$tags"
+      ) \
+        | fzf --no-hscroll --no-multi -n 2 \
+          --ansi --preview="git --no-pager log -150 --pretty=format:%s '..{2}'"
+    ) || return
+    git checkout $(awk '{print $2}' <<<"$target")
   }
 fi
 
