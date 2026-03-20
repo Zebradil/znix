@@ -21,7 +21,7 @@
           ];
         };
         # Symlink the entire nvim dir so all configs remain writable (edit without rebuilding)
-        xdg.configFile."nvim".source = config.lib.file.mkOutOfStoreSymlink "${config.znix.repoDir}/modules/home/editors/neovim/nvim";
+        xdg.configFile."nvim".source = config.znix.mkRepoLink "modules/home/editors/neovim/nvim";
       };
       impermanence = lib.mkIf osConfig.znix.impermanence.enable {
         home.persistence."/persist".directories = [

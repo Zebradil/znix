@@ -69,10 +69,10 @@ jobs:
         include:
           - name: trv4250
             os: macos-15
-            config: .#darwinConfigurations.trv4250.config.system.build.toplevel
+            config: .#checks.aarch64-darwin.trv4250-build
           - name: tuxedo
             os: ubuntu-latest
-            config: .#nixosConfigurations.tuxedo.config.system.build.toplevel
+            config: .#checks.x86_64-linux.tuxedo-build
     runs-on: ${{ matrix.os }}
     name: Build and Publish ${{ matrix.name }}
     permissions:

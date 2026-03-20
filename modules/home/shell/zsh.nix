@@ -60,8 +60,7 @@
           };
         };
 
-        home.file.".zsh/zshrc".source =
-          config.lib.file.mkOutOfStoreSymlink "${config.znix.repoDir}/modules/home/shell/zsh/zshrc";
+        home.file.".zsh/zshrc".source = config.znix.mkRepoLink "modules/home/shell/zsh/zshrc";
       };
 
       impermanence = lib.mkIf osConfig.znix.impermanence.enable {
