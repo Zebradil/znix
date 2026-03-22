@@ -12,7 +12,9 @@ This is a unified Nix configuration using the **dendritic pattern** with flake-p
 ## Key Patterns
 
 ### Adding a module
+
 Create a `.nix` file under the appropriate `modules/` subdirectory. It must be a flake-parts module:
+
 ```nix
 { ... }: {
   flake.nixosModules.my-feature = { config, lib, ... }: { /* NixOS config */ };
@@ -20,9 +22,11 @@ Create a `.nix` file under the appropriate `modules/` subdirectory. It must be a
 ```
 
 ### Optional NixOS features
+
 Use `znix.<name>.enable` with `lib.mkEnableOption` + `lib.mkIf`.
 
 ### Module namespaces
+
 - `modules/shared/` -> registers both `nixosModules` AND `darwinModules`
 - `modules/darwin/` -> registers `darwinModules` only
 - `modules/nixos/` -> registers `nixosModules` only
@@ -34,10 +38,11 @@ Use `znix.<name>.enable` with `lib.mkEnableOption` + `lib.mkIf`.
 ```bash
 nix flake check                    # Validate
 nix develop                        # Dev shell
-nix fmt                            # Format with nixfmt-rfc-style
+nix fmt                            # Format with nixfmt
 darwin-rebuild switch --flake .    # Apply on macOS
 nixos-rebuild switch --flake .     # Apply on NixOS
 ```
 
 ## Secrets
+
 Managed with sops-nix. See `docs/secrets.md`. Never commit unencrypted secrets.
