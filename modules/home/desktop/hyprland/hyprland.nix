@@ -10,11 +10,16 @@
           # hyprlandPlugins.hyprbars
         ];
         settings = {
+          "$menu" = "hyprlauncher";
+          "$terminal" = "kitty";
+          "$browser" = "firefox";
+
           "$mod" = "SUPER";
           bind = [
-            "$mod, F, exec, firefox"
-            "$mod, Q, exec, kitty"
-            ", Print, exec, grimblast copy area"
+            "$mod, Space, exec, $menu"
+
+            "$mod, F, exec, $browser"
+            "$mod, Q, exec, $terminal"
           ]
           ++ (
             # workspaces
