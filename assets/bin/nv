@@ -6,7 +6,7 @@ set -o errexit
 
 NVIM_PROFILES_DIR_NAME="nvim-profiles"
 NVIM_PROFILE_NAME="${NVIM_PROFILE_NAME:-nvim}"
-NVIM_COMMAND="nvim"
+NVIM_COMMAND="${NVIM_COMMAND:-nvim}"
 
 usage() (
   bold_green="$(tput bold)$(tput setaf 2)"

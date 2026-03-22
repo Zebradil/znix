@@ -327,6 +327,21 @@
         "type": "github"
       }
     },
+    "nixCats": {
+      "locked": {
+        "lastModified": 1770584904,
+        "narHash": "sha256-9Zaz8lbKF2W9pwXZEnbiGsicHdBoU+dHt3Wv3mCJoZ8=",
+        "owner": "BirdeeHub",
+        "repo": "nixCats-nvim",
+        "rev": "538fdde784d2909700d97a8ef307783b33a86fb1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "BirdeeHub",
+        "repo": "nixCats-nvim",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1768564909,
@@ -374,6 +389,104 @@
         "type": "github"
       }
     },
+    "plugins-nvim-dap": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1772809467,
+        "narHash": "sha256-U9RMvCDeNQjZ/8TFn848YQXhccIvZsBf7Axa/IipX/Q=",
+        "owner": "mfussenegger",
+        "repo": "nvim-dap",
+        "rev": "a9d8cb68ee7184111dc66156c4a2ebabfbe01bc5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "mfussenegger",
+        "repo": "nvim-dap",
+        "rev": "a9d8cb68ee7184111dc66156c4a2ebabfbe01bc5",
+        "type": "github"
+      }
+    },
+    "plugins-nvim-lint": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1771878210,
+        "narHash": "sha256-WotyvU8lqfjN3PVXVpDQm7HMahmwYRYgTN0+WsJwyWQ=",
+        "owner": "mfussenegger",
+        "repo": "nvim-lint",
+        "rev": "606b823a57b027502a9ae00978ebf4f5d5158098",
+        "type": "github"
+      },
+      "original": {
+        "owner": "mfussenegger",
+        "repo": "nvim-lint",
+        "rev": "606b823a57b027502a9ae00978ebf4f5d5158098",
+        "type": "github"
+      }
+    },
+    "plugins-tree-sitter-queries": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1767826755,
+        "narHash": "sha256-qIgFGVYMMY6lu4XriLP55MQjx3OuwV8smS8+T+oeO4Q=",
+        "owner": "zebradil",
+        "repo": "tree-sitter-queries",
+        "rev": "16964f7a4fc871f7ae520b4ce8b175e50b330552",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zebradil",
+        "repo": "tree-sitter-queries",
+        "type": "github"
+      }
+    },
+    "plugins-tree-sitter-test_highlights": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1767868229,
+        "narHash": "sha256-uEvipAtTJQgUc3KrMbdDZbDgh0kEBa6F8j/63HO6Ih4=",
+        "owner": "zebradil",
+        "repo": "tree-sitter-test_highlights",
+        "rev": "74087af9836bdc077f9861bea25bf231842db88c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zebradil",
+        "repo": "tree-sitter-test_highlights",
+        "type": "github"
+      }
+    },
+    "plugins-tree-sitter-ytt_annotation": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1767868242,
+        "narHash": "sha256-yAWNSHwzJWB8ezmtk0AQJaxkR8G6Myr2p+kJs9+nGuQ=",
+        "owner": "zebradil",
+        "repo": "tree-sitter-ytt_annotation",
+        "rev": "768f09da01f0ba5634efd71aa2e401cf04d30d48",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zebradil",
+        "repo": "tree-sitter-ytt_annotation",
+        "type": "github"
+      }
+    },
+    "plugins-vim-abolish": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1695997009,
+        "narHash": "sha256-MFXQjLIY1WJ6bGuxRr7WiIcjK9lOlMsFDit0bRmYd/s=",
+        "owner": "tpope",
+        "repo": "vim-abolish",
+        "rev": "dcbfe065297d31823561ba787f51056c147aa682",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tpope",
+        "repo": "vim-abolish",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "disko": "disko",
@@ -391,7 +504,14 @@
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",
         "nix-index-database": "nix-index-database",
+        "nixCats": "nixCats",
         "nixpkgs": "nixpkgs_2",
+        "plugins-nvim-dap": "plugins-nvim-dap",
+        "plugins-nvim-lint": "plugins-nvim-lint",
+        "plugins-tree-sitter-queries": "plugins-tree-sitter-queries",
+        "plugins-tree-sitter-test_highlights": "plugins-tree-sitter-test_highlights",
+        "plugins-tree-sitter-ytt_annotation": "plugins-tree-sitter-ytt_annotation",
+        "plugins-vim-abolish": "plugins-vim-abolish",
         "sops-nix": "sops-nix"
       }
     },

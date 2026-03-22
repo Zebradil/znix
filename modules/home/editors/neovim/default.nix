@@ -3,34 +3,25 @@
   flake.modules.homeManager.neovim =
     {
       pkgs,
-      lib,
       config,
-      osConfig,
       ...
     }:
     let
       base = {
-        programs.neovim = {
-          enable = true;
-          extraPackages = with pkgs; [
-            nodejs
-            deadnix
-            nixd
-            nixfmt
-            statix
-          ];
-        };
-        # Symlink the entire nvim dir so all configs remain writable (edit without rebuilding)
-        xdg.configFile."nvim".source = config.znix.mkRepoLink "modules/home/editors/neovim/nvim";
-      };
-      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
-        home.persistence."/persist".directories = [
-          ".config/github-copilot"
+        # Symlink the AstroNvim config into the nv profile directory
+        # Access via: nv astro
+        xdg.configFile."nvim-profiles/astro/nvim".source =
+          config.znix.mkRepoLink "modules/home/editors/neovim/nvim";
+
+        # Plain neovim binary for profile switching via the nv script.
+        # The default nvim is nixCats (wrapRc=true, ignores XDG overrides),
+        # so profiles need an unwrapped neovim that respects XDG_CONFIG_HOME.
+        home.packages = [
+          (pkgs.writeShellScriptBin "nvim-profile" ''
+            exec ${pkgs.neovim-unwrapped}/bin/nvim "$@"
+          '')
         ];
       };
     in
-    lib.mkMerge [
-      base
-      impermanence
-    ];
+    base;
 }

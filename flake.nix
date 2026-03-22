@@ -46,7 +46,32 @@
       url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nixCats.url = "github:BirdeeHub/nixCats-nvim";
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    plugins-nvim-dap = {
+      url = "github:mfussenegger/nvim-dap/a9d8cb68ee7184111dc66156c4a2ebabfbe01bc5";
+      flake = false;
+    };
+    plugins-nvim-lint = {
+      url = "github:mfussenegger/nvim-lint/606b823a57b027502a9ae00978ebf4f5d5158098";
+      flake = false;
+    };
+    plugins-tree-sitter-queries = {
+      url = "github:zebradil/tree-sitter-queries";
+      flake = false;
+    };
+    plugins-tree-sitter-test_highlights = {
+      url = "github:zebradil/tree-sitter-test_highlights";
+      flake = false;
+    };
+    plugins-tree-sitter-ytt_annotation = {
+      url = "github:zebradil/tree-sitter-ytt_annotation";
+      flake = false;
+    };
+    plugins-vim-abolish = {
+      url = "github:tpope/vim-abolish";
+      flake = false;
+    };
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";

@@ -15,6 +15,8 @@
           dotDir = "${config.home.homeDirectory}/.zsh";
           envExtra = ''
             export EDITOR=nvim
+            export NVIM_COMMAND=nvim-profile
+            export NVIM_PROFILE_NAME=astro4
             export LANG=en_US.UTF-8
             export LC_ALL=en_US.UTF-8
             export LC_TIME=en_DK.UTF-8
@@ -56,7 +58,6 @@
           shellAliases = {
             ndr = "nix-direnv-reload";
             tf = "terraform";
-            nv = "nvim";
           };
         };
 
