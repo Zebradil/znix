@@ -6,12 +6,11 @@
       lib,
       config,
       osConfig,
+      isDarwin,
       ...
     }:
     let
       base = {
-        programs.ssh.matchBlocks."*".identityAgent = "~/.1password/agent.sock";
-
         programs.git.settings = {
           gpg.format = "ssh";
           "gpg \"ssh\"" = {
@@ -22,15 +21,32 @@
         };
       };
 
+      darwin = {
+        home.packages = [ pkgs._1password-cli ];
+      };
+
+      nixos = {
+        programs.ssh.matchBlocks."*".identityAgent = "~/.1password/agent.sock";
+      };
+
       impermanence = lib.mkIf osConfig.znix.impermanence.enable {
         home.persistence."/persist".directories = [ ".config/1Password" ];
       };
 
     in
-    lib.mkMerge [
-      base
-      impermanence
-    ];
+    lib.mkMerge (
+      if isDarwin then
+        [
+          base
+          darwin
+        ]
+      else
+        [
+          base
+          nixos
+          impermanence
+        ]
+    );
 
   flake.modules.nixos._1password =
     { config, lib, ... }:
