@@ -8,6 +8,7 @@
   flake.modules.nixos.tuxedo = {
     imports =
       (with inputs.self.modules.nixos; [
+        _1password
         boot
         diff
         ephemeral-btrfs

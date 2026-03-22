@@ -10,17 +10,7 @@
     }:
     let
       base = {
-        home.packages = with pkgs; [
-          _1password-gui
-          _1password-cli
-        ];
-
-        programs.ssh = {
-          extraConfig = ''
-            Host *
-                IdentityAgent ~/.1password/agent.sock
-          '';
-        };
+        programs.ssh.matchBlocks."*".identityAgent = "~/.1password/agent.sock";
 
         programs.git.settings = {
           gpg.format = "ssh";
@@ -41,4 +31,14 @@
       base
       impermanence
     ];
+
+  flake.modules.nixos._1password =
+    { config, lib, ... }:
+    {
+      programs._1password.enable = true;
+      programs._1password-gui = {
+        enable = true;
+        polkitPolicyOwners = builtins.attrNames (lib.filterAttrs (_: u: u.isNormalUser) config.users.users);
+      };
+    };
 }
