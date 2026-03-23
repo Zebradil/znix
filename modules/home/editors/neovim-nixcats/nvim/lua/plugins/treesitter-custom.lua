@@ -1,4 +1,6 @@
-if not nixCats("custom") then return end
+if not nixCats("custom") then
+  return
+end
 
 -- Custom tree-sitter parsers from zebradil
 -- These plugins are on the runtimepath and register parsers/queries with nvim-treesitter.
