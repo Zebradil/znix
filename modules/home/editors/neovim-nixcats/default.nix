@@ -172,7 +172,7 @@
 
       nixCatsBuilder = utils.baseBuilder ./nvim {
         nixpkgs = inputs.nixpkgs;
-        system = pkgs.system;
+        system = pkgs.stdenv.hostPlatform.system;
         inherit dependencyOverlays;
         extra_pkg_config = { };
       } categoryDefinitions packageDefinitions;
