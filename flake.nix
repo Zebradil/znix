@@ -48,6 +48,10 @@
     };
     nixCats.url = "github:BirdeeHub/nixCats-nvim";
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixvim = {
+      url = "github:nix-community/nixvim";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     plugins-nvim-dap = {
       url = "github:mfussenegger/nvim-dap/a9d8cb68ee7184111dc66156c4a2ebabfbe01bc5";
       flake = false;
