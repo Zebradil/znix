@@ -1,30 +1,33 @@
-local lspconfig = require("lspconfig")
+-- Keymaps for LSP buffers
+vim.api.nvim_create_autocmd("LspAttach", {
+  group = vim.api.nvim_create_augroup("UserLspKeymaps", { clear = true }),
+  callback = function(args)
+    local bufnr = args.buf
+    local map = function(mode, lhs, rhs, opts)
+      opts = vim.tbl_extend("force", { buffer = bufnr, silent = true }, opts or {})
+      vim.keymap.set(mode, lhs, rhs, opts)
+    end
 
--- Common on_attach function
-local on_attach = function(_, bufnr)
-  local map = function(mode, lhs, rhs, opts)
-    opts = vim.tbl_extend("force", { buffer = bufnr, silent = true }, opts or {})
-    vim.keymap.set(mode, lhs, rhs, opts)
-  end
+    map("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
+    map("n", "gD", vim.lsp.buf.declaration, { desc = "Go to declaration" })
+    map("n", "gr", vim.lsp.buf.references, { desc = "References" })
+    map("n", "gi", vim.lsp.buf.implementation, { desc = "Go to implementation" })
+    map("n", "gy", vim.lsp.buf.type_definition, { desc = "Type definition" })
+    map("n", "K", vim.lsp.buf.hover, { desc = "Hover documentation" })
+    map("n", "<C-k>", vim.lsp.buf.signature_help, { desc = "Signature help" })
+    map("n", "<Leader>la", vim.lsp.buf.code_action, { desc = "Code action" })
+    map("v", "<Leader>la", vim.lsp.buf.code_action, { desc = "Code action" })
+    map("n", "<Leader>lr", vim.lsp.buf.rename, { desc = "Rename symbol" })
+  end,
+})
 
-  map("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
-  map("n", "gD", vim.lsp.buf.declaration, { desc = "Go to declaration" })
-  map("n", "gr", vim.lsp.buf.references, { desc = "References" })
-  map("n", "gi", vim.lsp.buf.implementation, { desc = "Go to implementation" })
-  map("n", "gy", vim.lsp.buf.type_definition, { desc = "Type definition" })
-  map("n", "K", vim.lsp.buf.hover, { desc = "Hover documentation" })
-  map("n", "<C-k>", vim.lsp.buf.signature_help, { desc = "Signature help" })
-  map("n", "<Leader>la", vim.lsp.buf.code_action, { desc = "Code action" })
-  map("v", "<Leader>la", vim.lsp.buf.code_action, { desc = "Code action" })
-  map("n", "<Leader>lr", vim.lsp.buf.rename, { desc = "Rename symbol" })
-end
-
--- Build capabilities with blink-cmp support
+-- Global capabilities with blink-cmp support
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 local ok_blink, blink = pcall(require, "blink.cmp")
 if ok_blink then
   capabilities = blink.get_lsp_capabilities(capabilities)
 end
+vim.lsp.config("*", { capabilities = capabilities })
 
 -- Diagnostics config
 vim.diagnostic.config({
@@ -39,11 +42,11 @@ vim.diagnostic.config({
   },
 })
 
--- LSP server configurations
-local servers = {}
+-- LSP server configurations and enable list
+local servers_to_enable = {}
 
 if nixCats("go") then
-  servers.gopls = {
+  vim.lsp.config("gopls", {
     settings = {
       gopls = {
         analyses = { unusedparams = true },
@@ -51,11 +54,12 @@ if nixCats("go") then
         gofumpt = true,
       },
     },
-  }
+  })
+  table.insert(servers_to_enable, "gopls")
 end
 
 if nixCats("lua") then
-  servers.lua_ls = {
+  vim.lsp.config("lua_ls", {
     settings = {
       Lua = {
         workspace = { checkThirdParty = false },
@@ -69,22 +73,24 @@ if nixCats("lua") then
         },
       },
     },
-  }
+  })
+  table.insert(servers_to_enable, "lua_ls")
 end
 
 if nixCats("nix") then
-  servers.nixd = {
+  vim.lsp.config("nixd", {
     settings = {
       nixd = {
         formatting = { command = { "nixfmt" } },
       },
     },
-  }
+  })
+  table.insert(servers_to_enable, "nixd")
 end
 
 if nixCats("yaml") then
   local ok_schema, schemastore = pcall(require, "SchemaStore")
-  servers.yamlls = {
+  vim.lsp.config("yamlls", {
     settings = {
       yaml = {
         schemaStore = { enable = false, url = "" },
@@ -94,25 +100,20 @@ if nixCats("yaml") then
         hover = true,
       },
     },
-  }
+  })
+  table.insert(servers_to_enable, "yamlls")
 end
 
 if nixCats("markdown") then
-  servers.marksman = {}
+  table.insert(servers_to_enable, "marksman")
 end
 
 if nixCats("terraform") then
-  servers.terraformls = {}
-  servers.tflint = {}
+  table.insert(servers_to_enable, "terraformls")
+  table.insert(servers_to_enable, "tflint")
 end
 
--- Setup all servers
-for server, config in pairs(servers) do
-  lspconfig[server].setup(vim.tbl_deep_extend("force", {
-    capabilities = capabilities,
-    on_attach = on_attach,
-  }, config))
-end
+vim.lsp.enable(servers_to_enable)
 
 -- lazydev for Lua LSP
 if nixCats("lua") then
