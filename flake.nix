@@ -51,6 +51,7 @@
     nixvim = {
       url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-parts.follows = "flake-parts";
     };
     plugins-nvim-dap = {
       url = "github:mfussenegger/nvim-dap/a9d8cb68ee7184111dc66156c4a2ebabfbe01bc5";

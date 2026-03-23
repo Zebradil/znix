@@ -197,6 +197,11 @@
           "statix"
         ];
       };
+      autoCmd.event = [
+        "BufWritePost"
+        "BufReadPost"
+        "InsertLeave"
+      ];
     };
 
     # ─ Completion ─────────────────────────────────────────────────
@@ -394,13 +399,9 @@
     };
 
     # ─ DAP ────────────────────────────────────────────────────────
-    dap = {
-      enable = true;
-      extensions = {
-        dap-go.enable = true;
-        dap-ui.enable = true;
-      };
-    };
+    dap.enable = true;
+    dap-go.enable = true;
+    dap-ui.enable = true;
 
     # ─ Testing ────────────────────────────────────────────────────
     neotest = {
@@ -912,20 +913,6 @@
 
   # ── Autocommands ─────────────────────────────────────────────────
   autoCmd = [
-    # Lint on save/read/insert leave
-    {
-      event = [
-        "BufWritePost"
-        "BufReadPost"
-        "InsertLeave"
-      ];
-      callback.__raw = ''
-        function()
-          require("lint").try_lint()
-        end
-      '';
-      desc = "Run linters";
-    }
     {
       event = [ "FileType" ];
       pattern = [ "yaml" ];
