@@ -24,6 +24,7 @@
 
       base = {
         home.packages = [
+          pkgs.tree-sitter
           (pkgs.writeShellScriptBin "nvx" ''
             exec ${nvim}/bin/nvim "$@"
           '')
