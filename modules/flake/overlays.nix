@@ -6,6 +6,6 @@
   };
 
   flake.overlays.default = final: _prev: {
-    gke-kubeconfiger = inputs.gke-kubeconfiger.packages.${final.system}.gke-kubeconfiger;
+    gke-kubeconfiger = inputs.gke-kubeconfiger.packages.${final.stdenv.hostPlatform.system}.gke-kubeconfiger;
   };
 }
