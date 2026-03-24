@@ -16,7 +16,7 @@
       ...
     }:
     let
-      nvim = inputs.nixvim.legacyPackages.${pkgs.system}.makeNixvimWithModule {
+      nvim = inputs.nixvim.legacyPackages.${pkgs.stdenv.hostPlatform.system}.makeNixvimWithModule {
         inherit pkgs;
         module = import ./_config.nix;
         extraSpecialArgs = { inherit inputs; };
