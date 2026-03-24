@@ -464,6 +464,13 @@ in
       name = "tree-sitter-queries";
       src = inputs.plugins-tree-sitter-queries;
     })
+
+    # ytt_annotation vim plugin layer (provides after/queries/yaml/injections.scm
+    # for injecting ytt_annotation parsing into YAML comments)
+    (pkgs.vimUtils.buildVimPlugin {
+      name = "tree-sitter-ytt_annotation";
+      src = inputs.plugins-tree-sitter-ytt_annotation;
+    })
   ];
 
   # ── Extra Lua config (for plugins without nixvim modules) ────────
