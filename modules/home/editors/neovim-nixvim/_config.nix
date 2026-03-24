@@ -1,4 +1,17 @@
 { pkgs, inputs, ... }:
+let
+  # Pre-compile custom treesitter grammars at nix build time
+  ts-test_highlights = pkgs.tree-sitter.buildGrammar {
+    language = "test_highlights";
+    version = "0.0.0";
+    src = inputs.plugins-tree-sitter-test_highlights;
+  };
+  ts-ytt_annotation = pkgs.tree-sitter.buildGrammar {
+    language = "ytt_annotation";
+    version = "0.0.0";
+    src = inputs.plugins-tree-sitter-ytt_annotation;
+  };
+in
 {
   # ── Global variables ──────────────────────────────────────────────
   globals = {
@@ -90,6 +103,10 @@
         vim
         vimdoc
         yaml
+      ] ++ [
+        # Custom zebradil grammars (pre-compiled)
+        (pkgs.vimPlugins.nvim-treesitter.grammarToPlugin ts-test_highlights)
+        (pkgs.vimPlugins.nvim-treesitter.grammarToPlugin ts-ytt_annotation)
       ];
     };
 
@@ -442,15 +459,7 @@
       src = inputs.plugins-vim-abolish;
     })
 
-    # Custom treesitter grammars
-    (pkgs.vimUtils.buildVimPlugin {
-      name = "tree-sitter-test_highlights";
-      src = inputs.plugins-tree-sitter-test_highlights;
-    })
-    (pkgs.vimUtils.buildVimPlugin {
-      name = "tree-sitter-ytt_annotation";
-      src = inputs.plugins-tree-sitter-ytt_annotation;
-    })
+    # Custom treesitter query files (not a compilable grammar)
     (pkgs.vimUtils.buildVimPlugin {
       name = "tree-sitter-queries";
       src = inputs.plugins-tree-sitter-queries;
