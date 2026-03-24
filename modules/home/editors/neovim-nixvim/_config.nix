@@ -295,7 +295,7 @@
               gap = 1;
               padding = 1;
             }
-            { section = "startup"; }
+            { section = "recent_files"; }
           ];
         };
         indent.enabled = true;
