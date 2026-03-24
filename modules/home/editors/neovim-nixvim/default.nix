@@ -29,13 +29,13 @@
           '')
         ];
       };
-
-      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
-        home.persistence."/persist".directories = [ ".config/github-copilot" ];
-      };
+      #
+      # impermanence = lib.mkIf osConfig.znix.impermanence.enable {
+      #   home.persistence."/persist".directories = [ ".config/github-copilot" ];
+      # };
     in
     lib.mkMerge [
       base
-      impermanence
+      # impermanence
     ];
 }

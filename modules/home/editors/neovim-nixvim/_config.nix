@@ -31,15 +31,17 @@
   };
 
   # ── Diagnostics ──────────────────────────────────────────────────
-  diagnostics = {
-    virtual_text = true;
-    underline = true;
-    signs = true;
-    update_in_insert = false;
-    severity_sort = true;
-    float = {
-      border = "rounded";
-      source = true;
+  diagnostic = {
+    settings = {
+      virtual_text = true;
+      underline = true;
+      signs = true;
+      update_in_insert = false;
+      severity_sort = true;
+      float = {
+        border = "rounded";
+        source = true;
+      };
     };
   };
 
@@ -151,6 +153,7 @@
 
     schemastore = {
       enable = true;
+      json.enable = false;
       yaml.enable = true;
     };
 
@@ -261,17 +264,19 @@
     # ─ UI ─────────────────────────────────────────────────────────
     neo-tree = {
       enable = true;
-      closeIfLastWindow = true;
-      filesystem = {
-        filteredItems = {
-          hideDotfiles = false;
-          hideGitignored = true;
+      settings = {
+        close_if_last_window = true;
+        filesystem = {
+          filtered_items = {
+            hide_dotfiles = false;
+            hide_gitignored = true;
+          };
+          follow_current_file.enabled = true;
         };
-        followCurrentFile.enabled = true;
-      };
-      window = {
-        position = "left";
-        width = 30;
+        window = {
+          position = "left";
+          width = 30;
+        };
       };
     };
 
