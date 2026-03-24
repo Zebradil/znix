@@ -4,7 +4,18 @@
     nixvim = {
       url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-parts.follows = "flake-parts";
+    };
+    "plugins-tree-sitter-test_highlights" = {
+      url = "github:zebradil/tree-sitter-test_highlights";
+      flake = false;
+    };
+    "plugins-tree-sitter-ytt_annotation" = {
+      url = "github:zebradil/tree-sitter-ytt_annotation";
+      flake = false;
+    };
+    "plugins-tree-sitter-queries" = {
+      url = "github:zebradil/tree-sitter-queries";
+      flake = false;
     };
   };
 
@@ -16,27 +27,31 @@
       ...
     }:
     let
-      nvim = inputs.nixvim.legacyPackages.${pkgs.stdenv.hostPlatform.system}.makeNixvimWithModule {
-        inherit pkgs;
-        module = import ./_config.nix;
-        extraSpecialArgs = { inherit inputs; };
-      };
-
       base = {
+        imports = [
+          inputs.nixvim.homeModules.nixvim
+          ./_config.nix
+        ];
+
         home.packages = [
           pkgs.tree-sitter
-          (pkgs.writeShellScriptBin "nvx" ''
-            exec ${nvim}/bin/nvim "$@"
-          '')
         ];
+
+        programs.nixvim = {
+          enable = true;
+          defaultEditor = true;
+          nixpkgs.useGlobalPackages = true;
+          viAlias = true;
+          vimAlias = true;
+        };
       };
-      #
-      # impermanence = lib.mkIf osConfig.znix.impermanence.enable {
-      #   home.persistence."/persist".directories = [ ".config/github-copilot" ];
-      # };
+
+      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
+        home.persistence."/persist".directories = [ ".config/github-copilot" ];
+      };
     in
     lib.mkMerge [
       base
-      # impermanence
+      impermanence
     ];
 }
