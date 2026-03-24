@@ -80,34 +80,38 @@ in
           };
         };
       };
-      grammarPackages = with pkgs.vimPlugins.nvim-treesitter.builtGrammars; [
-        bash
-        dockerfile
-        go
-        gomod
-        gosum
-        gowork
-        hcl
-        helm
-        json
-        just
-        lua
-        make
-        markdown
-        markdown_inline
-        nix
-        python
-        rust
-        terraform
-        toml
-        vim
-        vimdoc
-        yaml
-      ] ++ [
-        # Custom zebradil grammars (pre-compiled)
-        (pkgs.vimPlugins.nvim-treesitter.grammarToPlugin ts-test_highlights)
-        (pkgs.vimPlugins.nvim-treesitter.grammarToPlugin ts-ytt_annotation)
-      ];
+      grammarPackages =
+        with pkgs.vimPlugins.nvim-treesitter.builtGrammars;
+        [
+          bash
+          dockerfile
+          go
+          gomod
+          gosum
+          gowork
+          hcl
+          helm
+          json
+          just
+          lua
+          make
+          markdown
+          markdown_inline
+          nix
+          python
+          rust
+          starlark
+          terraform
+          toml
+          vim
+          vimdoc
+          yaml
+        ]
+        ++ [
+          # Custom zebradil grammars (pre-compiled)
+          (pkgs.vimPlugins.nvim-treesitter.grammarToPlugin ts-test_highlights)
+          (pkgs.vimPlugins.nvim-treesitter.grammarToPlugin ts-ytt_annotation)
+        ];
     };
 
     # ─ LSP ────────────────────────────────────────────────────────
