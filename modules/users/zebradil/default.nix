@@ -44,7 +44,7 @@
         home = {
           username = "zebradil";
           homeDirectory = "/home/zebradil";
-          stateVersion = "22.05";
+          stateVersion = "26.05";
 
           persistence."/persist" = lib.mkIf config.znix.impermanence.enable {
             directories = [
