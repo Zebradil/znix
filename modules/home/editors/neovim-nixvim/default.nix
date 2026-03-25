@@ -26,19 +26,20 @@
       osConfig,
       ...
     }:
-    let
-      base = {
-        imports = [ inputs.nixvim.homeModules.nixvim ];
-        programs.nixvim = import ./_config.nix { inherit pkgs inputs; };
-        home.packages = [ pkgs.tree-sitter ];
-      };
+    {
+      # imports must be at the module top level, NOT inside lib.mkMerge
+      # (mkMerge treats its contents as config values, so imports would be
+      # interpreted as a config option rather than a module structural key)
+      imports = [ inputs.nixvim.homeModules.nixvim ];
 
-      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
-        home.persistence."/persist".directories = [ ".config/github-copilot" ];
-      };
-    in
-    lib.mkMerge [
-      base
-      impermanence
-    ];
+      config = lib.mkMerge [
+        {
+          programs.nixvim = import ./_config.nix { inherit pkgs inputs; };
+          home.packages = [ pkgs.tree-sitter ];
+        }
+        (lib.mkIf osConfig.znix.impermanence.enable {
+          home.persistence."/persist".directories = [ ".config/github-copilot" ];
+        })
+      ];
+    };
 }
