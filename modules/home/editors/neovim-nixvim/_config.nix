@@ -461,12 +461,7 @@ in
   extraPlugins = with pkgs.vimPlugins; [
     # CopilotChat
     CopilotChat-nvim
-
-    # vim-abolish
-    (pkgs.vimUtils.buildVimPlugin {
-      name = "vim-abolish";
-      src = inputs.plugins-vim-abolish;
-    })
+    vim-abolish
 
     # Custom treesitter query files (not a compilable grammar)
     (pkgs.vimUtils.buildVimPlugin {
