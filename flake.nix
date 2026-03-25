@@ -67,5 +67,6 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    tree-sitter-test_highlights.url = "github:zebradil/tree-sitter-test_highlights";
   };
 }

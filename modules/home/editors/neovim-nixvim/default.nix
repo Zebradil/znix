@@ -17,6 +17,7 @@
       url = "github:zebradil/tree-sitter-queries";
       flake = false;
     };
+    tree-sitter-test_highlights.url = "github:zebradil/tree-sitter-test_highlights";
   };
 
   flake.modules.homeManager.neovim-nixvim =

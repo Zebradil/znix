@@ -114,7 +114,7 @@ in
         ]
         ++ [
           # Custom zebradil grammars (pre-compiled)
-          (pkgs.vimPlugins.nvim-treesitter.grammarToPlugin ts-test_highlights)
+          inputs.tree-sitter-test_highlights.packages.${pkgs.stdenv.hostPlatform.system}.nvim-plugin
           (pkgs.vimPlugins.nvim-treesitter.grammarToPlugin ts-ytt_annotation)
         ];
     };
