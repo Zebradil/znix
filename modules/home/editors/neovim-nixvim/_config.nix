@@ -13,6 +13,11 @@ let
   };
 in
 {
+  enable = true;
+  defaultEditor = true;
+  viAlias = true;
+  vimAlias = true;
+
   # ── Global variables ──────────────────────────────────────────────
   globals = {
     mapleader = " ";

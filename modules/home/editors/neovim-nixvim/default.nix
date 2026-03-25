@@ -28,22 +28,9 @@
     }:
     let
       base = {
-        imports = [
-          inputs.nixvim.homeModules.nixvim
-          ./_config.nix
-        ];
-
-        home.packages = [
-          pkgs.tree-sitter
-        ];
-
-        programs.nixvim = {
-          enable = true;
-          defaultEditor = true;
-          nixpkgs.useGlobalPackages = true;
-          viAlias = true;
-          vimAlias = true;
-        };
+        imports = [ inputs.nixvim.homeModules.nixvim ];
+        programs.nixvim = import ./_config.nix { inherit pkgs inputs; };
+        home.packages = [ pkgs.tree-sitter ];
       };
 
       impermanence = lib.mkIf osConfig.znix.impermanence.enable {
