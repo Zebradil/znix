@@ -31,7 +31,7 @@ in
         home = {
           username = "${username}";
           homeDirectory = "/Users/${username}";
-          stateVersion = "24.05";
+          stateVersion = "26.05";
         };
       };
 

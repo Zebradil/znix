@@ -1,7 +1,12 @@
 { ... }:
 let
   nixosModule =
-    { config, lib, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       options.znix.diff.enable = lib.mkEnableOption "rebuild diff summary";
 
@@ -18,7 +23,12 @@ let
     };
 
   darwinModule =
-    { config, lib, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       options.znix.diff.enable = lib.mkEnableOption "rebuild diff summary";
 

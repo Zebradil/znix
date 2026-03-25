@@ -92,6 +92,27 @@
         "type": "github"
       }
     },
+    "flake-parts_2": {
+      "inputs": {
+        "nixpkgs-lib": [
+          "nixvim",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1772408722,
+        "narHash": "sha256-rHuJtdcOjK7rAHpHphUb1iCvgkU3GpfvicLMwwnfMT0=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "f20dc5d9b8027381c474144ecabc9034d6a839a3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -327,21 +348,6 @@
         "type": "github"
       }
     },
-    "nixCats": {
-      "locked": {
-        "lastModified": 1770584904,
-        "narHash": "sha256-9Zaz8lbKF2W9pwXZEnbiGsicHdBoU+dHt3Wv3mCJoZ8=",
-        "owner": "BirdeeHub",
-        "repo": "nixCats-nvim",
-        "rev": "538fdde784d2909700d97a8ef307783b33a86fb1",
-        "type": "github"
-      },
-      "original": {
-        "owner": "BirdeeHub",
-        "repo": "nixCats-nvim",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1768564909,
@@ -389,37 +395,25 @@
         "type": "github"
       }
     },
-    "plugins-nvim-dap": {
-      "flake": false,
+    "nixvim": {
+      "inputs": {
+        "flake-parts": "flake-parts_2",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "systems": "systems_2"
+      },
       "locked": {
-        "lastModified": 1772809467,
-        "narHash": "sha256-U9RMvCDeNQjZ/8TFn848YQXhccIvZsBf7Axa/IipX/Q=",
-        "owner": "mfussenegger",
-        "repo": "nvim-dap",
-        "rev": "a9d8cb68ee7184111dc66156c4a2ebabfbe01bc5",
+        "lastModified": 1772402258,
+        "narHash": "sha256-3DmCFOdmbkFML1/G9gj8Wb+rCCZFPOQtNoMCpqOF8SA=",
+        "owner": "nix-community",
+        "repo": "nixvim",
+        "rev": "21ae25e13b01d3b4cdc750b5f9e7bad68b150c10",
         "type": "github"
       },
       "original": {
-        "owner": "mfussenegger",
-        "repo": "nvim-dap",
-        "rev": "a9d8cb68ee7184111dc66156c4a2ebabfbe01bc5",
-        "type": "github"
-      }
-    },
-    "plugins-nvim-lint": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1771878210,
-        "narHash": "sha256-WotyvU8lqfjN3PVXVpDQm7HMahmwYRYgTN0+WsJwyWQ=",
-        "owner": "mfussenegger",
-        "repo": "nvim-lint",
-        "rev": "606b823a57b027502a9ae00978ebf4f5d5158098",
-        "type": "github"
-      },
-      "original": {
-        "owner": "mfussenegger",
-        "repo": "nvim-lint",
-        "rev": "606b823a57b027502a9ae00978ebf4f5d5158098",
+        "owner": "nix-community",
+        "repo": "nixvim",
         "type": "github"
       }
     },
@@ -471,22 +465,6 @@
         "type": "github"
       }
     },
-    "plugins-vim-abolish": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1695997009,
-        "narHash": "sha256-MFXQjLIY1WJ6bGuxRr7WiIcjK9lOlMsFDit0bRmYd/s=",
-        "owner": "tpope",
-        "repo": "vim-abolish",
-        "rev": "dcbfe065297d31823561ba787f51056c147aa682",
-        "type": "github"
-      },
-      "original": {
-        "owner": "tpope",
-        "repo": "vim-abolish",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "disko": "disko",
@@ -504,14 +482,11 @@
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",
         "nix-index-database": "nix-index-database",
-        "nixCats": "nixCats",
         "nixpkgs": "nixpkgs_2",
-        "plugins-nvim-dap": "plugins-nvim-dap",
-        "plugins-nvim-lint": "plugins-nvim-lint",
+        "nixvim": "nixvim",
         "plugins-tree-sitter-queries": "plugins-tree-sitter-queries",
         "plugins-tree-sitter-test_highlights": "plugins-tree-sitter-test_highlights",
         "plugins-tree-sitter-ytt_annotation": "plugins-tree-sitter-ytt_annotation",
-        "plugins-vim-abolish": "plugins-vim-abolish",
         "sops-nix": "sops-nix"
       }
     },
@@ -536,6 +511,21 @@
       }
     },
     "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems_2": {
       "locked": {
         "lastModified": 1681028828,
         "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
