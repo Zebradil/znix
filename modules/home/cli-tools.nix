@@ -20,7 +20,6 @@ _: {
         jnv
         k9s
         lazygit
-        nh
         tailscale
         tmux
         translate-shell
@@ -52,6 +51,7 @@ _: {
         moreutils
         myks
         ncdu
+        nh
         nmap
         nodejs
         rage
