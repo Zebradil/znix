@@ -82,6 +82,7 @@ _: {
         nil
         nixd
         nixfmt
+        nixfmt-tree
 
         python3
 
