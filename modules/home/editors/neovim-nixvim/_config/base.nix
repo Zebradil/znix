@@ -16,6 +16,7 @@
     relativenumber = false;
 
     # -- Display --
+    foldenable = false; # Disable code folding by default
     scrolloff = 8; # Keep 8 lines visible above/below the cursor when scrolling
     signcolumn = "yes"; # Always show the sign column (prevents layout shift from diagnostics/git signs)
     spell = false;
