@@ -19,7 +19,7 @@
 
       config = lib.mkMerge [
         {
-          programs.nixvim = import ./_config.nix { inherit pkgs inputs; };
+          programs.nixvim = import ./_config { inherit pkgs inputs lib; };
           home.packages = [ pkgs.tree-sitter ];
         }
         (lib.mkIf osConfig.znix.impermanence.enable {
