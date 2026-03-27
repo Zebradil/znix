@@ -1,5 +1,4 @@
-{ ... }:
-{
+_: {
   flake.modules.nixos.ephemeral-btrfs =
     { config, lib, ... }:
     {

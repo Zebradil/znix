@@ -1,4 +1,4 @@
-{ ... }:
+_:
 let
   fontsModule =
     { pkgs, ... }:

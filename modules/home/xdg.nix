@@ -1,8 +1,5 @@
-{ ... }:
-{
-  flake.modules.homeManager.xdg =
-    { ... }:
-    {
-      xdg.enable = true;
-    };
+_: {
+  flake.modules.homeManager.xdg = _: {
+    xdg.enable = true;
+  };
 }

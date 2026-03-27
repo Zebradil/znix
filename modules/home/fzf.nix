@@ -1,8 +1,5 @@
-{ ... }:
-{
-  flake.modules.homeManager.fzf =
-    { ... }:
-    {
-      programs.fzf.enable = true;
-    };
+_: {
+  flake.modules.homeManager.fzf = _: {
+    programs.fzf.enable = true;
+  };
 }

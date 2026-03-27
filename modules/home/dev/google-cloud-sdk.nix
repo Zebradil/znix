@@ -1,5 +1,4 @@
-{ ... }:
-{
+_: {
   flake.modules.homeManager.google-cloud-sdk =
     { pkgs, ... }:
     {

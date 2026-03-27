@@ -1,11 +1,8 @@
-{ ... }:
-{
-  flake.modules.nixos.gdm =
-    { ... }:
-    {
-      services.displayManager = {
-        enable = true;
-        gdm.enable = true;
-      };
+_: {
+  flake.modules.nixos.gdm = _: {
+    services.displayManager = {
+      enable = true;
+      gdm.enable = true;
     };
+  };
 }

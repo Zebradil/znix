@@ -1,5 +1,4 @@
-{ ... }:
-{
+_: {
   flake.modules.homeManager._1password =
     {
       pkgs,
