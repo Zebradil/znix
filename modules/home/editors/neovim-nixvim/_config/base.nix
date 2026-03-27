@@ -17,28 +17,28 @@
 
     # -- Display --
     foldenable = false; # Disable code folding by default
+    colorcolumn = "+1"; # Show a vertical guide 1 column past 'textwidth' to indicate line length
     scrolloff = 8; # Keep 8 lines visible above/below the cursor when scrolling
     signcolumn = "yes"; # Always show the sign column (prevents layout shift from diagnostics/git signs)
     spell = false;
     termguicolors = true; # Enable 24-bit RGB color in the TUI (required by most modern colorschemes)
     wrap = true; # Wrap long lines visually (does not insert actual line breaks)
-    colorcolumn = "+1"; # Show a vertical guide 1 column past 'textwidth' to indicate line length
 
     # -- Indentation --
     expandtab = true; # Convert tabs to spaces when inserting
     shiftwidth = 2; # Number of spaces used for each step of (auto)indent
-    tabstop = 2; # Number of spaces a <Tab> character counts for visually
     smartindent = true; # Auto-indent new lines based on syntax (e.g., after `{` or keywords)
+    tabstop = 2; # Number of spaces a <Tab> character counts for visually
 
     # -- Search --
     ignorecase = true;
     smartcase = true; # Override 'ignorecase' when the search pattern contains uppercase letters
 
     # -- Behavior --
-    updatetime = 250; # Time in ms before CursorHold fires & swap file is written (snappier diagnostics)
     splitbelow = true; # Open horizontal splits below the current window
     splitright = true; # Open vertical splits to the right of the current window
     undofile = true; # Persist undo history to disk so it survives between sessions
+    updatetime = 250; # Time in ms before CursorHold fires & swap file is written (snappier diagnostics)
 
     # -- System Integration --
     clipboard = "unnamedplus"; # Use the system clipboard for all yank/delete/paste operations
