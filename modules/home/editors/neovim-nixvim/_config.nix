@@ -59,9 +59,10 @@
     # ─ Treesitter ─────────────────────────────────────────────────
     treesitter = {
       enable = true;
+      folding.enable = true;
+      highlight.enable = true;
+      indent.enable = true;
       settings = {
-        highlight.enable = true;
-        indent.enable = true;
         incremental_selection = {
           enable = true;
           keymaps = {
