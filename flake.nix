@@ -51,22 +51,12 @@
       url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    plugins-tree-sitter-queries = {
-      url = "github:zebradil/tree-sitter-queries";
-      flake = false;
-    };
-    plugins-tree-sitter-test_highlights = {
-      url = "github:zebradil/tree-sitter-test_highlights";
-      flake = false;
-    };
-    plugins-tree-sitter-ytt_annotation = {
-      url = "github:zebradil/tree-sitter-ytt_annotation";
-      flake = false;
-    };
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    tree-sitter-queries.url = "github:zebradil/tree-sitter-queries";
     tree-sitter-test_highlights.url = "github:zebradil/tree-sitter-test_highlights";
+    tree-sitter-ytt_annotation.url = "github:zebradil/tree-sitter-ytt_annotation";
   };
 }

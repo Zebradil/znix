@@ -1,17 +1,4 @@
-{ pkgs, inputs, ... }:
-let
-  # Pre-compile custom treesitter grammars at nix build time
-  ts-test_highlights = pkgs.tree-sitter.buildGrammar {
-    language = "test_highlights";
-    version = "0.0.0";
-    src = inputs.plugins-tree-sitter-test_highlights;
-  };
-  ts-ytt_annotation = pkgs.tree-sitter.buildGrammar {
-    language = "ytt_annotation";
-    version = "0.0.0";
-    src = inputs.plugins-tree-sitter-ytt_annotation;
-  };
-in
+{ pkgs, ... }:
 {
   enable = true;
   defaultEditor = true;
@@ -114,8 +101,8 @@ in
         ]
         ++ [
           # Custom zebradil grammars (pre-compiled)
-          inputs.tree-sitter-test_highlights.packages.${pkgs.stdenv.hostPlatform.system}.nvim-plugin
-          (pkgs.vimPlugins.nvim-treesitter.grammarToPlugin ts-ytt_annotation)
+          pkgs.tree-sitter-test_highlights
+          pkgs.tree-sitter-ytt_annotation
         ];
     };
 
@@ -459,22 +446,11 @@ in
 
   # ── Extra plugins (no native nixvim module) ──────────────────────
   extraPlugins = with pkgs.vimPlugins; [
-    # CopilotChat
     CopilotChat-nvim
+    tree-sitter-queries-nvim
+    tree-sitter-test_highlights-nvim
+    tree-sitter-ytt_annotation-nvim
     vim-abolish
-
-    # Custom treesitter query files (not a compilable grammar)
-    (pkgs.vimUtils.buildVimPlugin {
-      name = "tree-sitter-queries";
-      src = inputs.plugins-tree-sitter-queries;
-    })
-
-    # ytt_annotation vim plugin layer (provides after/queries/yaml/injections.scm
-    # for injecting ytt_annotation parsing into YAML comments)
-    (pkgs.vimUtils.buildVimPlugin {
-      name = "tree-sitter-ytt_annotation";
-      src = inputs.plugins-tree-sitter-ytt_annotation;
-    })
   ];
 
   # ── Extra Lua config (for plugins without nixvim modules) ────────
