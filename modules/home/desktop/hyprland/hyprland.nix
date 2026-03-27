@@ -1,8 +1,8 @@
-{ ... }:
+{ lib, ... }:
 {
   flake.modules.homeManager.hyprland =
-    { pkgs, ... }:
-    {
+    { pkgs, isDarwin, ... }:
+    lib.optionalAttrs (!isDarwin) {
       imports = [ ./_waybar.nix ];
       wayland.windowManager.hyprland = {
         enable = true;

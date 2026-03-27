@@ -22,7 +22,8 @@ in
           (builtins.attrValues (
             removeAttrs self.modules.homeManager [
               "firefox"
-              "hyprland"
+              "telegram"
+              "slack"
             ]
           ))
           ++ [

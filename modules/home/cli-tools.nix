@@ -1,7 +1,7 @@
 { ... }:
 {
   flake.modules.homeManager.cli-tools =
-    { pkgs, lib, ... }:
+    { pkgs, ... }:
     {
       home.packages = with pkgs; [
         # Desktop apps
