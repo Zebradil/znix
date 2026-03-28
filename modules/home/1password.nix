@@ -10,12 +10,11 @@ _: {
     }:
     let
       base = {
-        programs.git.settings = {
-          gpg.format = "ssh";
-          "gpg \"ssh\"" = {
-            program = "${lib.getExe' pkgs._1password-gui "op-ssh-sign"}";
-          };
-          user.signingKey = config.sshPublicKey;
+        programs.git.signing = {
+          format = "ssh";
+          key = config.sshPublicKey;
+          signByDefault = true;
+          signer = "${lib.getExe' pkgs._1password-gui "op-ssh-sign"}";
         };
       };
 
