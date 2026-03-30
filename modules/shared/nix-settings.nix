@@ -4,63 +4,62 @@ let
     n: v: n != "self" && inputs.nixpkgs.lib.isType "flake" v
   ) inputs;
 
-  nixosModule =
-    { lib, ... }:
-    {
-      nix.settings = {
-        trusted-users = [
-          "root"
-          "@wheel"
-        ];
-        auto-optimise-store = lib.mkDefault true;
+  common = {
+    nixpkgs = {
+      config.allowUnfree = true;
+      overlays = [ self.overlays.default ];
+    };
+
+    nix.settings = {
+      settings = {
         experimental-features = [
           "nix-command"
           "flakes"
         ];
         warn-dirty = false;
-        flake-registry = "";
+        extra-substituters = [ "https://znix.zebradil.dev" ];
+        extra-trusted-public-keys = [ "znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=" ];
       };
-
-      nix.gc = {
+      gc = {
         automatic = true;
         dates = "daily";
         options = "--delete-older-than 7d";
       };
-
-      nix.registry = lib.mapAttrs (_: flake: { inherit flake; }) flakeInputs;
-      nix.nixPath = lib.mapAttrsToList (n: _: "${n}=flake:${n}") flakeInputs;
-
-      nixpkgs.config.allowUnfree = true;
-      nixpkgs.overlays = [
-        self.overlays.default
-      ];
     };
+  };
+
+  nixosModule =
+    { lib, ... }:
+    lib.mkMerge [
+      common
+      {
+        nix.settings = {
+          settings = {
+            auto-optimise-store = lib.mkDefault true;
+            flake-registry = "";
+            trusted-users = [
+              "root"
+              "@wheel"
+            ];
+          };
+
+          registry = lib.mapAttrs (_: flake: { inherit flake; }) flakeInputs;
+          nixPath = lib.mapAttrsToList (n: _: "${n}=flake:${n}") flakeInputs;
+        };
+      }
+    ];
 
   darwinModule =
     { config, lib, ... }:
-    {
-      nixpkgs.config.allowUnfree = true;
-      nixpkgs.overlays = [
-        self.overlays.default
-      ];
-
-      nix.settings = lib.mkIf config.nix.enable {
-        trusted-users = [
+    lib.mkMerge [
+      common
+      (lib.mkIf config.nix.enable {
+        nix.settings.trusted-users = [
           "root"
           "@admin"
         ];
-        experimental-features = [
-          "nix-command"
-          "flakes"
-        ];
-        warn-dirty = false;
-      };
-
-      nix.gc = lib.mkIf config.nix.enable {
-        automatic = true;
-        options = "--delete-older-than 7d";
-      };
-    };
+      })
+    ];
 in
 {
   flake.modules.nixos.nix-settings = nixosModule;
