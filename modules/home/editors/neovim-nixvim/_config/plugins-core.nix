@@ -141,6 +141,7 @@
           nix = [ "nixfmt" ];
           terraform = [ "terraform_fmt" ];
           tf = [ "terraform_fmt" ];
+          yaml = [ "prettier" ];
           markdown = [ "prettier" ];
         };
         format_on_save = {
