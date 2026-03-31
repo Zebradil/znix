@@ -196,6 +196,12 @@ _: {
     }
     {
       mode = "n";
+      key = "<Leader>fc";
+      action.__raw = "function() Snacks.picker.grep_word() end";
+      options.desc = "Find word under cursor";
+    }
+    {
+      mode = "n";
       key = "<Leader>fb";
       action.__raw = "function() Snacks.picker.buffers() end";
       options.desc = "Find buffers";
