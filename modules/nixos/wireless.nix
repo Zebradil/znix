@@ -13,30 +13,46 @@ _: {
 
         sops.secrets.wireless = {
           sopsFile = ../../secrets/hosts/common.yaml;
-          owner = "wpa_supplicant";
-          group = "wpa_supplicant";
         };
 
-        networking.wireless = {
+        sops.templates."wifi-env".content = ''
+          WIFI_PSK=${config.sops.placeholder.wireless}
+        '';
+
+        networking.networkmanager = {
           enable = true;
-          fallbackToWPA2 = false;
-          secretsFile = config.sops.secrets.wireless.path;
-          networks =
-            lib.genAttrs
-              [
-                "DUST"
-                "DUSTY"
-                "DUSK"
-              ]
-              (_ssid: {
-                pskRaw = "ext:psk_home";
-              });
-
-          allowAuxiliaryImperativeNetworks = true;
-          userControlled = true;
+          wifi.backend = "iwd";
+          ensureProfiles = {
+            environmentFiles = [ config.sops.templates."wifi-env".path ];
+            profiles =
+              lib.genAttrs
+                [
+                  "DUST"
+                  "DUSTY"
+                  "DUSK"
+                ]
+                (ssid: {
+                  connection = {
+                    id = ssid;
+                    type = "wifi";
+                  };
+                  wifi = {
+                    inherit ssid;
+                    mode = "infrastructure";
+                  };
+                  wifi-security = {
+                    key-mgmt = "wpa-psk";
+                    psk = "$WIFI_PSK";
+                  };
+                  ipv4.method = "auto";
+                  ipv6.method = "auto";
+                });
+          };
         };
 
-        users.groups.network = { };
+        environment.persistence."/persist".directories = [
+          "/etc/NetworkManager/system-connections"
+        ];
       };
     };
 }
