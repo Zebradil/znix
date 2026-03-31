@@ -11,6 +11,7 @@ let
     };
 
     nix = {
+      enable = true;
       settings = {
         experimental-features = [
           "nix-command"
@@ -23,7 +24,6 @@ let
 
       gc = {
         automatic = true;
-        dates = "daily";
         options = "--delete-older-than 7d";
       };
     };
@@ -51,15 +51,15 @@ let
     ];
 
   darwinModule =
-    { config, lib, ... }:
+    { lib, ... }:
     lib.mkMerge [
       common
-      (lib.mkIf config.nix.enable {
+      {
         nix.settings.trusted-users = [
           "root"
           "@admin"
         ];
-      })
+      }
     ];
 in
 {

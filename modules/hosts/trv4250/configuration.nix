@@ -29,30 +29,20 @@
 
     znix.diff.enable = true;
 
-    nix.enable = false;
     environment.etc."nix/nix.custom.conf".text = ''
       trusted-users = root glashevich @admin
     '';
+
     programs.zsh.enable = true;
-    system.primaryUser = "glashevich";
-    system.configurationRevision = self.rev or self.dirtyRev or null;
-    system.stateVersion = 4;
 
-    nix-homebrew = {
-      user = "glashevich";
-      enable = true;
-      taps = {
-        "homebrew/homebrew-core" = inputs.homebrew-core;
-        "homebrew/homebrew-cask" = inputs.homebrew-cask;
-        "homebrew/homebrew-bundle" = inputs.homebrew-bundle;
+    system = {
+      primaryUser = "glashevich";
+      defaults.CustomUserPreferences."digital.twisted.noTunes" = {
+        replacement = "/Users/glashevich/Applications/Edge Apps.localized/YouTube Music.app";
       };
-      mutableTaps = false;
-      enableRosetta = true;
-      autoMigrate = true;
-    };
 
-    system.defaults.CustomUserPreferences."digital.twisted.noTunes" = {
-      replacement = "/Users/glashevich/Applications/Edge Apps.localized/YouTube Music.app";
+      configurationRevision = self.rev or self.dirtyRev or null;
+      stateVersion = 4;
     };
   };
 }
