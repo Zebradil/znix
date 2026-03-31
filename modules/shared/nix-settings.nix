@@ -10,7 +10,7 @@ let
       overlays = [ self.overlays.default ];
     };
 
-    nix.settings = {
+    nix = {
       settings = {
         experimental-features = [
           "nix-command"
@@ -20,6 +20,7 @@ let
         extra-substituters = [ "https://znix.zebradil.dev" ];
         extra-trusted-public-keys = [ "znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=" ];
       };
+
       gc = {
         automatic = true;
         dates = "daily";
@@ -33,7 +34,7 @@ let
     lib.mkMerge [
       common
       {
-        nix.settings = {
+        nix = {
           settings = {
             auto-optimise-store = lib.mkDefault true;
             flake-registry = "";
