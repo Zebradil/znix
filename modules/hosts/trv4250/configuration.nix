@@ -16,7 +16,9 @@
   };
 
   flake.modules.darwin.trv4250 = {
-    imports = with inputs.self.modules.darwin; [
+    imports = [
+      inputs.determinate.darwinModules.default
+    ] ++ (with inputs.self.modules.darwin; [
       diff
       nix-settings
       fonts
@@ -25,13 +27,21 @@
       touch-id
       home-manager
       glashevich
-    ];
+    ]);
 
     znix.diff.enable = true;
 
-    environment.etc."nix/nix.custom.conf".text = ''
-      trusted-users = root glashevich @admin
-    '';
+    determinateNix = {
+      enable = true;
+      customSettings = (inputs.self.lib.nixSettings or { }) // {
+        trusted-users = [
+          "root"
+          "glashevich"
+          "@admin"
+        ];
+      };
+      determinateNixd.garbageCollector.strategy = "automatic";
+    };
 
     programs.zsh.enable = true;
 
