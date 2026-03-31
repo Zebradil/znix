@@ -12,6 +12,8 @@ _: {
       config = lib.mkIf config.znix.laptop.enable {
         powerManagement.powertop.enable = true;
 
+        services.upower.enable = true;
+
         environment.systemPackages = [ pkgs.brightnessctl ];
 
         services.logind.settings.Login = {
