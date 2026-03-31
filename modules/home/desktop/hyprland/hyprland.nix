@@ -1,9 +1,16 @@
 { lib, ... }:
 {
+  flake-file.inputs = {
+    ashell = {
+      url = "github:MalpenZibo/ashell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
   flake.modules.homeManager.hyprland =
     { pkgs, isDarwin, ... }:
     lib.optionalAttrs (!isDarwin) {
-      # imports = [ ./_waybar.nix ];
+      imports = [ ./_ashell.nix ];
       wayland.windowManager.hyprland = {
         enable = true;
         plugins = with pkgs; [
@@ -42,33 +49,6 @@
       services.hyprlauncher = {
         enable = true;
       };
-      programs.ashell = {
-        enable = true;
-        systemd.enable = true;
-        settings = {
-          appearance = {
-            scale_factor = 1.25;
-          };
-          modules = {
-            center = [
-              "Window Title"
-            ];
-            left = [
-              "Workspaces"
-            ];
-            right = [
-              "SystemInfo"
-              [
-                "Clock"
-                "Privacy"
-                "Settings"
-              ]
-            ];
-          };
-          workspaces = {
-            visibility_mode = "MonitorSpecific";
-          };
-        };
-      };
+      services.network-manager-applet.enable = true;
     };
 }

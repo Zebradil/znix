@@ -8,12 +8,14 @@
   flake.modules.nixos.home-manager = {
     imports = [ inputs.home-manager.nixosModules.home-manager ];
     home-manager.extraSpecialArgs = {
+      inherit inputs;
       isDarwin = false;
     };
   };
   flake.modules.darwin.home-manager = {
     imports = [ inputs.home-manager.darwinModules.home-manager ];
     home-manager.extraSpecialArgs = {
+      inherit inputs;
       isDarwin = true;
     };
   };
