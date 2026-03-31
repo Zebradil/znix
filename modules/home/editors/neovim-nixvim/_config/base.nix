@@ -97,7 +97,7 @@
     gofumpt
     gotools # provides goimports
     nixfmt
-    nodePackages.prettier
+    prettier
 
     # Linters
     golangci-lint
