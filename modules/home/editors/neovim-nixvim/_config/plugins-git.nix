@@ -2,6 +2,8 @@ _: {
   plugins = {
 
     # ─ Git ────────────────────────────────────────────────────────
+    gitlinker.enable = true;
+
     gitsigns = {
       enable = true;
       settings = {
