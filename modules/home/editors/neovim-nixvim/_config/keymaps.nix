@@ -169,6 +169,26 @@ _: {
       options.desc = "Focus file tree";
     }
 
+    # ─ Aerial ─
+    {
+      mode = "n";
+      key = "<Leader>a";
+      action = "<cmd>AerialToggle!<cr>";
+      options.desc = "Toggle aerial";
+    }
+    {
+      mode = "n";
+      key = "]s";
+      action = "<cmd>AerialNext<cr>";
+      options.desc = "Next symbol";
+    }
+    {
+      mode = "n";
+      key = "[s";
+      action = "<cmd>AerialPrev<cr>";
+      options.desc = "Previous symbol";
+    }
+
     # ─ Snacks picker ─
     {
       mode = "n";
