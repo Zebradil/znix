@@ -31,6 +31,10 @@ _: {
       };
     };
 
+    # ─ Flash ──────────────────────────────────────────────────────
+    # Label-based jump motions (enhances f/t/s and treesitter selection)
+    flash.enable = true;
+
     # ─ Aerial ─────────────────────────────────────────────────────
     # Code outline and symbol navigation
     aerial = {
