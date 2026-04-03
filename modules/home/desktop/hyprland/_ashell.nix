@@ -38,6 +38,11 @@
           strong = "#1b1b25";
         };
       };
+      keyboard_layout.labels = {
+        "English (US)" = "🇺🇸";
+        "English (Dvorak)" = "◈";
+        "Russian (phonetic Dvorak)" = "🇷🇺";
+      };
       modules = {
         center = [
           "WindowTitle"
@@ -46,6 +51,7 @@
           "Workspaces"
         ];
         right = [
+          "KeyboardLayout"
           "SystemInfo"
           [
             "Tempo"
