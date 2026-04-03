@@ -48,7 +48,7 @@
         right = [
           "SystemInfo"
           [
-            "Clock"
+            "Tempo"
             "Tray"
             "Privacy"
             "Settings"
