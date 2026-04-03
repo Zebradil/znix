@@ -19,7 +19,7 @@ _: {
             export LANG=en_US.UTF-8
             export LC_ALL=en_US.UTF-8
             export LC_TIME=en_DK.UTF-8
-            export LESS='--mouse --wheel-lines=3 --quit-if-one-screen --ignore-case --tabs=4'
+            export LESS='--RAW-CONTROL-CHARS --mouse --wheel-lines=3 --quit-if-one-screen --ignore-case --tabs=4'
             export MANPAGER='nvim +Man!'
             export WORKSPACE=$HOME
             export ZVM_INIT_MODE=sourcing
