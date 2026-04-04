@@ -31,7 +31,7 @@
 
     networking.hostName = "tuxedo";
     networking.domain = "zebradil.dev";
-    system.stateVersion = "22.05";
+    system.stateVersion = "25.11";
 
     znix = {
       boot.enable = true;
