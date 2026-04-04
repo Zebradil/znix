@@ -6,7 +6,8 @@
     systemd.enable = true;
     settings = {
       appearance = {
-        scale_factor = 1.25;
+        font_name = "IosevkaTerm Nerd Font";
+        scale_factor = 1.0;
         style = "Solid";
 
         success_color = "#a6e3a1";
