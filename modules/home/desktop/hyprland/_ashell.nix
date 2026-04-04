@@ -41,7 +41,7 @@
       keyboard_layout.labels = {
         "English (US)" = "🇺🇸";
         "English (Dvorak)" = "◈";
-        "Russian (phonetic Dvorak)" = "🇷🇺";
+        "Russian (phonetic, Dvorak)" = "🇷🇺";
       };
       modules = {
         center = [
