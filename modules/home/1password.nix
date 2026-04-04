@@ -23,7 +23,7 @@ _: {
               signByDefault = true;
               signer = "${lib.getExe' pkgs._1password-gui "op-ssh-sign"}";
             };
-            extraConfig."gpg.ssh".allowedSignersFile = toString allowedSignersFile;
+            settings."gpg.ssh".allowedSignersFile = toString allowedSignersFile;
           };
         };
 
