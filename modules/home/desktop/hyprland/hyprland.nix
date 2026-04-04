@@ -86,6 +86,14 @@
           "$browser" = "firefox";
 
           "$mod" = "SUPER";
+          general = {
+            gaps_in = 0;
+            gaps_out = 0;
+            border_size = 2;
+          };
+          workspace = [
+            "w[tv1], border:false"
+          ];
           input = {
             kb_layout = "us,us,ru";
             kb_variant = ",dvorak,phonetic_dvorak";
@@ -123,6 +131,9 @@
               # Volume toggles (no repeat needed)
               ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
               ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+              # Layout switching
+              "$mod, comma, exec, hyprctl keyword general:layout master"
+              "$mod, period, exec, hyprctl keyword general:layout dwindle"
             ]
             ++ (
               # workspaces
