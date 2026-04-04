@@ -18,7 +18,8 @@
   flake.modules.darwin.trv4250 = {
     imports = [
       inputs.determinate.darwinModules.default
-    ] ++ (with inputs.self.modules.darwin; [
+    ]
+    ++ (with inputs.self.modules.darwin; [
       diff
       nix-settings
       fonts

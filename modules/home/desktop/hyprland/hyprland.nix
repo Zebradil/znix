@@ -67,7 +67,14 @@
         binds ++ lib.concatMap toCyrillic binds;
     in
     lib.optionalAttrs (!isDarwin) {
-      imports = [ ./_ashell.nix ];
+      imports = [
+        ./_ashell.nix
+        ./_hyprlock.nix
+        ./_hypridle.nix
+        ./_hyprpaper.nix
+        ./_screenshot.nix
+        ./_mako.nix
+      ];
       wayland.windowManager.hyprland = {
         enable = true;
         plugins = with pkgs; [
@@ -91,6 +98,31 @@
 
               "$mod, F, exec, $browser"
               "$mod, Q, exec, $terminal"
+
+              "$mod, C, killactive"
+              "$mod SHIFT, F, fullscreen"
+              "$mod, V, togglefloating"
+              "$mod, L, exec, loginctl lock-session"
+            ]
+            ++ [
+              # Focus movement (arrow keys work across all layouts)
+              "$mod, left, movefocus, l"
+              "$mod, right, movefocus, r"
+              "$mod, up, movefocus, u"
+              "$mod, down, movefocus, d"
+              # Window movement
+              "$mod SHIFT, left, movewindow, l"
+              "$mod SHIFT, right, movewindow, r"
+              "$mod SHIFT, up, movewindow, u"
+              "$mod SHIFT, down, movewindow, d"
+              # Media playback
+              ", XF86AudioPlay, exec, playerctl play-pause"
+              ", XF86AudioNext, exec, playerctl next"
+              ", XF86AudioPrev, exec, playerctl previous"
+              ", XF86AudioStop, exec, playerctl stop"
+              # Volume toggles (no repeat needed)
+              ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+              ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
             ]
             ++ (
               # workspaces
@@ -108,8 +140,16 @@
                 ) 9
               )
             );
+          # Repeat-on-hold bindings
+          binde = [
+            ", XF86MonitorBrightnessUp, exec, brightnessctl set +5%"
+            ", XF86MonitorBrightnessDown, exec, brightnessctl set 5%-"
+            ", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
+            ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+          ];
         };
       };
+      home.packages = with pkgs; [ playerctl ];
       services.hyprlauncher = {
         enable = true;
       };

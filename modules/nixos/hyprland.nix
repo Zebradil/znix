@@ -9,6 +9,7 @@ _: {
       };
 
       programs.hyprland.enable = true;
+      security.pam.services.hyprlock = { };
       # Optional, hint electron apps to use wayland:
       environment.sessionVariables.NIXOS_OZONE_WL = "1";
       environment.systemPackages = [
