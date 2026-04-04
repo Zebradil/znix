@@ -38,7 +38,7 @@ Use `znix.<name>.enable` with `lib.mkEnableOption` + `lib.mkIf`.
 ```bash
 nix flake check                    # Validate
 nix develop                        # Dev shell
-nix fmt                            # Format with nixfmt
+nix fmt                            # Format with nixfmt-tree
 darwin-rebuild switch --flake .    # Apply on macOS
 nixos-rebuild switch --flake .     # Apply on NixOS
 ```
