@@ -9,14 +9,23 @@ _: {
       ...
     }:
     let
-      base = {
-        programs.git.signing = {
-          format = "ssh";
-          key = config.sshPublicKey;
-          signByDefault = true;
-          signer = "${lib.getExe' pkgs._1password-gui "op-ssh-sign"}";
+      base =
+        let
+          allowedSignersFile = pkgs.writeText "allowed-signers" ''
+            ${config.znix.user.email} ${config.sshPublicKey}
+          '';
+        in
+        {
+          programs.git = {
+            signing = {
+              format = "ssh";
+              key = config.sshPublicKey;
+              signByDefault = true;
+              signer = "${lib.getExe' pkgs._1password-gui "op-ssh-sign"}";
+            };
+            extraConfig."gpg.ssh".allowedSignersFile = toString allowedSignersFile;
+          };
         };
-      };
 
       darwin = {
         home.packages = [ pkgs._1password-cli ];
