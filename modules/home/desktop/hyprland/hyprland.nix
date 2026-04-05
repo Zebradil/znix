@@ -72,6 +72,7 @@
         ./_hyprlock.nix
         ./_hypridle.nix
         ./_hyprpaper.nix
+        ./_polkit.nix
         ./_screenshot.nix
         ./_mako.nix
       ];
