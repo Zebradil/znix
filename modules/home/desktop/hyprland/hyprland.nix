@@ -98,7 +98,7 @@
           input = {
             kb_layout = "us,us,ru";
             kb_variant = ",dvorak,phonetic_dvorak";
-            kb_options = "grp:caps_toggle";
+            kb_options = "grp:caps_toggle,ctrl:swap_lalt_lctl";
             resolve_binds_by_sym = true;
           };
           bind =
