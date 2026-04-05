@@ -98,7 +98,7 @@
           input = {
             kb_layout = "us,us,ru";
             kb_variant = ",dvorak,phonetic_dvorak";
-            kb_options = "grp:caps_toggle,ctrl:swap_lalt_lctl";
+            kb_options = "grp:caps_toggle";
             resolve_binds_by_sym = true;
             touchpad = {
               natural_scroll = true;
@@ -106,6 +106,12 @@
               clickfinger_behavior = true;
               drag_lock = true;
             };
+          };
+          device = {
+            name = "at-translated-set-2-keyboard";
+            kb_layout = "us,us,ru";
+            kb_variant = ",dvorak,phonetic_dvorak";
+            kb_options = "grp:caps_toggle,ctrl:swap_lalt_lctl";
           };
           gestures = {
             workspace_swipe = true;
