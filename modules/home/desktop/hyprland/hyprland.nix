@@ -68,6 +68,8 @@
     in
     lib.optionalAttrs (!isDarwin) {
       imports = [
+        ./_appearance.nix
+        ./_input.nix
         ./_ashell.nix
         ./_hyprlock.nix
         ./_hypridle.nix
@@ -76,6 +78,7 @@
         ./_screenshot.nix
         ./_mako.nix
       ];
+      home.packages = with pkgs; [ playerctl ];
       wayland.windowManager.hyprland = {
         enable = true;
         plugins = with pkgs; [
@@ -87,38 +90,6 @@
           "$browser" = "firefox";
 
           "$mod" = "SUPER";
-          general = {
-            gaps_in = 0;
-            gaps_out = 0;
-            border_size = 2;
-          };
-          workspace = [
-            "w[tv1], border:false"
-          ];
-          input = {
-            kb_layout = "us,us,ru";
-            kb_variant = ",dvorak,phonetic_dvorak";
-            kb_options = "grp:caps_toggle";
-            resolve_binds_by_sym = true;
-            touchpad = {
-              natural_scroll = true;
-              tap-to-click = true;
-              clickfinger_behavior = true;
-              drag_lock = true;
-            };
-          };
-          device = {
-            name = "at-translated-set-2-keyboard";
-            kb_layout = "us,us,ru";
-            kb_variant = ",dvorak,phonetic_dvorak";
-            kb_options = "grp:caps_toggle,ctrl:swap_lalt_lctl";
-          };
-          gesture = "3, horizontal, workspace";
-          gestures = {
-            workspace_swipe_distance = 300;
-            workspace_swipe_cancel_ratio = 0.5;
-            workspace_swipe_create_new = true;
-          };
           bind =
             withCyrillic [
               "$mod, Space, exec, $menu"
@@ -179,10 +150,10 @@
           ];
         };
       };
-      home.packages = with pkgs; [ playerctl ];
-      services.hyprlauncher = {
-        enable = true;
+      services = {
+        hyprpolkitagent.enable = true;
+        hyprlauncher.enable = true;
+        network-manager-applet.enable = true;
       };
-      services.network-manager-applet.enable = true;
     };
 }

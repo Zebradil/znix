@@ -1,4 +1,0 @@
-{ ... }:
-{
-  services.hyprpolkitagent.enable = true;
-}
