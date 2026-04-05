@@ -100,6 +100,19 @@
             kb_variant = ",dvorak,phonetic_dvorak";
             kb_options = "grp:caps_toggle,ctrl:swap_lalt_lctl";
             resolve_binds_by_sym = true;
+            touchpad = {
+              natural_scroll = true;
+              tap-to-click = true;
+              clickfinger_behavior = true;
+              drag_lock = true;
+            };
+          };
+          gestures = {
+            workspace_swipe = true;
+            workspace_swipe_fingers = 3;
+            workspace_swipe_distance = 300;
+            workspace_swipe_cancel_ratio = 0.5;
+            workspace_swipe_create_new = true;
           };
           bind =
             withCyrillic [
