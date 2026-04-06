@@ -105,6 +105,7 @@
             };
           };
         };
+        bashls.enable = true;
         marksman.enable = true;
         terraformls.enable = true;
         tflint.enable = true;
@@ -141,6 +142,8 @@
           nix = [ "nixfmt" ];
           terraform = [ "terraform_fmt" ];
           tf = [ "terraform_fmt" ];
+          sh = [ "shfmt" ];
+          bash = [ "shfmt" ];
           yaml = [ "prettier" ];
           markdown = [ "prettier" ];
         };
@@ -156,6 +159,8 @@
       enable = true;
       lintersByFt = {
         go = [ "golangcilint" ];
+        sh = [ "shellcheck" ];
+        bash = [ "shellcheck" ];
         nix = [
           "deadnix"
           "statix"

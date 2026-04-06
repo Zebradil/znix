@@ -98,11 +98,13 @@
     gotools # provides goimports
     nixfmt
     prettier
+    shfmt
 
     # Linters
     golangci-lint
     deadnix
     statix
+    shellcheck
 
     # DAP
     delve
