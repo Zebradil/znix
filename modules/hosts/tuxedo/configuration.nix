@@ -15,6 +15,7 @@
         fido
         fonts
         gdm
+        hardware-monitoring
         home-manager
         hyprland
         impermanence
@@ -36,6 +37,7 @@
     znix = {
       boot.enable = true;
       diff.enable = true;
+      hardware-monitoring.enable = true;
       ephemeral-btrfs.enable = true;
       impermanence.enable = true;
       wireless.enable = true;
