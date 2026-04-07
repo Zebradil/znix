@@ -15,7 +15,7 @@ _: {
         enable = true;
         font = {
           name = "${fontFamily} style=Light";
-          size = 13;
+          size = 12.0;
         };
         settings = {
           italic_font = "${fontFamily} style='Light Italic'";
@@ -29,7 +29,7 @@ _: {
         autoThemeFiles = {
           dark = assertTheme "ayu";
           light = assertTheme "ayu_light";
-          noPreference = assertTheme "Nightfox";
+          noPreference = assertTheme "ayu";
         };
         keybindings = {
           "ctrl+shift+enter" = "new_window";
