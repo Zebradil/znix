@@ -260,7 +260,7 @@ _: {
     {
       mode = "n";
       key = "<Leader>fc";
-      action.__raw = "function() Snacks.picker.grep_word() end";
+      action.__raw = "function() Snacks.picker.grep_word { hidden = true } end";
       options.desc = "Find word under cursor";
     }
     {
