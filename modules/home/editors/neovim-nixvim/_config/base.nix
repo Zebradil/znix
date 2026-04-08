@@ -109,6 +109,10 @@
     # DAP
     delve
 
+    # Nushell
+    nushell
+    nufmt
+
     # Runtime
     nodejs_22
     ripgrep

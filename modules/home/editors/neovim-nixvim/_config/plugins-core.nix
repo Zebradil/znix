@@ -37,6 +37,7 @@
           markdown
           markdown_inline
           nix
+          nu
           python
           rust
           starlark
@@ -107,6 +108,7 @@
         };
         bashls.enable = true;
         marksman.enable = true;
+        nushell.enable = true;
         terraformls.enable = true;
         tflint.enable = true;
       };
@@ -144,6 +146,7 @@
           tf = [ "terraform_fmt" ];
           sh = [ "shfmt" ];
           bash = [ "shfmt" ];
+          nu = [ "nufmt" ];
           yaml = [ "prettier" ];
           markdown = [ "prettier" ];
         };
