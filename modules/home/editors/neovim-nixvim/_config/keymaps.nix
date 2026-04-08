@@ -254,7 +254,7 @@ _: {
     {
       mode = "n";
       key = "<Leader>fg";
-      action.__raw = "function() Snacks.picker.grep() end";
+      action.__raw = "function() Snacks.picker.grep { hidden = true } end";
       options.desc = "Live grep";
     }
     {
