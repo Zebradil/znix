@@ -147,8 +147,8 @@
           sh = [ "shfmt" ];
           bash = [ "shfmt" ];
           nu = [ "nufmt" ];
-          yaml = [ "prettier" ];
-          markdown = [ "prettier" ];
+          yaml = [ "oxfmt" ];
+          markdown = [ "oxfmt" ];
         };
         format_on_save = {
           timeout_ms = 3200;

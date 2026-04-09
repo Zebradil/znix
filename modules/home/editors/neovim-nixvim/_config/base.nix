@@ -97,7 +97,7 @@
     gofumpt
     gotools # provides goimports
     nixfmt
-    prettier
+    oxfmt
     shfmt
 
     # Linters
