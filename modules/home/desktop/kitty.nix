@@ -32,7 +32,7 @@ _: {
           noPreference = assertTheme "ayu";
         };
         keybindings = {
-          "ctrl+shift+enter" = "new_window";
+          "ctrl+shift+enter" = "new_window_with_cwd";
           "ctrl+shift+]" = "next_window";
           "ctrl+shift+[" = "previous_window";
           "ctrl+shift+w" = "close_window";
