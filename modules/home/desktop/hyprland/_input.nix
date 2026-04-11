@@ -1,6 +1,8 @@
 _: {
   wayland.windowManager.hyprland.settings = {
     input = {
+      repeat_delay = 200;
+      repeat_rate = 50;
       kb_layout = "us,us,ru";
       kb_variant = ",dvorak,phonetic_dvorak";
       kb_options = "grp:caps_toggle,ctrl:swap_lalt_lctl";
