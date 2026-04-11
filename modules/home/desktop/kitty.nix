@@ -46,7 +46,13 @@ _: {
           "ctrl+a>l" = "neighboring_window right";
           "ctrl+a>z" = "toggle_layout stack";
           "ctrl+a>s" = "launch --allow-remote-control kitty +kitten broadcast";
-        };
+        }
+        // (builtins.listToAttrs (
+          builtins.genList (i: {
+            name = "ctrl+a>${toString i}";
+            value = "goto_tab ${toString i}";
+          }) 9
+        ));
       };
     };
 }
