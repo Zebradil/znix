@@ -45,13 +45,6 @@ _: {
                 algorithm: "fuzzy"
               }
             }
-
-            # Start polkit TTY agent for terminal-based U2F/password authentication.
-            # Takes priority over the session-wide GUI agent (hyprpolkitagent) for
-            # commands run in this terminal.
-            if (which pkttyagent | is-not-empty) {
-              pkttyagent --process $nu.pid &
-            }
           '';
         };
       };
