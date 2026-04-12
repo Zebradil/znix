@@ -33,6 +33,7 @@ _: {
 
       nixos = {
         programs.ssh.matchBlocks."*".identityAgent = "~/.1password/agent.sock";
+        wayland.windowManager.hyprland.settings.exec-once = [ "1password --silent" ];
       };
 
       impermanence = lib.mkIf osConfig.znix.impermanence.enable {
