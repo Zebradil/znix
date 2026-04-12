@@ -93,12 +93,10 @@
             withCyrillic [
               "$mod, Space, exec, $menu"
 
-              "$mod, F, exec, $browser"
-              "$mod, Q, exec, $terminal"
+              "$mod, F, exec, fullscreen"
+              "$mod, Q, exec, killactive"
 
-              "$mod, C, killactive"
-              "$mod SHIFT, F, fullscreen"
-              "$mod, V, togglefloating"
+              "$mod SHIFT, F, togglefloating"
               "$mod, L, exec, loginctl lock-session"
             ]
             ++ [

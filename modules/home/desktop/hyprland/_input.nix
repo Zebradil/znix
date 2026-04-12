@@ -20,7 +20,7 @@ _: {
       kb_variant = ",phonetic";
       kb_options = "grp:caps_toggle";
     };
-    gesture = "3, horizontal, workspace";
+    gesture = "4, horizontal, workspace";
     gestures = {
       workspace_swipe_distance = 300;
       workspace_swipe_cancel_ratio = 0.5;
