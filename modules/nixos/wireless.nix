@@ -10,6 +10,7 @@ _: {
 
       config = lib.mkIf config.znix.wireless.enable {
         hardware.bluetooth.enable = true;
+        services.blueman.enable = true;
 
         sops.secrets.wireless = {
           sopsFile = ../../secrets/hosts/common.yaml;
@@ -63,6 +64,7 @@ _: {
 
         environment.persistence."/persist".directories = [
           "/etc/NetworkManager/system-connections"
+          "/var/lib/bluetooth"
         ];
       };
     };

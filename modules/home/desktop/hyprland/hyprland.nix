@@ -151,6 +151,7 @@
         hyprpolkitagent.enable = true;
         hyprlauncher.enable = true;
         network-manager-applet.enable = true;
+        blueman-applet.enable = true;
       };
     };
 }
