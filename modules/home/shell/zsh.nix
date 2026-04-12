@@ -1,6 +1,7 @@
 _: {
   flake.modules.homeManager.zsh =
     {
+      pkgs,
       lib,
       config,
       osConfig,
@@ -33,15 +34,22 @@ _: {
             '')
             (builtins.readFile ./zsh/zshrc.zsh)
           ];
-          antidote = {
-            enable = true;
-            plugins = [
-              "hcgraf/zsh-sudo"
-              "jeffreytse/zsh-vi-mode"
-              "MichaelAquilina/zsh-auto-notify"
-              "zchee/zsh-completions"
-            ];
-          };
+          plugins = [
+            {
+              name = "zsh-vi-mode";
+              src = pkgs.zsh-vi-mode;
+              file = "share/zsh-vi-mode/zsh-vi-mode.plugin.zsh";
+            }
+            {
+              name = "zsh-auto-notify";
+              src = pkgs.fetchFromGitHub {
+                owner = "MichaelAquilina";
+                repo = "zsh-auto-notify";
+                rev = "0.10.1";
+                hash = "sha256-l5nXzCC7MT3hxRQPZv1RFalXZm7uKABZtfEZSMdVmro=";
+              };
+            }
+          ];
           autosuggestion.enable = true;
           history = {
             extended = true;
