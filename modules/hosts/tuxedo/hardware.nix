@@ -7,8 +7,10 @@
     {
       imports = [ inputs.hardware.nixosModules.tuxedo-infinitybook-pro14-gen9-amd ];
 
-      hardware.enableRedistributableFirmware = true;
-      hardware.cpu.amd.updateMicrocode = true;
+      hardware = {
+        enableRedistributableFirmware = true;
+        tuxedo-rs.enable = true;
+      };
 
       boot.kernelPackages = pkgs.linuxKernel.packages.linux_xanmod_latest;
       boot.initrd = {
