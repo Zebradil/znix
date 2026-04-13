@@ -89,7 +89,7 @@ jobs:
           name: flake-lock
 
       - name: Cache Nix sources
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.cache/nix
           key: nix-cache-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}-${{ github.run_id }}
@@ -99,7 +99,7 @@ jobs:
             nix-cache-${{ runner.os }}-
 
       - name: Cache Nix store
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: '${{ env.NIX_CACHE_PATH }}'
           key: nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}-${{ github.run_id }}
