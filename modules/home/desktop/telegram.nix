@@ -1,6 +1,11 @@
 _: {
   flake.modules.homeManager.telegram =
-    { lib, osConfig, pkgs, ... }:
+    {
+      lib,
+      osConfig,
+      pkgs,
+      ...
+    }:
     let
       base = {
         home.packages = with pkgs; [
@@ -11,5 +16,8 @@ _: {
         home.persistence."/persist".directories = [ ".config/TelegramDesktop" ];
       };
     in
-    lib.mkMerge [ base impermanence ];
+    lib.mkMerge [
+      base
+      impermanence
+    ];
 }
