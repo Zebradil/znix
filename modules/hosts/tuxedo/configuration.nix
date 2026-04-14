@@ -10,6 +10,7 @@
       (with inputs.self.modules.nixos; [
         _1password
         boot
+        determinate
         diff
         ephemeral-btrfs
         fido
@@ -33,6 +34,8 @@
     networking.hostName = "tuxedo";
     networking.domain = "zebradil.dev";
     system.stateVersion = "25.11";
+
+    determinate.enable = true;
 
     znix = {
       boot.enable = true;

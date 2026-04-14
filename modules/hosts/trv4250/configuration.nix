@@ -16,10 +16,8 @@
   };
 
   flake.modules.darwin.trv4250 = {
-    imports = [
-      inputs.determinate.darwinModules.default
-    ]
-    ++ (with inputs.self.modules.darwin; [
+    imports = with inputs.self.modules.darwin; [
+      determinate
       diff
       nix-settings
       fonts
@@ -28,7 +26,7 @@
       touch-id
       home-manager
       glashevich
-    ]);
+    ];
 
     znix.diff.enable = true;
 

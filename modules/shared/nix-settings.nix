@@ -16,35 +16,41 @@ let
   };
 
   nixosModule =
-    { lib, ... }:
+    { config, lib, ... }:
+    let
+      usingDeterminate = config.determinate.enable or false;
+    in
     {
       nixpkgs = {
         config.allowUnfree = true;
         overlays = [ self.overlays.default ];
       };
 
-      nix = {
-        enable = true;
-        settings = nixSettings // {
-          auto-optimise-store = lib.mkDefault true;
-          flake-registry = "";
-          trusted-users = [
-            "root"
-            "@wheel"
-          ];
-        };
-
-        gc = {
-          automatic = true;
-          options = "--delete-older-than 7d";
-        };
-
-        registry = lib.mapAttrs (_: flake: { inherit flake; }) flakeInputs;
-        nixPath = lib.mapAttrsToList (n: _: "${n}=flake:${n}") flakeInputs;
-      };
+      nix = lib.mkMerge [
+        {
+          # Always pin flake registry and nixPath regardless of Nix manager
+          registry = lib.mapAttrs (_: flake: { inherit flake; }) flakeInputs;
+          nixPath = lib.mapAttrsToList (n: _: "${n}=flake:${n}") flakeInputs;
+        }
+        (lib.mkIf (!usingDeterminate) {
+          enable = true;
+          settings = nixSettings // {
+            auto-optimise-store = lib.mkDefault true;
+            flake-registry = "";
+            trusted-users = [
+              "root"
+              "@wheel"
+            ];
+          };
+          gc = {
+            automatic = true;
+            options = "--delete-older-than 7d";
+          };
+        })
+      ];
     };
 
-  # Darwin uses Determinate Nix — nix.enable/settings/gc are managed by it
+  # Determinate Nix manages nix.enable/settings/gc on both Darwin and NixOS
   darwinModule = {
     nixpkgs = {
       config.allowUnfree = true;
