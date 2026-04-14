@@ -473,6 +473,20 @@ _: {
       options.desc = "Yank filename";
     }
 
+    # ─ Scratch buffer ─
+    {
+      mode = "n";
+      key = "<Leader>.";
+      action.__raw = "function() Snacks.scratch() end";
+      options.desc = "Toggle scratch buffer";
+    }
+    {
+      mode = "n";
+      key = "<Leader>S";
+      action.__raw = "function() Snacks.scratch.select() end";
+      options.desc = "Select scratch buffer";
+    }
+
     # ─ Neotest ─
     {
       mode = "n";
