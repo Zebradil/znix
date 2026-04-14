@@ -16,7 +16,13 @@
     relativenumber = false;
 
     # -- Display --
-    foldenable = false; # Disable code folding by default
+    # -- Folding --
+    # Treesitter (plugins-core.nix) supplies foldmethod=expr / foldexpr.
+    # Start every buffer with all folds open so `zc` closes only the fold under
+    # the cursor instead of every fold at level >= 1.
+    foldenable = true;
+    foldlevel = 99;
+    foldlevelstart = 99;
     colorcolumn = "+1"; # Show a vertical guide 1 column past 'textwidth' to indicate line length
     scrolloff = 8; # Keep 8 lines visible above/below the cursor when scrolling
     signcolumn = "yes"; # Always show the sign column (prevents layout shift from diagnostics/git signs)
