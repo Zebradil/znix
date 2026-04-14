@@ -435,6 +435,44 @@ _: {
       options.desc = "Debug: Run Last";
     }
 
+    # ─ Yank file path ─
+    {
+      mode = "n";
+      key = "<Leader>yp";
+      action.__raw = ''
+        function()
+          local path = vim.fn.expand("%:.")
+          vim.fn.setreg("+", path)
+          vim.notify("Copied: " .. path)
+        end
+      '';
+      options.desc = "Yank relative file path";
+    }
+    {
+      mode = "n";
+      key = "<Leader>yP";
+      action.__raw = ''
+        function()
+          local path = vim.fn.expand("%:p")
+          vim.fn.setreg("+", path)
+          vim.notify("Copied: " .. path)
+        end
+      '';
+      options.desc = "Yank absolute file path";
+    }
+    {
+      mode = "n";
+      key = "<Leader>yn";
+      action.__raw = ''
+        function()
+          local name = vim.fn.expand("%:t")
+          vim.fn.setreg("+", name)
+          vim.notify("Copied: " .. name)
+        end
+      '';
+      options.desc = "Yank filename";
+    }
+
     # ─ Neotest ─
     {
       mode = "n";
