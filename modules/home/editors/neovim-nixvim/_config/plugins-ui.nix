@@ -17,6 +17,36 @@
         window = {
           position = "left";
           width = 30;
+          mappings = {
+            # AstroNvim-style: l expands a dir, enters its first child when already
+            # expanded, or opens a file. h collapses an expanded dir, or focuses
+            # the parent node when on a leaf. Overrides the upstream default
+            # l = focus_preview (focus_preview is intentionally left unbound).
+            l.__raw = ''
+              function(state)
+                local node = state.tree:get_node()
+                if node.type == "directory" then
+                  if not node:is_expanded() then
+                    require("neo-tree.sources.filesystem").toggle_directory(state, node)
+                  elseif node:has_children() then
+                    require("neo-tree.ui.renderer").focus_node(state, node:get_child_ids()[1])
+                  end
+                else
+                  state.commands.open(state)
+                end
+              end
+            '';
+            h.__raw = ''
+              function(state)
+                local node = state.tree:get_node()
+                if node.type == "directory" and node:is_expanded() then
+                  require("neo-tree.sources.filesystem").toggle_directory(state, node)
+                else
+                  require("neo-tree.ui.renderer").focus_node(state, node:get_parent_id())
+                end
+              end
+            '';
+          };
         };
       };
     };
