@@ -26,9 +26,11 @@
       touch-id
       home-manager
       glashevich
+      trv4250-shell
     ];
 
     znix.diff.enable = true;
+    znix.hosts.trv4250.enable = true;
 
     determinateNix = {
       enable = true;

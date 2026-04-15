@@ -8,7 +8,10 @@
     homebrew = {
       enable = true;
       onActivation.autoUpdate = true;
-      brews = [ "displayplacer" ];
+      brews = [
+        "displayplacer"
+        "brightness"
+      ];
       casks = [
         "flameshot"
         "notunes"
