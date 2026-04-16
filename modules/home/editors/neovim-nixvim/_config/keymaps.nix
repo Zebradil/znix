@@ -311,6 +311,12 @@ _: {
       action = "<cmd>TodoSnacks<cr>";
       options.desc = "Find TODOs";
     }
+    {
+      mode = "n";
+      key = "<Leader>f<CR>";
+      action.__raw = "function() Snacks.picker.resume() end";
+      options.desc = "Resume last picker";
+    }
 
     # ─ Base64 encode/decode (visual mode) ─
     {
