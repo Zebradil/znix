@@ -106,6 +106,76 @@ function z:k8s:contexts:do-parallel-filter() {
   lib::parallel::run -c _z_k8s_parallel_job -- "${contexts[@]}"
 }
 
+
+function z:k8s:namespaces:dump() {
+  if (( $# < 2 )); then
+    log::error "Too few arguments"
+    log::info "Usage: ${funcstack[1]} <rg pattern> <out dir>"
+    return 1
+  fi
+  local rg_pattern=$1
+  local out_dir=$2
+
+  local -a namespaces
+  namespaces=(${(f)"$(
+    kubectl get namespaces -o custom-columns=NAME:.metadata.name --no-headers \
+      | rg "$rg_pattern"
+  )"})
+  if (( ${#namespaces} == 0 )); then
+    log::warn "No namespaces matched pattern '$rg_pattern'"
+    return 0
+  fi
+
+  local -a kinds
+  kinds=(${(f)"$(kubectl api-resources --verbs=list --namespaced -o name)"})
+  if (( ${#kinds} == 0 )); then
+    log::error "No namespaced api-resources found"
+    return 1
+  fi
+
+  mkdir -p "$out_dir"
+  local progress_dir
+  progress_dir=$(mktemp -d)
+
+  _z_k8s_ns_dump_job() {
+    local ns=$1
+    local ns_dir="$out_dir/$ns"
+    mkdir -p "$ns_dir" "$progress_dir/$ns"
+    local kind
+    for kind in "${kinds[@]}"; do
+      (
+        kubectl get --ignore-not-found -n "$ns" "$kind" -oyaml \
+          > "$ns_dir/$kind.yaml"
+        : > "$progress_dir/$ns/$kind"
+      ) &
+    done
+    wait
+    find "$ns_dir" -size 0 -delete
+  }
+
+  _z_k8s_ns_dump_status() {
+    local ns=$2
+    local -a done_files=("$progress_dir/$ns"/*(N))
+    local count=${#done_files}
+    local total=${#kinds}
+    local width=20
+    local filled=$(( count * width / total ))
+    local bar="" i
+    for (( i = 0; i < width; i++ )); do
+      (( i < filled )) && bar+="█" || bar+="░"
+    done
+    printf 'running [%s] %d/%d' "$bar" "$count" "$total"
+  }
+
+  lib::parallel::run \
+    -c _z_k8s_ns_dump_job \
+    -s _z_k8s_ns_dump_status \
+    -- "${namespaces[@]}"
+  local rc=$?
+  rm -rf "$progress_dir"
+  return $rc
+}
+
 z:k8s:kubeconfig:init
 
 if lib::check_commands kubectl; then

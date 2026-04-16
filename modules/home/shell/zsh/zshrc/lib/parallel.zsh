@@ -7,11 +7,14 @@
 # in-place progress. Supports a configurable concurrency limit.
 #
 # Usage:
-#   lib::parallel::run [-j <max_jobs>] -c <callback_function> -- <item1> <item2> ...
+#   lib::parallel::run [-j <max_jobs>] -c <callback_function> [-s <status_fn>] -- <item1> <item2> ...
 #
 # Options:
 #   -j N    Max simultaneous jobs (default: $ZNIX_PARALLEL_JOBS or 0 for unlimited)
 #   -c func Callback function, called as `func <item>` in a subshell per item
+#   -s fn   Optional status hook: called as `fn <idx> <item>` each poll tick for
+#           in-progress items; its stdout replaces the "running…" status string.
+#           The returned string must start with "running" to keep the WARN color.
 #
 # The callback's stdout is not captured (callers handle their own redirection).
 # The callback's stderr is captured to prevent progress display corruption;
@@ -24,10 +27,12 @@ function lib::parallel::run() {
   # ---- Argument parsing ----
   local max_jobs=${ZNIX_PARALLEL_JOBS:-0}
   local callback=""
+  local status_cmd=""
   while [[ $# -gt 0 ]]; do
     case $1 in
       -j) max_jobs=$2; shift 2 ;;
       -c) callback=$2; shift 2 ;;
+      -s) status_cmd=$2; shift 2 ;;
       --) shift; break ;;
       *)  break ;;
     esac
@@ -101,21 +106,22 @@ function lib::parallel::run() {
       done)     color=$LOGGER_COLOR_INFO   symbol=" ✓" ;;
       FAILED*)  color=$LOGGER_COLOR_ERROR  symbol=" ✗" ;;
     esac
-    printf "  %-${max_name_len}s  %b%s%b%s\n" "$display" "$color" "$statuss" "$LOGGER_COLOR_RESET" "$symbol"
+    printf "\r  %-${max_name_len}s  %b%s%b%s\e[K\n" "$display" "$color" "$statuss" "$LOGGER_COLOR_RESET" "$symbol"
   }
 
   local _drawn=0
+  local _dirty=0
 
   _lib_parallel_draw_all() {
     if (( use_ansi )); then
       (( _drawn )) && printf '\e[%dA' "$total" >&2
       local i
       for (( i = 1; i <= total; i++ )); do
-        printf '\e[2K' >&2
         _lib_parallel_render_line "${items[$i]}" "${item_status[$i]}" >&2
       done
       _drawn=1
     fi
+    _dirty=0
   }
 
   _lib_parallel_draw_initial() {
@@ -144,9 +150,24 @@ function lib::parallel::run() {
     fi
   }
 
+  # ---- Status hook ----
+  _lib_parallel_refresh_running_status() {
+    [[ -z $status_cmd ]] && return 0
+    local i new
+    for (( i = 1; i <= total; i++ )); do
+      if [[ ${item_status[$i]} == running* ]]; then
+        new=$("$status_cmd" "$i" "${items[$i]}")
+        if [[ -n $new && $new != ${item_status[$i]} ]]; then
+          item_status[$i]=$new
+          _dirty=1
+        fi
+      fi
+    done
+  }
+
   # ---- Completion checker ----
   _lib_parallel_check_completed() {
-    local changed=0 pid idx rc
+    local pid idx rc
     for pid idx in "${(@kv)pid_to_idx}"; do
       if ! kill -0 "$pid" 2>/dev/null; then
         wait "$pid" 2>/dev/null
@@ -161,10 +182,9 @@ function lib::parallel::run() {
         (( running-- ))
         (( completed++ ))
         _lib_parallel_notify "$idx"
-        changed=1
+        _dirty=1
       fi
     done
-    (( changed )) && _lib_parallel_draw_all
   }
 
   # ---- Main execution loop ----
@@ -175,6 +195,8 @@ function lib::parallel::run() {
     while (( running >= max_jobs )) && (( max_jobs > 0 )); do
       (( _interrupted )) && break 2
       _lib_parallel_check_completed
+      _lib_parallel_refresh_running_status
+      (( _dirty )) && _lib_parallel_draw_all
       (( running >= max_jobs )) && sleep 0.1
     done
     (( _interrupted )) && break
@@ -193,6 +215,8 @@ function lib::parallel::run() {
   # Wait for all remaining jobs
   while (( completed < total && ! _interrupted )); do
     _lib_parallel_check_completed
+    _lib_parallel_refresh_running_status
+    (( _dirty )) && _lib_parallel_draw_all
     (( completed < total )) && sleep 0.1
   done
 
