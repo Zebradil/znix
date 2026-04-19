@@ -76,8 +76,23 @@
         ./_hyprpaper.nix
         ./_screenshot.nix
         ./_mako.nix
+        ./_swayosd.nix
       ];
-      home.packages = with pkgs; [ playerctl ];
+      home.packages = with pkgs; [
+        playerctl
+        (writeShellScriptBin "kbd-brightness" ''
+          direction="$1"
+          if [ "$direction" = "raise" ]; then
+            brightnessctl --device='*kbd_backlight*' set +5%
+          else
+            brightnessctl --device='*kbd_backlight*' set 5%-
+          fi
+          val=$(brightnessctl --device='*kbd_backlight*' get)
+          max=$(brightnessctl --device='*kbd_backlight*' max)
+          progress=$(awk "BEGIN{printf \"%.2f\", $val/$max}")
+          swayosd-client --custom-progress "$progress" --custom-icon keyboard-brightness-symbolic
+        '')
+      ];
       wayland.windowManager.hyprland = {
         enable = true;
         plugins = with pkgs; [
@@ -116,8 +131,8 @@
               ", XF86AudioPrev, exec, playerctl previous"
               ", XF86AudioStop, exec, playerctl stop"
               # Volume toggles (no repeat needed)
-              ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-              ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+              ", XF86AudioMute, exec, swayosd-client --output-volume mute-toggle"
+              ", XF86AudioMicMute, exec, swayosd-client --input-volume mute-toggle"
               # Layout switching
               "$mod, comma, exec, hyprctl keyword general:layout master"
               "$mod, period, exec, hyprctl keyword general:layout dwindle"
@@ -140,12 +155,12 @@
             );
           # Repeat-on-hold bindings
           binde = [
-            ", XF86MonBrightnessUp, exec, brightnessctl set +5%"
-            ", XF86MonBrightnessDown, exec, brightnessctl set 5%-"
-            "SHIFT, XF86MonBrightnessUp, exec, brightnessctl --device='*kbd_backlight*' set +5%"
-            "SHIFT, XF86MonBrightnessDown, exec, brightnessctl --device='*kbd_backlight*' set 5%-"
-            ", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
-            ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+            ", XF86MonBrightnessUp, exec, swayosd-client --brightness raise"
+            ", XF86MonBrightnessDown, exec, swayosd-client --brightness lower"
+            "SHIFT, XF86MonBrightnessUp, exec, kbd-brightness raise"
+            "SHIFT, XF86MonBrightnessDown, exec, kbd-brightness lower"
+            ", XF86AudioRaiseVolume, exec, swayosd-client --output-volume raise"
+            ", XF86AudioLowerVolume, exec, swayosd-client --output-volume lower"
           ];
         };
       };
