@@ -44,6 +44,7 @@
               multi-account-containers
               refined-github
               re-enable-right-click
+              sidebery
               single-file
               sponsorblock
               tridactyl
