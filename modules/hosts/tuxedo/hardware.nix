@@ -10,6 +10,7 @@
       hardware = {
         enableRedistributableFirmware = true;
         tuxedo-rs.enable = true;
+        tuxedo-rs.tailor-gui.enable = true;
       };
 
       boot.kernelPackages = pkgs.linuxKernel.packages.linux_xanmod_latest;
