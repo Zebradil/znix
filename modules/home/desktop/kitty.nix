@@ -25,7 +25,7 @@ _: {
           # confirm_os_window_close = 0;
           # copy_on_select = "clipboard";
           update_check_interval = 0;
-          enabled_layouts = "splits,stack";
+          enabled_layouts = "splits,horizontal,vertical,tall,fat,stack";
           allow_remote_control = true;
         };
         autoThemeFiles = {
@@ -45,6 +45,7 @@ _: {
           "ctrl+a>k" = "neighboring_window up";
           "ctrl+a>l" = "neighboring_window right";
           "ctrl+a>z" = "toggle_layout stack";
+          "ctrl+a>space" = "next_layout";
           "ctrl+a>s" = "launch --allow-remote-control kitty +kitten broadcast";
         }
         // (builtins.listToAttrs (
