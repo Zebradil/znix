@@ -17,6 +17,17 @@
     let
       addons = (inputs.firefox-addons.overlays.default pkgs pkgs).firefox-addons;
       base = {
+        # Extensions are managed declaratively via `extensions.packages`.
+        # Firefox persists extension enabled/disabled state in `extensions.json`,
+        # which conflicts with declarative management after reboot (via impermanence).
+        # This activation script removes stale state so home-manager's extensions
+        # are properly recognized on each activation.
+        home.activation.firefoxExtensionCleanup = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          for profile in "$HOME"/.mozilla/firefox/*/; do
+            rm -f "''${profile}extensions.json" "''${profile}addonStartup.json.lz4"
+          done
+        '';
+
         programs.firefox = {
           enable = true;
           nativeMessagingHosts = with pkgs; [
@@ -128,6 +139,10 @@
               "toolkit.telemetry.unified" = false;
               "toolkit.telemetry.unifiedIsOptIn" = false;
               "toolkit.telemetry.updatePing.enabled" = false;
+
+              # Prevent Firefox from auto-disabling externally installed extensions
+              # (home-manager installs extensions as "external", which Firefox disables by default)
+              "extensions.autoDisableScopes" = 0;
 
               # Disable fx accounts
               "identity.fxaccounts.enabled" = false;
