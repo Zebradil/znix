@@ -108,8 +108,8 @@
             withCyrillic [
               "$mod, Space, exec, $menu"
 
-              "$mod, F, exec, fullscreen"
-              "$mod, Q, exec, killactive"
+              "$mod, F, fullscreen"
+              "$mod, Q, killactive"
 
               "$mod SHIFT, F, togglefloating"
               "$mod, L, exec, loginctl lock-session"
