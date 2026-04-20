@@ -66,4 +66,4 @@ If all pins are removed, the `pinsOverlay` becomes a no-op and nothing else need
 ## Limitations
 
 - Each pin instantiates a separate nixpkgs set; Nix deduplicates store paths so the overhead is minor for temporary use.
-- If the same package needs different refs on different systems, declare two pins under distinct names (rare).
+- Pin names map directly to the package attributes they override, so the same package cannot currently be pinned to different refs on different systems by declaring multiple pins under different names.

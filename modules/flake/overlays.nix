@@ -31,7 +31,11 @@ let
   pinsOverlay =
     _final: prev:
     lib.mapAttrs (
-      name: _: inputs.${inputName name}.legacyPackages.${prev.stdenv.hostPlatform.system}.${name}
+      name: _:
+      (import inputs.${inputName name} {
+        system = prev.stdenv.hostPlatform.system;
+        config = prev.config;
+      }).${name}
     ) (lib.filterAttrs (_: p: appliesTo prev.stdenv.hostPlatform.system p) normalized);
 in
 {
