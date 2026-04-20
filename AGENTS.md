@@ -46,3 +46,7 @@ nixos-rebuild switch --flake .     # Apply on NixOS
 ## Secrets
 
 Managed with sops-nix. See `docs/secrets.md`. Never commit unencrypted secrets.
+
+## Package pins
+
+Temporarily override broken packages via the `pins` map in `modules/flake/overlays.nix`. See `docs/package-pins.md`.

@@ -22,6 +22,7 @@
           programs.nixvim = import ./_config { inherit pkgs inputs lib; };
           home.packages = [ pkgs.tree-sitter ];
         }
+        { programs.nixvim.nixpkgs.useGlobalPackages = true; }
         (lib.mkIf osConfig.znix.impermanence.enable {
           home.persistence."/persist".directories = [ ".config/github-copilot" ];
         })

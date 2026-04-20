@@ -52,6 +52,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs-pin-nushell.url = "github:NixOS/nixpkgs/e787d9e711e78599f0ad3ec517fcef8192efd47e";
     nixvim = {
       url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
