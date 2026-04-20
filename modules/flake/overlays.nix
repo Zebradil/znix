@@ -8,6 +8,7 @@ let
   # Long form (per-system):    pkgname = { ref = "github:NixOS/nixpkgs/<rev>"; systems = [ "aarch64-darwin" ]; };
   pins = {
     nushell = {
+      # Upgrade to 0.112.2 is not in nixpkgs-unstable yet
       ref = "github:NixOS/nixpkgs/e787d9e711e78599f0ad3ec517fcef8192efd47e";
       systems = [ "aarch64-darwin" ];
     };
