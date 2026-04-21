@@ -29,7 +29,7 @@ jobs:
         aarch64-darwin:macos-15
       cache-pull-url: https://znix.zebradil.dev
       cache-public-key: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
-      cache-s3-url: s3://${{ secrets.CACHE_URL }}
+      cache-s3-url: ${{ secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
       run-flake-update: ${{ github.event_name == 'workflow_dispatch' && inputs.run-flake-update }}
       auto-commit: ${{ github.event_name == 'workflow_dispatch' && inputs.run-flake-update }}
     secrets:

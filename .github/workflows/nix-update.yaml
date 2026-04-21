@@ -191,7 +191,11 @@ jobs:
       - name: Resolve store path
         id: store-path
         run: |
-          echo "path=$(nix path-info ".#${{ matrix.attr }}")" >>"$GITHUB_OUTPUT"
+          {
+            echo 'path<<EOF'
+            nix path-info ".#${{ matrix.attr }}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Publish built path
         uses: ./.znix-ci/.github/actions/push-nix-cache

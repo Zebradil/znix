@@ -22,7 +22,7 @@ jobs:
         aarch64-darwin:macos-15
       cache-pull-url: https://znix.zebradil.dev
       cache-public-key: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
-      cache-s3-url: s3://${{ secrets.CACHE_URL }}
+      cache-s3-url: ${{ secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
       push-to-cache: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     secrets:
       cache-signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
