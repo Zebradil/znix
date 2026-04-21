@@ -54,7 +54,7 @@ function z:gke:cluster:do() (
     "$@"
 )
 
-# List all node pools in the current GKE cluster
+# List all node pools in the current GKE cluster with node and pod counts
 # Usage: z:gke:np:list
 function z:gke:np:list() (
   set -euo pipefail
@@ -65,16 +65,35 @@ function z:gke:np:list() (
   fi
   read -r cluster_name project_id location <<< "$info"
   log::info "Listing node pools for cluster $cluster_name ..."
-  gcloud container node-pools list \
-    --cluster "$cluster_name" \
-    --project "$project_id" \
-    --location "$location" \
-    --format="table(
-      name,
-      config.machineType,
-      config.spot,
-      autoscaling.enabled
-    )"
+
+  typeset -A node_count pod_count node_pool
+  local pool node
+  while IFS=$'\t' read -r pool node; do
+    [[ -z $pool || -z $node ]] && continue
+    node_pool[$node]=$pool
+    (( node_count[$pool]++ )) || true
+  done < <(kubectl get nodes \
+    -o jsonpath='{range .items[*]}{.metadata.labels.cloud\.google\.com/gke-nodepool}{"\t"}{.metadata.name}{"\n"}{end}')
+
+  while read -r node; do
+    [[ -z $node ]] && continue
+    pool=${node_pool[$node]:-}
+    [[ -n $pool ]] && (( pod_count[$pool]++ )) || true
+  done < <(kubectl get pods --all-namespaces \
+    --field-selector=status.phase=Running \
+    -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}')
+
+  {
+    print "NAME\tMACHINE_TYPE\tSPOT\tAUTOSCALING\tNODES\tPODS"
+    gcloud container node-pools list \
+      --cluster "$cluster_name" \
+      --project "$project_id" \
+      --location "$location" \
+      --format='value[separator="	"](name,config.machineType,config.spot.yesno(yes=True,no=False),autoscaling.enabled.yesno(yes=True,no=False))' \
+    | while IFS=$'\t' read -r name mtype spot as; do
+        print "$name\t$mtype\t$spot\t$as\t${node_count[$name]:-0}\t${pod_count[$name]:-0}"
+      done
+  } | column -ts $'\t'
 )
 
 # Run node pool command: create, delete, update, etc.
