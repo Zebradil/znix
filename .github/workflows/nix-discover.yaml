@@ -1,0 +1,83 @@
+name: Reusable Nix Discover
+
+# Reusable workflow that enumerates flake outputs and builds a matrix for downstream jobs.
+#
+# Usage (from another repo):
+#   jobs:
+#     discover:
+#       uses: zebradil/znix/.github/workflows/nix-discover.yaml@main
+
+on:
+  workflow_call:
+    inputs:
+      discovery-types:
+        description: Newline-separated list of flake output types to discover (e.g. 'checks\nnixosConfigurations').
+        type: string
+        required: false
+        default: |
+          nixosConfigurations
+          darwinConfigurations
+          devShells
+      runner-mapping:
+        description: >
+          Newline-separated list of Nix system to GitHub Actions runner label mappings (e.g.
+          'x86_64-linux:ubuntu-latest\naarch64-darwin:macos-15').
+        type: string
+        required: false
+        default: |
+          x86_64-linux:ubuntu-latest
+          aarch64-darwin:macos-15
+      attr-filter:
+        description: >
+          Optional regex to filter discovered attributes (applied to the `attr` field).
+          Leave empty to include all discovered targets.
+        type: string
+        required: false
+        default: ''
+      nix-infra-ref:
+        description: Git ref of zebradil/znix to use for CI actions and scripts.
+        type: string
+        required: false
+        default: main
+    outputs:
+      matrix:
+        description: |
+          JSON matrix include list for flake build targets.
+          Example: '{"include":[{"attr":"checks.x86_64-linux.tuxedo-build","system":"x86_64-linux","runner":"ubuntu-latest"}]}'
+        value: ${{ jobs.discover.outputs.matrix }}
+      has-targets:
+        description: Whether at least one flake target was discovered.
+        value: ${{ jobs.discover.outputs.has-targets }}
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+      has-targets: ${{ steps.discover.outputs.has_targets }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Checkout znix CI tooling
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: zebradil/znix
+          ref: ${{ inputs.nix-infra-ref }}
+          path: .znix-ci
+          sparse-checkout: .github
+
+      - name: Setup Nix
+        uses: ./.znix-ci/.github/actions/setup-nix
+
+      - name: Discover flake targets
+        id: discover
+        shell: bash
+        env:
+          DISCOVERY_TYPES: ${{ inputs.discovery-types }}
+          RUNNER_MAPPING: ${{ inputs.runner-mapping }}
+          ATTR_FILTER: ${{ inputs.attr-filter }}
+        run: .znix-ci/.github/scripts/discover-targets.sh

@@ -1,0 +1,71 @@
+name: Setup Nix
+description: >
+  Install Nix with optional signing key configuration. Installs Nix via
+  cachix/install-nix-action and optionally writes a signing key to disk.
+
+inputs:
+  extra-substituters:
+    description: Space-separated Nix substituter URLs to add alongside cache.nixos.org.
+    required: false
+    default: ''
+  extra-trusted-public-keys:
+    description: Space-separated trusted public keys for the extra substituters.
+    required: false
+    default: ''
+  cache-signing-key:
+    description: >
+      Nix binary cache signing private key. When set, the key is written to
+      `cache-key-file` so built paths can be signed before publishing.
+    required: false
+    default: ''
+  cache-key-file:
+    description: >
+      Filesystem path where the signing key will be written. Only used when `cache-signing-key` is provided.
+      Defaults to `$RUNNER_TEMP/cache-priv-key.pem` when left empty.
+    required: false
+    default: ''
+
+outputs:
+  signing-key-file:
+    description: >
+      Path to the signing key file on disk, or empty when no signing key was configured. Pass this to
+      push-nix-cache's `signing-key-file` input.
+    value: ${{ steps.outputs.outputs.signing_key_file }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Nix
+      uses: cachix/install-nix-action@616559265b40713947b9c190a8ff4b507b5df49b # v31.10.4
+      with:
+        extra_nix_config: |
+          accept-flake-config = true
+          download-buffer-size = 524288000
+          substituters = ${{ inputs.extra-substituters }} https://cache.nixos.org
+          trusted-public-keys = ${{ inputs.extra-trusted-public-keys }} cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+
+    - name: Configure Nix signing key
+      if: ${{ inputs.cache-signing-key != '' && inputs.cache-signing-key != null }}
+      id: key
+      shell: bash
+      env:
+        CACHE_SIGNING_KEY: ${{ inputs.cache-signing-key }}
+        CACHE_KEY_FILE_INPUT: ${{ inputs.cache-key-file }}
+      run: |
+        key_file="${CACHE_KEY_FILE_INPUT:-$RUNNER_TEMP/cache-priv-key.pem}"
+        printf '%s' "$CACHE_SIGNING_KEY" > "$key_file"
+        chmod 600 "$key_file"
+        echo "key_file=$key_file" >> "$GITHUB_OUTPUT"
+
+    - name: Export setup outputs
+      id: outputs
+      shell: bash
+      env:
+        CACHE_SIGNING_KEY: ${{ inputs.cache-signing-key }}
+        RESOLVED_KEY_FILE: ${{ steps.key.outputs.key_file }}
+      run: |
+        if [[ -n "$CACHE_SIGNING_KEY" ]]; then
+          echo "signing_key_file=$RESOLVED_KEY_FILE" >> "$GITHUB_OUTPUT"
+        else
+          echo "signing_key_file=" >> "$GITHUB_OUTPUT"
+        fi
