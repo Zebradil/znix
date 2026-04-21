@@ -6,4 +6,5 @@
   };
 
   flake.darwinConfigurations = inputs.self.lib.mkDarwin "aarch64-darwin" "trv4250";
+  flake.darwinSystemMap.trv4250 = "aarch64-darwin";
 }

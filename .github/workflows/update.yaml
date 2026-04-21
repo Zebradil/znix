@@ -1,7 +1,15 @@
-name: Test Flake
+name: Build and Publish
 
 on:
-  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      run-flake-update:
+        description: Run nix flake update before building
+        type: boolean
+        default: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -11,8 +19,8 @@ permissions:
   contents: read
 
 jobs:
-  ci:
-    uses: ./.github/workflows/nix-ci.yaml
+  publish:
+    uses: ./.github/workflows/nix-update.yaml
     with:
       discovery-types: |
         checks
@@ -22,8 +30,10 @@ jobs:
       cache-pull-url: https://znix.zebradil.dev
       cache-public-key: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
       cache-s3-url: s3://${{ secrets.CACHE_URL }}
-      push-to-cache: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+      run-flake-update: ${{ github.event_name == 'workflow_dispatch' && inputs.run-flake-update }}
+      auto-commit: ${{ github.event_name == 'workflow_dispatch' && inputs.run-flake-update }}
     secrets:
       cache-signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      ci-push-ssh-key: ${{ secrets.CI_PUSH_DEPLOY_KEY }}

@@ -1,0 +1,190 @@
+name: Reusable Nix CI
+
+# Reusable workflow that discovers, checks, and builds all flake outputs.
+#
+# Jobs:
+#   1. discover  - nix-discover.yaml (flake output matrix)
+#   2. check     - runs `nix flake check` and optionally `nix fmt -- --check`
+#   3. build     - builds every discovered target on the matching runner,
+#                  then signs and pushes the result to the binary cache
+#
+# Usage (from another repo):
+#   jobs:
+#     ci:
+#       uses: zebradil/znix/.github/workflows/nix-ci.yaml@main
+#       with:
+#         discovery-types: checks
+#         push-to-cache: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+#       secrets:
+#         cache-signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
+#         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+on:
+  workflow_call:
+    inputs:
+      check-flake:
+        description: Run `nix flake check` in the check job.
+        type: boolean
+        required: false
+        default: true
+      check-formatting:
+        description: Run `nix fmt -- --check` in the check job.
+        type: boolean
+        required: false
+        default: false
+      push-to-cache:
+        description: Sign and push built store paths to the remote cache after each build.
+        type: boolean
+        required: false
+        default: false
+      discovery-types:
+        description: Newline-separated list of flake output types to discover (e.g. 'checks\nnixosConfigurations').
+        type: string
+        required: false
+        default: |
+          nixosConfigurations
+          darwinConfigurations
+          devShells
+      runner-mapping:
+        description: >
+          Newline-separated list of Nix system to GitHub Actions runner label mappings.
+        type: string
+        required: false
+        default: |
+          x86_64-linux:ubuntu-latest
+          aarch64-darwin:macos-15
+      attr-filter:
+        description: Optional regex to filter discovered attributes.
+        type: string
+        required: false
+        default: ''
+      cache-pull-url:
+        description: HTTPS URL of the remote Nix binary cache used as an extra substituter.
+        type: string
+        required: false
+        default: ''
+      cache-public-key:
+        description: Trusted public key for the remote binary cache (e.g. 'cache.example.com:AAAA...').
+        type: string
+        required: false
+        default: ''
+      cache-s3-url:
+        description: S3 URL for `nix copy --to` (e.g. s3://my-bucket?region=eu-central-1).
+        type: string
+        required: false
+        default: ''
+      nix-infra-ref:
+        description: Git ref of zebradil/znix to use for CI actions and scripts.
+        type: string
+        required: false
+        default: main
+    secrets:
+      cache-signing-key:
+        description: Nix binary cache signing private key.
+        required: false
+      aws-access-key-id:
+        description: AWS access key ID for S3 cache push.
+        required: false
+      aws-secret-access-key:
+        description: AWS secret access key for S3 cache push.
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    uses: ./.github/workflows/nix-discover.yaml
+    with:
+      nix-infra-ref: ${{ inputs.nix-infra-ref }}
+      discovery-types: ${{ inputs.discovery-types }}
+      runner-mapping: ${{ inputs.runner-mapping }}
+      attr-filter: ${{ inputs.attr-filter }}
+
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Checkout znix CI tooling
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: zebradil/znix
+          ref: ${{ inputs.nix-infra-ref }}
+          path: .znix-ci
+          sparse-checkout: .github
+
+      - name: Setup Nix
+        uses: ./.znix-ci/.github/actions/setup-nix
+        with:
+          extra-substituters: ${{ inputs.cache-pull-url }}
+          extra-trusted-public-keys: ${{ inputs.cache-public-key }}
+
+      - name: Check flake
+        if: ${{ inputs.check-flake }}
+        run: nix flake check
+
+      - name: Verify formatting
+        if: ${{ inputs.check-formatting }}
+        run: nix fmt -- --check
+
+  build:
+    needs:
+      - discover
+      - check
+    if: ${{ needs.discover.outputs.has-targets == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Checkout znix CI tooling
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: zebradil/znix
+          ref: ${{ inputs.nix-infra-ref }}
+          path: .znix-ci
+          sparse-checkout: .github
+
+      - name: Setup Nix
+        id: setup
+        uses: ./.znix-ci/.github/actions/setup-nix
+        with:
+          extra-substituters: ${{ inputs.cache-pull-url }}
+          extra-trusted-public-keys: ${{ inputs.cache-public-key }}
+          cache-signing-key: ${{ inputs.push-to-cache && secrets.cache-signing-key || '' }}
+
+      - name: Build target
+        run: nix build ".#${{ matrix.attr }}"
+
+      - name: Resolve store path
+        id: store-path
+        run: |
+          {
+            echo 'path<<EOF'
+            nix path-info ".#${{ matrix.attr }}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish built path
+        if: ${{ inputs.push-to-cache }}
+        uses: ./.znix-ci/.github/actions/push-nix-cache
+        with:
+          store-paths: ${{ steps.store-path.outputs.path }}
+          signing-key-file: ${{ steps.setup.outputs.signing-key-file }}
+          s3-url: ${{ inputs.cache-s3-url }}
+          aws-access-key-id: ${{ secrets.aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+
+      - name: Clean up signing key
+        if: ${{ always() && steps.setup.outputs.signing-key-file != '' }}
+        run: rm -f '${{ steps.setup.outputs.signing-key-file }}'

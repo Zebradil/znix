@@ -1,0 +1,72 @@
+name: Push Nix Cache
+description: >
+  Sign and push built Nix store paths to an S3-backed binary cache. Accepts one or more store paths
+  (newline-separated), optionally signs them with a private key, and pushes them to S3 via `nix copy`.
+  Each step is skipped when its required inputs are empty.
+
+inputs:
+  store-paths:
+    description: Newline-separated Nix store paths to publish (e.g. output of `nix path-info`).
+    required: true
+  signing-key-file:
+    description: >
+      Path to the Nix signing key file on disk. Typically the `signing-key-file` output from the
+      setup-nix action. Leave empty to skip signing.
+    required: false
+    default: ''
+  s3-url:
+    description: >
+      S3 URL for `nix copy --to` (e.g. s3://my-cache-bucket or s3://my-bucket?region=eu-central-1).
+      Leave empty to skip remote push.
+    required: false
+    default: ''
+  aws-access-key-id:
+    description: AWS access key ID for S3 authentication.
+    required: false
+    default: ''
+  aws-secret-access-key:
+    description: AWS secret access key for S3 authentication.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Prepare store path list
+      id: store-path-list
+      shell: bash
+      run: |
+        mkdir -p "$RUNNER_TEMP"
+        store_path_file="$RUNNER_TEMP/nix-store-paths.txt"
+        printf "%s\n" "${{ inputs.store-paths }}" | sed '/^[[:space:]]*$/d' > "$store_path_file"
+        if [[ ! -s "$store_path_file" ]]; then
+          echo "No store paths to publish."
+          echo "has_paths=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        echo "has_paths=true" >> "$GITHUB_OUTPUT"
+        echo "store_path_file=$store_path_file" >> "$GITHUB_OUTPUT"
+
+    - name: Sign store paths
+      if: ${{ steps.store-path-list.outputs.has_paths == 'true' && inputs.signing-key-file != '' }}
+      shell: bash
+      run: |
+        store_paths=()
+        while IFS= read -r p; do store_paths+=("$p"); done < '${{ steps.store-path-list.outputs.store_path_file }}'
+        nix store sign --key-file '${{ inputs.signing-key-file }}' --recursive "${store_paths[@]}"
+
+    - name: Push to S3 binary cache
+      if: ${{ steps.store-path-list.outputs.has_paths == 'true' && inputs.s3-url != '' && inputs.aws-access-key-id != '' && inputs.aws-secret-access-key != '' }}
+      shell: bash
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+      run: |
+        store_paths=()
+        while IFS= read -r p; do store_paths+=("$p"); done < '${{ steps.store-path-list.outputs.store_path_file }}'
+        nix copy --to '${{ inputs.s3-url }}' "${store_paths[@]}"
+
+    - name: Skip remote push when credentials are missing
+      if: ${{ steps.store-path-list.outputs.has_paths == 'true' && inputs.s3-url != '' && (inputs.aws-access-key-id == '' || inputs.aws-secret-access-key == '') }}
+      shell: bash
+      run: echo "::warning::Remote cache push skipped — AWS credentials are not set."

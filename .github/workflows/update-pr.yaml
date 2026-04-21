@@ -1,0 +1,28 @@
+name: Update Flake Lock (PR)
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  pr:
+    uses: ./.github/workflows/nix-update-pr.yaml
+    with:
+      cache-pull-url: https://znix.zebradil.dev
+      cache-public-key: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
+      diff-targets: |
+        checks.x86_64-linux.tuxedo-build
+        checks.aarch64-darwin.trv4250-build
+      auto-merge: true
+      branch-name: automation/flake-update
+    secrets:
+      ci-app-id: ${{ secrets.CI_APP_ID }}
+      ci-app-private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}

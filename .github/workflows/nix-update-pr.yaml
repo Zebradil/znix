@@ -1,0 +1,307 @@
+name: Reusable Nix Update PR
+
+# Reusable workflow that updates flake.lock and opens (or updates) a pull request targeting
+# the repository's default branch. Unlike nix-update.yaml, this workflow does NOT build or
+# push to the binary cache — the resulting PR triggers the repo's own CI (e.g. nix-ci.yaml
+# via test.yaml) to handle that.
+#
+# If flake.lock is already up to date and an open update PR exists from the configured branch,
+# that PR is automatically closed.
+#
+# Jobs:
+#   1. update-flake-pr  - runs `nix flake update`, pushes a branch, and
+#                         creates or updates a PR with the lock file changes
+#
+# NOTE: ci-app-id and ci-app-private-key are required for this workflow to be useful. Without
+# them, a PR cannot be created in a way that triggers downstream CI (GITHUB_TOKEN-created PRs
+# do not fire pull_request events on the resulting PR, by GitHub design).
+#
+# Usage (from another repo):
+#   jobs:
+#     update:
+#       uses: zebradil/znix/.github/workflows/nix-update-pr.yaml@main
+#       with:
+#         auto-merge: true
+#         diff-targets: |
+#           checks.x86_64-linux.myhost-build
+#       secrets:
+#         ci-app-id: ${{ secrets.CI_APP_ID }}
+#         ci-app-private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+
+on:
+  workflow_call:
+    inputs:
+      branch-name:
+        description: Name of the branch to push the flake.lock update to.
+        type: string
+        required: false
+        default: automation/flake-update
+      auto-merge:
+        description: >
+          Enable GitHub auto-merge (squash) on the created PR. Requires the repository to have
+          "Allow auto-merge" enabled in settings and branch protection with required status checks.
+        type: boolean
+        required: false
+        default: true
+      nix-infra-ref:
+        description: Git ref of zebradil/znix to use for CI actions and scripts.
+        type: string
+        required: false
+        default: main
+      diff-targets:
+        description: >
+          Newline-separated list of flake attributes to build before and after the update for nvd
+          package diff (e.g. 'checks.x86_64-linux.tuxedo-build'). Leave empty to skip the diff.
+        type: string
+        required: false
+        default: ''
+      cache-pull-url:
+        description: HTTPS URL of the Nix binary cache used as an extra substituter during diff builds.
+        type: string
+        required: false
+        default: ''
+      cache-public-key:
+        description: Trusted public key for the remote binary cache.
+        type: string
+        required: false
+        default: ''
+    secrets:
+      ci-app-id:
+        description: >
+          GitHub App ID used to generate a token for creating the update PR. PRs created with
+          GITHUB_TOKEN do not trigger pull_request events, so an App token is required to make
+          downstream CI run on the PR.
+        required: false
+      ci-app-private-key:
+        description: GitHub App private key paired with ci-app-id.
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update-flake-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      HAS_APP_TOKEN: ${{ secrets.ci-app-id != '' && secrets.ci-app-private-key != '' }}
+      CAN_DIFF: ${{ inputs.diff-targets != '' }}
+    steps:
+      # Token generation runs before checkout so that actions/checkout can configure the git
+      # remote with push credentials in one step.
+      - name: Generate app token
+        if: ${{ env.HAS_APP_TOKEN == 'true' }}
+        id: app_token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          app-id: ${{ secrets.ci-app-id }}
+          private-key: ${{ secrets.ci-app-private-key }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          token: ${{ steps.app_token.outputs.token || github.token }}
+
+      - name: Checkout znix CI tooling
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: zebradil/znix
+          ref: ${{ inputs.nix-infra-ref }}
+          path: .znix-ci
+          sparse-checkout: .github
+
+      - name: Setup Nix
+        uses: ./.znix-ci/.github/actions/setup-nix
+        with:
+          extra-substituters: ${{ inputs.cache-pull-url }}
+          extra-trusted-public-keys: ${{ inputs.cache-public-key }}
+
+      - name: Update flake.lock
+        run: nix flake update
+
+      - name: Check for changes
+        id: check
+        run: |
+          if git diff --quiet flake.lock; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Close stale PR if no changes
+        if: ${{ steps.check.outputs.has_changes == 'false' }}
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token || github.token }}
+          BRANCH: ${{ inputs.branch-name }}
+        run: |
+          existing_pr=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [[ -n "$existing_pr" ]]; then
+            gh pr close "$existing_pr" --comment "Closing: \`flake.lock\` is already up to date after the latest \`nix flake update\` run."
+            echo "Closed stale PR #${existing_pr}."
+          else
+            echo "No changes to flake.lock and no open PR to close. Nothing to do."
+          fi
+
+      - name: Build pre-update targets
+        if: ${{ steps.check.outputs.has_changes == 'true' && env.CAN_DIFF == 'true' }}
+        env:
+          DIFF_TARGETS: ${{ inputs.diff-targets }}
+        run: |
+          # Save the updated flake.lock and restore the old one so nix build evaluates the old inputs.
+          cp flake.lock "$RUNNER_TEMP/new-flake.lock"
+          git checkout -- flake.lock
+
+          declare -A old_paths
+          while IFS= read -r target; do
+            [[ -z "$target" ]] && continue
+            echo "::group::Building pre-update: $target"
+            if nix build ".#${target}" --no-link; then
+              path=$(nix path-info ".#${target}")
+              old_paths["$target"]="$path"
+              echo "Pre-update store path: $path"
+            else
+              echo "::warning::Pre-update build failed for $target — skipping diff for this target"
+            fi
+            echo "::endgroup::"
+          done <<< "$DIFF_TARGETS"
+
+          # Restore the updated flake.lock for subsequent steps.
+          cp "$RUNNER_TEMP/new-flake.lock" flake.lock
+
+          for target in "${!old_paths[@]}"; do
+            printf '%s=%s\n' "$target" "${old_paths[$target]}"
+          done > "$RUNNER_TEMP/pre-update-paths.txt"
+
+      - name: Generate nvd diff
+        if: ${{ steps.check.outputs.has_changes == 'true' && env.CAN_DIFF == 'true' }}
+        env:
+          DIFF_TARGETS: ${{ inputs.diff-targets }}
+        run: |
+          pre_paths_file="$RUNNER_TEMP/pre-update-paths.txt"
+          diff_output=""
+
+          declare -A old_paths
+          if [[ -f "$pre_paths_file" ]]; then
+            while IFS='=' read -r target path; do
+              [[ -z "$target" ]] && continue
+              old_paths["$target"]="$path"
+            done < "$pre_paths_file"
+          fi
+
+          while IFS= read -r target; do
+            [[ -z "$target" ]] && continue
+
+            old_path="${old_paths[$target]:-}"
+            if [[ -z "$old_path" ]]; then
+              echo "Skipping $target — pre-update build was not available"
+              continue
+            fi
+
+            echo "::group::Building post-update: $target"
+            if ! nix build ".#${target}" --no-link; then
+              echo "::warning::Post-update build failed for $target"
+              diff_output+=$'\n\n<details>\n<summary><code>'"$target"$'</code> — build failed after update</summary>\n\nPost-update build failed. Diff unavailable.\n</details>'
+              echo "::endgroup::"
+              continue
+            fi
+            echo "::endgroup::"
+
+            new_path=$(nix path-info ".#${target}")
+
+            if [[ "$old_path" == "$new_path" ]]; then
+              diff_output+=$'\n\n<details>\n<summary><code>'"$target"$'</code> — no change</summary>\n\nStore path unchanged: `'"$new_path"$'`\n</details>'
+              continue
+            fi
+
+            echo "::group::nvd diff: $target"
+            nvd_result=$(nix run 'nixpkgs#nvd' -- --color never diff "$old_path" "$new_path" 2>&1) || true
+            echo "$nvd_result"
+            echo "::endgroup::"
+
+            diff_output+=$'\n\n<details open>\n<summary><code>'"$target"$'</code></summary>\n\n```\n'"$nvd_result"$'\n```\n</details>'
+          done <<< "$DIFF_TARGETS"
+
+          max_len=50000
+          if [[ ${#diff_output} -gt $max_len ]]; then
+            diff_output="${diff_output:0:$max_len}
+
+          ... (truncated — diff output exceeded ${max_len} characters)"
+          fi
+
+          if [[ -n "$diff_output" ]]; then
+            printf '%s\n' "$diff_output" > "$RUNNER_TEMP/nvd-diff.md"
+          fi
+
+      - name: Create or update PR
+        if: ${{ steps.check.outputs.has_changes == 'true' && env.HAS_APP_TOKEN == 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          BRANCH: ${{ inputs.branch-name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Generate a human-readable summary of changed direct inputs with compare links.
+          # At this point HEAD:flake.lock is the old (committed) version and flake.lock
+          # in the working tree is the new (updated) version.
+          if git show HEAD:flake.lock > "$RUNNER_TEMP/old-flake.lock" 2>/dev/null; then
+            input_summary=$(.znix-ci/.github/scripts/flake-lock-summary.sh "$RUNNER_TEMP/old-flake.lock" flake.lock)
+          else
+            input_summary="(New flake.lock — no previous version to compare.)"
+          fi
+
+          {
+            printf 'Automated `nix flake update` run.\n\n'
+            printf '### Updated inputs\n\n'
+            printf '%s\n\n' "$input_summary"
+            if [[ -f "$RUNNER_TEMP/nvd-diff.md" ]]; then
+              printf '### Package diff\n\n'
+              cat "$RUNNER_TEMP/nvd-diff.md"
+              printf '\n'
+            fi
+          } > "$RUNNER_TEMP/pr-body.md"
+
+          git checkout -B "$BRANCH"
+          git add flake.lock
+          git commit -m "chore: update flake.lock"
+          git push --force origin "$BRANCH"
+
+          existing_pr=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [[ -z "$existing_pr" ]]; then
+            gh pr create \
+              --title "chore: update flake.lock" \
+              --head "$BRANCH" \
+              --body-file "$RUNNER_TEMP/pr-body.md"
+            echo "PR created."
+          else
+            gh pr edit "$existing_pr" --body-file "$RUNNER_TEMP/pr-body.md"
+            echo "PR #${existing_pr} body updated; the force-push will trigger fresh CI checks."
+          fi
+
+      - name: Enable auto-merge
+        if: ${{ steps.check.outputs.has_changes == 'true' && inputs.auto-merge && env.HAS_APP_TOKEN == 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          BRANCH: ${{ inputs.branch-name }}
+        run: |
+          pr_number=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [[ -n "$pr_number" ]]; then
+            if gh pr merge "$pr_number" --auto --squash; then
+              echo "Auto-merge enabled for PR #${pr_number}."
+            else
+              echo "::warning::Could not enable auto-merge for PR #${pr_number}. Ensure the repository has 'Allow auto-merge' enabled in settings and branch protection with required status checks configured."
+            fi
+          fi
+
+      - name: Warn if app token is missing
+        if: ${{ steps.check.outputs.has_changes == 'true' && env.HAS_APP_TOKEN != 'true' }}
+        run: |
+          echo "::warning::ci-app-id and/or ci-app-private-key are not configured. Cannot create a PR — PRs created with GITHUB_TOKEN do not trigger pull_request events on the resulting PR, so CI would not run on the changes. Please configure the GitHub App secrets."
