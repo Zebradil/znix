@@ -14,6 +14,7 @@ jobs:
   ci:
     uses: ./.github/workflows/nix-ci.yaml
     with:
+      nix-infra-ref: ${{ github.sha }}
       discovery-types: |
         checks
       runner-mapping: |

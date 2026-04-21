@@ -51,8 +51,11 @@ for type in ${DISCOVERY_TYPES:?DISCOVERY_TYPES is required}; do
 	case "$type" in
 	nixosConfigurations | darwinConfigurations)
 		# Flat type: first-level keys are logical names, not systems.
-		sys_map=$(nix eval --json ".#${type/Configurations/SystemMap}")
-		if [[ -z "$sys_map" ]]; then
+		sys_map='null'
+		if sys_map=$(nix eval --json ".#${type/Configurations/SystemMap}" 2>/dev/null); then
+			:
+		fi
+		if [[ "$sys_map" == "null" ]] || echo "$sys_map" | jq -e 'type == "object" and length == 0' >/dev/null; then
 			echo "::warning::nix-discover: system map for '$type' not found, running expensive evaluation to get it"
 			sys_map=$(nix eval --json ".#$type" --apply 'builtins.mapAttrs (_: v: v.pkgs.stdenv.hostPlatform.system)')
 		fi
