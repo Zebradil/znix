@@ -68,11 +68,6 @@ on:
         type: string
         required: false
         default: ''
-      cache-s3-url:
-        description: S3 URL for `nix copy --to` (e.g. s3://my-bucket?region=eu-central-1).
-        type: string
-        required: false
-        default: ''
       nix-infra-ref:
         description: Git ref of zebradil/znix to use for CI actions and scripts.
         type: string
@@ -87,6 +82,9 @@ on:
         required: false
       aws-secret-access-key:
         description: AWS secret access key for S3 cache push.
+        required: false
+      cache-s3-url:
+        description: S3 URL for `nix copy --to` (e.g. s3://my-bucket?region=eu-central-1).
         required: false
       ci-push-ssh-key:
         description: SSH deploy key for committing the updated flake.lock back to the branch.
@@ -202,7 +200,7 @@ jobs:
         with:
           store-paths: ${{ steps.store-path.outputs.path }}
           signing-key-file: ${{ steps.setup.outputs.signing-key-file }}
-          s3-url: ${{ inputs.cache-s3-url }}
+          s3-url: ${{ secrets.cache-s3-url }}
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
 

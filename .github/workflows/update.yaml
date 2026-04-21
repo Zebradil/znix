@@ -29,7 +29,6 @@ jobs:
         aarch64-darwin:macos-15
       cache-pull-url: https://znix.zebradil.dev
       cache-public-key: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
-      cache-s3-url: ${{ secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
       run-flake-update: ${{ github.event_name == 'workflow_dispatch' && inputs.run-flake-update }}
       auto-commit: ${{ github.event_name == 'workflow_dispatch' && inputs.run-flake-update }}
     secrets:
@@ -37,3 +36,4 @@ jobs:
       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       ci-push-ssh-key: ${{ secrets.CI_PUSH_DEPLOY_KEY }}
+      cache-s3-url: ${{ secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
