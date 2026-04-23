@@ -259,7 +259,7 @@ jobs:
           fi
 
           {
-            printf 'Automated `nix flake update` run.\n\n'
+            printf $'Automated `nix flake update` run.\n\n'
             printf '### Updated inputs\n\n'
             printf '%s\n\n' "$input_summary"
             if [[ -f "$RUNNER_TEMP/nvd-diff.md" ]]; then
