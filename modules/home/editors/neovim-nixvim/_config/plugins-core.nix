@@ -23,6 +23,7 @@
         with pkgs.vimPlugins.nvim-treesitter.builtGrammars;
         [
           bash
+          css
           dockerfile
           go
           gomod
@@ -30,6 +31,8 @@
           gowork
           hcl
           helm
+          html
+          javascript
           json
           just
           lua
@@ -107,6 +110,9 @@
           };
         };
         bashls.enable = true;
+        cssls.enable = true;
+        emmet_language_server.enable = true;
+        html.enable = true;
         marksman.enable = true;
         nushell.enable = true;
         terraformls.enable = true;
@@ -149,6 +155,9 @@
           nu = [ "nufmt" ];
           yaml = [ "oxfmt" ];
           markdown = [ "oxfmt" ];
+          html = [ "oxfmt" ];
+          css = [ "oxfmt" ];
+          javascript = [ "oxfmt" ];
         };
         format_on_save = {
           timeout_ms = 3200;
