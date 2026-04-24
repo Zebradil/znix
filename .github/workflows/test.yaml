@@ -28,3 +28,18 @@ jobs:
       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       cache-s3-url: ${{ secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
+
+  required-checks:
+    name: required-checks
+    needs: [ci]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify CI result
+        env:
+          CI_RESULT: ${{ needs.ci.result }}
+        run: |
+          echo "ci result: $CI_RESULT"
+          if [[ "$CI_RESULT" != "success" ]]; then
+            exit 1
+          fi
