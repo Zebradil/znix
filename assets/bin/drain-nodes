@@ -83,18 +83,15 @@ function log::say {
 # Emit the combined count of (Pending pods) + (non-terminal pods that are not Ready).
 # Pre-existing stuck/pending pods are captured in BASELINE_SIGNAL before the drain
 # loop starts, so they don't inflate the adaptive signal.
-# On any kubectl/jq failure, returns 9999 so a bad poll never looks "caught up".
+# On any kubectl failure, returns 9999 so a bad poll never looks "caught up".
 function signal::snapshot {
     local pending not_ready
     pending=$(kubectl get pods -A --field-selector=status.phase=Pending \
         -o go-template='{{len .items}}' 2>/dev/null) || { echo 9999; return; }
     not_ready=$(kubectl get pods -A \
         --field-selector=status.phase!=Succeeded,status.phase!=Failed \
-        -o json 2>/dev/null \
-        | jq '[.items[]
-               | select(any(.status.conditions[]?;
-                            .type=="Ready" and .status!="True"))] | length' \
-        2>/dev/null) || { echo 9999; return; }
+        -o go-template='{{range .items}}{{range .status.conditions}}{{if and (eq .type "Ready") (ne .status "True")}}x{{"\n"}}{{end}}{{end}}{{end}}' \
+        2>/dev/null | wc -l) || { echo 9999; return; }
     echo $(( pending + not_ready ))
 }
 
@@ -103,7 +100,7 @@ function signal::snapshot {
 # Uses globals: MIN_WAIT MAX_WAIT POLL_INTERVAL STABLE_FOR TOLERANCE BASELINE_SIGNAL TALK
 function do_adaptive_wait {
     local start now deadline stable_since=0 signal target input
-    local pause_start elapsed
+    local pause_start elapsed remaining wait_for
 
     start=$(date +%s)
     deadline=$(( start + MAX_WAIT ))
@@ -116,7 +113,9 @@ function do_adaptive_wait {
     # Pause time extends 'start' so it doesn't count toward the min-wait budget.
     while (( $(date +%s) - start < MIN_WAIT )); do
         input=""
-        read -rsn1 -t "$POLL_INTERVAL" input </dev/tty || true
+        remaining=$(( MIN_WAIT - ($(date +%s) - start) ))
+        wait_for=$(( remaining < POLL_INTERVAL ? remaining : POLL_INTERVAL ))
+        (( wait_for > 0 )) && read -rsn1 -t "$wait_for" input </dev/tty || true
         case $input in
         p)
             pause_start=$(date +%s)
