@@ -120,6 +120,27 @@ jobs:
           extra-substituters: ${{ inputs.cache-pull-url }}
           extra-trusted-public-keys: ${{ inputs.cache-public-key }}
 
+      - name: Filter diff targets to current system
+        if: ${{ env.CAN_DIFF == 'true' }}
+        env:
+          DIFF_TARGETS: ${{ inputs.diff-targets }}
+        run: |
+          current_system=$(nix eval --impure --raw --expr 'builtins.currentSystem')
+          echo "Runner system: $current_system"
+          : > "$RUNNER_TEMP/diff-targets.txt"
+          while IFS= read -r target; do
+            [[ -z "$target" ]] && continue
+            sys=$(cut -d. -f2 <<< "$target")
+            if [[ "$sys" == "$current_system" ]]; then
+              printf '%s\n' "$target" >> "$RUNNER_TEMP/diff-targets.txt"
+            else
+              echo "::notice::Skipping $target — not buildable on $current_system runner"
+            fi
+          done <<< "$DIFF_TARGETS"
+          if [[ ! -s "$RUNNER_TEMP/diff-targets.txt" ]]; then
+            echo "::notice::No diff targets match the runner system; nvd diff will be skipped."
+          fi
+
       - name: Update flake.lock
         run: nix flake update
 
@@ -148,8 +169,6 @@ jobs:
 
       - name: Build pre-update targets
         if: ${{ steps.check.outputs.has_changes == 'true' && env.CAN_DIFF == 'true' }}
-        env:
-          DIFF_TARGETS: ${{ inputs.diff-targets }}
         run: |
           # Save the updated flake.lock and restore the old one so nix build evaluates the old inputs.
           cp flake.lock "$RUNNER_TEMP/new-flake.lock"
@@ -159,15 +178,12 @@ jobs:
           while IFS= read -r target; do
             [[ -z "$target" ]] && continue
             echo "::group::Building pre-update: $target"
-            if nix build ".#${target}" --no-link; then
-              path=$(nix path-info ".#${target}")
-              old_paths["$target"]="$path"
-              echo "Pre-update store path: $path"
-            else
-              echo "::warning::Pre-update build failed for $target — skipping diff for this target"
-            fi
+            nix build ".#${target}" --no-link
+            path=$(nix path-info ".#${target}")
+            old_paths["$target"]="$path"
+            echo "Pre-update store path: $path"
             echo "::endgroup::"
-          done <<< "$DIFF_TARGETS"
+          done < "$RUNNER_TEMP/diff-targets.txt"
 
           # Restore the updated flake.lock for subsequent steps.
           cp "$RUNNER_TEMP/new-flake.lock" flake.lock
@@ -178,8 +194,6 @@ jobs:
 
       - name: Generate nvd diff
         if: ${{ steps.check.outputs.has_changes == 'true' && env.CAN_DIFF == 'true' }}
-        env:
-          DIFF_TARGETS: ${{ inputs.diff-targets }}
         run: |
           pre_paths_file="$RUNNER_TEMP/pre-update-paths.txt"
           diff_output=""
@@ -202,12 +216,7 @@ jobs:
             fi
 
             echo "::group::Building post-update: $target"
-            if ! nix build ".#${target}" --no-link; then
-              echo "::warning::Post-update build failed for $target"
-              diff_output+=$'\n\n<details>\n<summary><code>'"$target"$'</code> — build failed after update</summary>\n\nPost-update build failed. Diff unavailable.\n</details>'
-              echo "::endgroup::"
-              continue
-            fi
+            nix build ".#${target}" --no-link
             echo "::endgroup::"
 
             new_path=$(nix path-info ".#${target}")
@@ -223,7 +232,7 @@ jobs:
             echo "::endgroup::"
 
             diff_output+=$'\n\n<details open>\n<summary><code>'"$target"$'</code></summary>\n\n```\n'"$nvd_result"$'\n```\n</details>'
-          done <<< "$DIFF_TARGETS"
+          done < "$RUNNER_TEMP/diff-targets.txt"
 
           max_len=50000
           if [[ ${#diff_output} -gt $max_len ]]; then
