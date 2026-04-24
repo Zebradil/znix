@@ -7,37 +7,58 @@ function help {
     script_name=$(basename "$0")
     # shellcheck disable=SC2016,SC2028
     cat <<HLP
-Usage: $script_name [options] [timeout] <<< <INPUT>
+Usage: $script_name [options] <<< <INPUT>
 
 Drain nodes in the cluster one by one.
 The node list is read from the standard input.
-The script waits for the specified timeout before proceeding to the next node.
+
+By default, an adaptive wait is used between drains: the script polls the cluster
+state and proceeds as soon as evicted pods are rescheduled, or falls back to the
+--max-wait ceiling. Use --no-adaptive for a fixed sleep instead.
 
 If the TALK environment variable is set to true, the script will talk to you.
 
 Options:
-  --cordon:  Cordon the nodes before draining
-  --delete:  Delete the nodes after draining
-  --dry-run: Print the node list without draining
-  --help:    Print this help message
+  --cordon           Cordon all nodes before draining any
+  --delete           Delete nodes from their managed instance group after draining
+  --dry-run          Print actions without executing; skip all waits
+  --help             Print this help message
+  --adaptive         Enable adaptive wait between drains (default)
+  --no-adaptive      Use a fixed sleep of --max-wait seconds instead
+  --min-wait SEC     Grace period before probing starts; allows the scheduler time
+                     to mark evicted pods as Pending (default: 20)
+  --max-wait SEC     Hard ceiling on wait time per node (default: 300)
+  --poll-interval SEC
+                     Seconds between cluster state polls in adaptive mode (default: 5)
+  --stable-for SEC   Signal must stay at-or-below baseline for this many consecutive
+                     seconds before proceeding early (default: 15)
+  --tolerance N      Allow baseline+N Pending/NotReady pods when deciding "caught
+                     up" — absorbs normal HPA/CronJob churn (default: 2)
 
-Arguments:
-  timeout: Timeout in seconds to wait before proceeding to the next node
-           Default: 180
+Interactive controls during any wait:
+  p   pause the timer (paused time is excluded from max-wait and stable-for)
+  s   skip the current wait and proceed to the next node immediately
+  any other key   print remaining time and current signal
 
 Input:
   List of nodes to drain, one node per line
 
 Examples:
-  $script_name <<< \$(printf "node1\nnode2\nnode3")'
+  $script_name <<< \$(printf "node1\nnode2\nnode3")
 
-  $script_name --dry-run 120 <<< \$( \\
+  $script_name --dry-run <<< \$( \\
       kubectl get node \\
           -o custom-columns=:.metadata.name \\
           --no-headers -l=pool=general)
 
   kubectl get node -o custom-columns=:.metadata.name --no-headers -l=pool=general \\
-      | $script_name --cordon 300
+      | $script_name --cordon
+
+  # Override the ceiling for slow autoscaler environments:
+  $script_name --delete --max-wait 600
+
+  # Restore old fixed-sleep behaviour:
+  $script_name --delete --no-adaptive --max-wait 180
 HLP
 }
 
@@ -59,52 +80,168 @@ function log::say {
     fi
 }
 
+# Emit the combined count of (Pending pods) + (non-terminal pods that are not Ready).
+# Pre-existing stuck/pending pods are captured in BASELINE_SIGNAL before the drain
+# loop starts, so they don't inflate the adaptive signal.
+# On any kubectl failure, returns 9999 so a bad poll never looks "caught up".
+function signal::snapshot {
+    local pending not_ready
+    pending=$(kubectl get pods -A --field-selector=status.phase=Pending \
+        -o go-template='{{len .items}}' 2>/dev/null) || { echo 9999; return; }
+    not_ready=$(kubectl get pods -A \
+        --field-selector=status.phase!=Succeeded,status.phase!=Failed \
+        -o go-template='{{range .items}}{{range .status.conditions}}{{if and (eq .type "Ready") (ne .status "True")}}x{{"\n"}}{{end}}{{end}}{{end}}' \
+        2>/dev/null | wc -l) || { echo 9999; return; }
+    echo $(( pending + not_ready ))
+}
+
+# do_adaptive_wait — poll cluster state and exit as soon as the signal is stable
+# at or below the baseline. Falls back to the max-wait ceiling.
+# Uses globals: MIN_WAIT MAX_WAIT POLL_INTERVAL STABLE_FOR TOLERANCE BASELINE_SIGNAL TALK
+function do_adaptive_wait {
+    local start now deadline stable_since=0 signal target input
+    local pause_start elapsed remaining wait_for
+
+    start=$(date +%s)
+    deadline=$(( start + MAX_WAIT ))
+    target=$(( BASELINE_SIGNAL + TOLERANCE ))
+
+    log::info "Adaptive wait: min=${MIN_WAIT}s max=${MAX_WAIT}s stable-for=${STABLE_FOR}s tolerance=${TOLERANCE} target=${target}"
+    log::say "Waiting for cluster to catch up"
+
+    # min-wait phase: accept interactive controls but don't probe the cluster yet.
+    # Pause time extends 'start' so it doesn't count toward the min-wait budget.
+    while (( $(date +%s) - start < MIN_WAIT )); do
+        input=""
+        remaining=$(( MIN_WAIT - ($(date +%s) - start) ))
+        wait_for=$(( remaining < POLL_INTERVAL ? remaining : POLL_INTERVAL ))
+        (( wait_for > 0 )) && read -rsn1 -t "$wait_for" input </dev/tty || true
+        case $input in
+        p)
+            pause_start=$(date +%s)
+            log::info "Paused — press any key to continue"
+            read -rsn1 </dev/tty; echo
+            elapsed=$(( $(date +%s) - pause_start ))
+            start=$(( start + elapsed ))
+            deadline=$(( deadline + elapsed ))
+            log::info "Resumed"
+            ;;
+        s) log::info "Skipped"; return 0 ;;
+        "") ;;
+        *) log::info "min-wait: $(( MIN_WAIT - ($(date +%s) - start) ))s before probing  [p=pause s=skip]" ;;
+        esac
+    done
+
+    # Probing phase: poll until signal is stable at target, or the deadline is hit.
+    while :; do
+        now=$(date +%s)
+        if (( now >= deadline )); then
+            log::info "adaptive: deadline reached after ${MAX_WAIT}s (signal=$(signal::snapshot) target=${target}) — raise --max-wait if cluster needs more time"
+            return 0
+        fi
+
+        signal=$(signal::snapshot)
+        if (( signal <= target )); then
+            (( stable_since == 0 )) && stable_since=$now
+            if (( now - stable_since >= STABLE_FOR )); then
+                log::success "adaptive: caught up — signal=${signal} target=${target}; saved $(( deadline - now ))s vs max-wait"
+                log::say "Cluster caught up"
+                return 0
+            fi
+        else
+            stable_since=0
+        fi
+
+        log::info "adaptive: signal=${signal} target=${target} stable=$(( stable_since ? now - stable_since : 0 ))/${STABLE_FOR}s left=$(( deadline - now ))s  [p=pause s=skip]"
+
+        input=""
+        read -rsn1 -t "$POLL_INTERVAL" input </dev/tty || true
+        case $input in
+        p)
+            pause_start=$(date +%s)
+            log::info "Paused — press any key to continue"
+            read -rsn1 </dev/tty; echo
+            elapsed=$(( $(date +%s) - pause_start ))
+            deadline=$(( deadline + elapsed ))
+            (( stable_since > 0 )) && stable_since=$(( stable_since + elapsed ))
+            log::info "Resumed"
+            ;;
+        s) log::info "Skipped"; return 0 ;;
+        *) ;;
+        esac
+    done
+}
+
+# do_fixed_wait — sleep for MAX_WAIT seconds with interactive pause/skip support.
+# Uses globals: MAX_WAIT TALK
+function do_fixed_wait {
+    local deadline input time_left
+    local pause_start elapsed
+    deadline=$(( $(date +%s) + MAX_WAIT ))
+    log::info "Fixed wait: ${MAX_WAIT}s  [p=pause s=skip any=time-left]"
+    log::say "Waiting"
+    while :; do
+        time_left=$(( deadline - $(date +%s) ))
+        log::info "Seconds left: ${time_left}"
+        (( time_left <= 0 )) && break
+        read -rsn1 -t "$time_left" input </dev/tty || true
+        case $input in
+        p)
+            pause_start=$(date +%s)
+            log::info "Paused — press any key to continue"
+            read -rsn1 </dev/tty; echo
+            elapsed=$(( $(date +%s) - pause_start ))
+            deadline=$(( deadline + elapsed ))
+            log::info "Resumed"
+            ;;
+        s) break ;;
+        esac
+    done
+}
+
 TALK=${TALK:-false}
 
-TM=
 DRY_RUN=false
 CORDON=false
 DELETE=false
+ADAPTIVE=true
+MIN_WAIT=20
+MAX_WAIT=300
+POLL_INTERVAL=5
+STABLE_FOR=15
+TOLERANCE=2
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-    --cordon)
-        CORDON=true
-        shift
-        ;;
-    --delete)
-        DELETE=true
-        shift
-        ;;
-    --dry-run)
-        DRY_RUN=true
-        shift
-        ;;
-    --help)
-        help >&2
-        exit 0
-        ;;
+    --cordon)      CORDON=true; shift ;;
+    --delete)      DELETE=true; shift ;;
+    --dry-run)     DRY_RUN=true; shift ;;
+    --help)        help >&2; exit 0 ;;
+    --adaptive)    ADAPTIVE=true; shift ;;
+    --no-adaptive) ADAPTIVE=false; shift ;;
+    --min-wait)
+        [[ ${2:-} =~ ^[0-9]+$ ]] || { log::err "--min-wait requires a non-negative integer"; exit 1; }
+        MIN_WAIT=$2; shift 2 ;;
+    --max-wait)
+        [[ ${2:-} =~ ^[1-9][0-9]*$ ]] || { log::err "--max-wait requires a positive integer"; exit 1; }
+        MAX_WAIT=$2; shift 2 ;;
+    --poll-interval)
+        [[ ${2:-} =~ ^[1-9][0-9]*$ ]] || { log::err "--poll-interval requires a positive integer"; exit 1; }
+        POLL_INTERVAL=$2; shift 2 ;;
+    --stable-for)
+        [[ ${2:-} =~ ^[0-9]+$ ]] || { log::err "--stable-for requires a non-negative integer"; exit 1; }
+        STABLE_FOR=$2; shift 2 ;;
+    --tolerance)
+        [[ ${2:-} =~ ^[0-9]+$ ]] || { log::err "--tolerance requires a non-negative integer"; exit 1; }
+        TOLERANCE=$2; shift 2 ;;
     *)
-        # If TM is already set, fail the script
-        if [[ -n $TM ]]; then
-            log::err "Timeout is already set"
-            help >&2
-            exit 1
-        fi
-        # If the argument is not a number, fail the script
-        if ! [[ $1 =~ ^[1-9][0-9]*$ ]]; then
-            log::err "Timeout must be a positive integer"
-            help >&2
-            exit 1
-        fi
-        TM=$1
-        shift
-        ;;
+        log::err "Unknown argument: $1"
+        help >&2
+        exit 1 ;;
     esac
 done
 
-TM=${TM:-180}
-INFO="Press p to pause, s to skip, any other key to check seconds left, CTRL+C to exit"
+BASELINE_SIGNAL=0
 
 log::info "Reading node list from the standard input"
 readarray -t nodes
@@ -119,6 +256,14 @@ if $CORDON; then
             log::info "$(kubectl cordon "$node")"
         fi
     done
+fi
+
+# Capture a baseline before the first drain so that pre-existing stuck/pending pods
+# are baked into BASELINE_SIGNAL and do not inflate the adaptive signal comparisons.
+if $ADAPTIVE && ! $DRY_RUN && (( ${#nodes[@]} > 1 )); then
+    log::info "Capturing cluster baseline ..."
+    BASELINE_SIGNAL=$(signal::snapshot)
+    log::info "Baseline signal: ${BASELINE_SIGNAL} (Pending + not-Ready non-terminal pods)"
 fi
 
 for i in "${!nodes[@]}"; do
@@ -154,24 +299,14 @@ for i in "${!nodes[@]}"; do
     if ((i == ${#nodes[@]} - 1)); then
         break
     fi
-    log::info "$INFO"
-    deadline=$(($(date +%s) + TM))
-    while true; do
-        time_left=$((deadline - $(date +%s)))
-        log::info "Seconds left: $time_left"
-        if [[ $time_left -le 0 ]]; then
-            break
-        fi
-        log::say "Waiting"
-        read -rsn1 -t $time_left input </dev/tty || true
-        if [[ $input = "p" ]]; then
-            log::info "Paused"
-            read -rsn1 -p "Press any key to continue " </dev/tty
-            echo
-        elif [[ $input = "s" ]]; then
-            break
-        fi
-    done
+    if $DRY_RUN; then
+        continue
+    fi
+    if $ADAPTIVE; then
+        do_adaptive_wait
+    else
+        do_fixed_wait
+    fi
 done
 
 log::say "All nodes are drained"
