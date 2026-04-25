@@ -14,7 +14,10 @@ _: {
         ];
       };
       impermanence = lib.mkIf osConfig.znix.impermanence.enable {
-        home.persistence."/persist".directories = [ ".config/claude" ];
+        home.persistence."/persist" = {
+          directories = [ ".claude" ];
+          files = [ ".claude.json" ];
+        };
       };
     in
     lib.mkMerge [
