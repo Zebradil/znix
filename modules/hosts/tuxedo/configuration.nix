@@ -12,6 +12,7 @@
         boot
         determinate
         diff
+        docker
         ephemeral-btrfs
         fido
         fonts
@@ -40,6 +41,7 @@
     znix = {
       boot.enable = true;
       diff.enable = true;
+      docker.enable = true;
       hardware-monitoring.enable = true;
       ephemeral-btrfs.enable = true;
       impermanence.enable = true;
