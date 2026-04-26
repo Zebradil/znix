@@ -1,11 +1,30 @@
-{ pkgs, ... }:
+{ pkgs, inputs, ... }:
 let
+  system = pkgs.stdenv.hostPlatform.system;
+  anyrunPkgs = inputs.anyrun.packages.${system};
+  anyrunBin = "${anyrunPkgs.anyrun}/bin/anyrun";
+  stdinLib = "${anyrunPkgs.stdin}/lib/libstdin.so";
+
+  # See _anyrun.nix for the full explanation. Same derivation, Nix deduplicates.
+  pickerConfigDir = pkgs.symlinkJoin {
+    name = "anyrun-picker-config";
+    paths = [
+      (pkgs.writeTextDir "anyrun/config.ron" ''
+        Config(
+          plugins: ["${stdinLib}"],
+          show_results_immediately: true,
+          close_on_click: true,
+          hide_plugin_info: true,
+        )
+      '')
+    ];
+  };
+
   monitor-switch = pkgs.writeShellApplication {
     name = "monitor-switch";
     runtimeInputs = with pkgs; [
       hyprland
       jq
-      fuzzel
       libnotify
     ];
     text = ''
@@ -130,7 +149,7 @@ let
 "
           fi
         done
-        chosen=$(printf '%s' "$options" | fuzzel --dmenu --prompt "Display: ")
+        chosen=$(printf '%s' "$options" | XDG_CONFIG_HOME="${pickerConfigDir}" ${anyrunBin})
         [ -z "$chosen" ] && exit 0
         # Strip the active marker before applying
         chosen="''${chosen#\* }"
@@ -216,11 +235,10 @@ in
 {
   home.packages = [
     monitor-switch
-    pkgs.fuzzel
   ];
 
   wayland.windowManager.hyprland.settings.bind = [
-    "$mod, P, exec, monitor-switch --pick"
+    "$mod, P, exec, hypr-exec monitor-switch --pick"
   ];
 
   systemd.user.services.monitor-switch-daemon = {

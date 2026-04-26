@@ -86,6 +86,35 @@
       ];
       home.packages = with pkgs; [
         playerctl
+        # Wrapper for hyprland exec bindings: captures stderr, appends failures
+        # to a persistent session log, and pops a notification.
+        # Log: $XDG_STATE_HOME/hyprland/hypr-exec.log  (default ~/.local/state/...)
+        # Usage: hypr-exec <command> [args...]
+        (writeShellApplication {
+          name = "hypr-exec";
+          runtimeInputs = [ libnotify ];
+          text = ''
+            log_dir="''${XDG_STATE_HOME:-$HOME/.local/state}/hyprland"
+            log_file="$log_dir/hypr-exec.log"
+            mkdir -p "$log_dir"
+
+            tmpfile=$(mktemp)
+            exit_code=0
+            "$@" 2>"$tmpfile" || exit_code=$?
+
+            if [ "$exit_code" -ne 0 ]; then
+              {
+                printf '=== %s | exit %d ===\nCMD: %s\n' \
+                  "$(date -Iseconds)" "$exit_code" "$(printf '%q ' "$@")"
+                cat "$tmpfile"
+                printf '\n'
+              } >> "$log_file"
+              notify-send -u critical "Exec failed" \
+                "$(printf '%q ' "$@")\n\nExit: $exit_code — see $log_file"
+            fi
+            rm -f "$tmpfile"
+          '';
+        })
         (writeShellApplication {
           name = "kbd-brightness";
           runtimeInputs = [
@@ -113,7 +142,7 @@
           # hyprlandPlugins.hyprbars
         ];
         settings = {
-          "$menu" = "hyprlauncher";
+          "$menu" = "hypr-exec anyrun";
           "$terminal" = "kitty";
           "$browser" = "firefox";
 
@@ -126,7 +155,7 @@
               "$mod, Q, killactive"
 
               "$mod SHIFT, F, togglefloating"
-              "$mod, L, exec, loginctl lock-session"
+              "$mod, L, exec, hypr-exec loginctl lock-session"
             ]
             ++ [
               # Focus movement (arrow keys work across all layouts)
@@ -140,16 +169,16 @@
               "$mod SHIFT, up, movewindow, u"
               "$mod SHIFT, down, movewindow, d"
               # Media playback
-              ", XF86AudioPlay, exec, playerctl play-pause"
-              ", XF86AudioNext, exec, playerctl next"
-              ", XF86AudioPrev, exec, playerctl previous"
-              ", XF86AudioStop, exec, playerctl stop"
+              ", XF86AudioPlay, exec, hypr-exec playerctl play-pause"
+              ", XF86AudioNext, exec, hypr-exec playerctl next"
+              ", XF86AudioPrev, exec, hypr-exec playerctl previous"
+              ", XF86AudioStop, exec, hypr-exec playerctl stop"
               # Volume toggles (no repeat needed)
-              ", XF86AudioMute, exec, swayosd-client --output-volume mute-toggle"
-              ", XF86AudioMicMute, exec, swayosd-client --input-volume mute-toggle"
+              ", XF86AudioMute, exec, hypr-exec swayosd-client --output-volume mute-toggle"
+              ", XF86AudioMicMute, exec, hypr-exec swayosd-client --input-volume mute-toggle"
               # Layout switching
-              "$mod, comma, exec, hyprctl keyword general:layout master"
-              "$mod, period, exec, hyprctl keyword general:layout dwindle"
+              "$mod, comma, exec, hypr-exec hyprctl keyword general:layout master"
+              "$mod, period, exec, hypr-exec hyprctl keyword general:layout dwindle"
             ]
             ++ (
               # workspaces
