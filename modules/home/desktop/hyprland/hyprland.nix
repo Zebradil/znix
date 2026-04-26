@@ -113,6 +113,7 @@
                 "$(printf '%q ' "$@")\n\nExit: $exit_code — see $log_file"
             fi
             rm -f "$tmpfile"
+            exit "$exit_code"
           '';
         })
         (writeShellApplication {
