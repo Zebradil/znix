@@ -99,6 +99,8 @@
               "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
 
               "browser.startup.homepage" = "about:home";
+              # Restore previous session on startup
+              "browser.startup.page" = 3;
 
               # Disable irritating first-run stuff
               "browser.disableResetPrompt" = true;
