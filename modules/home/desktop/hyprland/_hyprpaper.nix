@@ -1,6 +1,6 @@
 { pkgs, ... }:
 let
-  wallpaper = "${pkgs.nixos-artwork.wallpapers.nineish}/share/backgrounds/nixos/nix-wallpaper-nineish.png";
+  wallpaper = pkgs.nixos-artwork.wallpapers.binary-black.gnomeFilePath;
 in
 {
   services.hyprpaper = {
