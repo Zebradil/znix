@@ -80,18 +80,26 @@
       ];
       home.packages = with pkgs; [
         playerctl
-        (writeShellScriptBin "kbd-brightness" ''
-          direction="$1"
-          if [ "$direction" = "raise" ]; then
-            brightnessctl --device='*kbd_backlight*' set +5%
-          else
-            brightnessctl --device='*kbd_backlight*' set 5%-
-          fi
-          val=$(brightnessctl --device='*kbd_backlight*' get)
-          max=$(brightnessctl --device='*kbd_backlight*' max)
-          progress=$(awk "BEGIN{printf \"%.2f\", $val/$max}")
-          swayosd-client --custom-progress "$progress" --custom-icon keyboard-brightness-symbolic
-        '')
+        (writeShellApplication {
+          name = "kbd-brightness";
+          runtimeInputs = [
+            brightnessctl
+            gawk
+            swayosd
+          ];
+          text = ''
+            direction="$1"
+            if [ "$direction" = "raise" ]; then
+              brightnessctl --device='*kbd_backlight*' set +5%
+            else
+              brightnessctl --device='*kbd_backlight*' set 5%-
+            fi
+            val=$(brightnessctl --device='*kbd_backlight*' get)
+            max=$(brightnessctl --device='*kbd_backlight*' max)
+            progress=$(awk "BEGIN{printf \"%.2f\", $val/$max}")
+            swayosd-client --custom-progress "$progress" --custom-icon keyboard-brightness-symbolic
+          '';
+        })
       ];
       wayland.windowManager.hyprland = {
         enable = true;
@@ -154,11 +162,11 @@
               )
             );
           # Repeat-on-hold bindings
-          binde = [
+          bindel = [
+            "$mod, XF86MonBrightnessUp, exec, kbd-brightness raise"
+            "$mod, XF86MonBrightnessDown, exec, kbd-brightness lower"
             ", XF86MonBrightnessUp, exec, swayosd-client --brightness raise"
             ", XF86MonBrightnessDown, exec, swayosd-client --brightness lower"
-            "SHIFT, XF86MonBrightnessUp, exec, kbd-brightness raise"
-            "SHIFT, XF86MonBrightnessDown, exec, kbd-brightness lower"
             ", XF86AudioRaiseVolume, exec, swayosd-client --output-volume raise"
             ", XF86AudioLowerVolume, exec, swayosd-client --output-volume lower"
           ];
