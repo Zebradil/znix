@@ -151,8 +151,8 @@
             withCyrillic [
               "$mod, Space, exec, $menu"
 
-              "$mod, F, fullscreen"
-              "$mod, Q, killactive"
+              "$mod SHIFT, F, fullscreen"
+              "$mod SHIFT, Q, killactive"
 
               "$mod SHIFT, F, togglefloating"
               "$mod, L, exec, hypr-exec loginctl lock-session"
