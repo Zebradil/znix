@@ -71,6 +71,28 @@
                 bing.metaData.hidden = true;
               };
             };
+            userChrome = ''
+              /* Hide tab bar — Sidebery is used for vertical tabs */
+              #TabsToolbar {
+                opacity: 0;
+                pointer-events: none;
+              }
+              #TabsToolbar:not([titlepreface=""]) {
+                visibility: collapse !important;
+              }
+              .titlebar-spacer[type="pre-tabs"],
+              .titlebar-spacer[type="post-tabs"] {
+                border-inline-end: none !important;
+              }
+
+              /* Merge address bar into titlebar area */
+              #TabsToolbar {
+                position: absolute;
+              }
+              #nav-bar-customization-target {
+                margin-left: 7em;
+              }
+            '';
             bookmarks = { };
             settings = {
               # Enable custom css (userChrome.css)
@@ -152,8 +174,8 @@
               # Harden
               "privacy.trackingprotection.enabled" = true;
               "dom.security.https_only_mode" = true;
-              # Remove close button
-              "browser.tabs.inTitlebar" = 0;
+              # Tabs in titlebar (required for userChrome.css to fully hide the tab bar)
+              "browser.tabs.inTitlebar" = 1;
               # Vertical tabs
               "sidebar.verticalTabs" = false;
               "sidebar.revamp" = false;
