@@ -74,6 +74,7 @@
         ./_hyprlock.nix
         ./_hypridle.nix
         ./_hyprpaper.nix
+        ./_monitors.nix
         ./_screenshot.nix
         ./_mako.nix
         ./_swayosd.nix
