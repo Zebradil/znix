@@ -5,7 +5,8 @@ let
   anyrunBin = "${anyrunPkgs.anyrun}/bin/anyrun";
   stdinLib = "${anyrunPkgs.stdin}/lib/libstdin.so";
 
-  # See _anyrun.nix for the full explanation. Same derivation, Nix deduplicates.
+  # See _anyrun.nix for the full explanation. This is a separate minimal
+  # Anyrun picker config for monitor selection, not the same derivation.
   pickerConfigDir = pkgs.symlinkJoin {
     name = "anyrun-picker-config";
     paths = [
