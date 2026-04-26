@@ -5,6 +5,10 @@
       url = "github:MalpenZibo/ashell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    anyrun = {
+      url = "github:anyrun-org/anyrun";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   flake.modules.homeManager.hyprland =
@@ -70,6 +74,7 @@
       imports = [
         ./_appearance.nix
         ./_input.nix
+        ./_anyrun.nix
         ./_ashell.nix
         ./_hyprlock.nix
         ./_hypridle.nix
@@ -175,7 +180,6 @@
       };
       services = {
         hyprpolkitagent.enable = true;
-        hyprlauncher.enable = true;
         network-manager-applet.enable = true;
         blueman-applet.enable = true;
       };
