@@ -6,13 +6,16 @@ let
   stdinLib = "${anyrunPkgs.stdin}/lib/libstdin.so";
 
   # Shared CSS — applied both to the main launcher and the picker overlay.
-  # `all: unset` resets GTK theme defaults so colours don't bleed through.
-  css = ''
+  # Explicit resets instead of `all: unset` to avoid breaking GTK4 internals.
+  css = /* css */ ''
     * {
-      all: unset;
       font-family: "IosevkaTerm Nerd Font", monospace;
       font-size: 14px;
       color: #cdd6f4;
+      background: transparent;
+      border: none;
+      margin: 0;
+      padding: 0;
     }
 
     #window,
@@ -127,7 +130,7 @@ in
       hidePluginInfo = true;
       closeOnClick = true;
     };
-    extraCss = css;
+    # extraCss = css;
   };
 
   home.packages = [
