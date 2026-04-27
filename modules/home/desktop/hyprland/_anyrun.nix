@@ -161,23 +161,6 @@ in
     '';
   };
 
-  # Manage anyrun as a systemd user service so it is always running and
-  # properly initialised before a keybinding fires. Without this, the first
-  # invocation races against D-Bus registration and panics.
-  systemd.user.services.anyrun = {
-    Unit = {
-      Description = "Anyrun application launcher daemon";
-      After = [ "graphical-session.target" ];
-      PartOf = [ "graphical-session.target" ];
-    };
-    Service = {
-      ExecStart = "${anyrunPkgs.anyrun}/bin/anyrun";
-      Restart = "on-failure";
-      RestartSec = 2;
-    };
-    Install.WantedBy = [ "graphical-session.target" ];
-  };
-
   home.packages = [
     wifi-picker
     perf-picker
