@@ -1,5 +1,5 @@
 _: {
-  flake.modules.homeManager.claude =
+  flake.modules.homeManager.gh =
     {
       lib,
       osConfig,

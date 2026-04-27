@@ -25,6 +25,7 @@
         nix-settings
         openssh
         sops
+        tuxedo-claude
         tuxedo-disko
         tuxedo-hardware
         wireless

@@ -66,8 +66,3 @@ function z:docker:remote:down {
     "$GCPD_INSTANCE"
 }
 
-function trv-claude {
-  ANTHROPIC_API_KEY=$(op read 'op://Employee/Anthropic API key/credential') \
-  CLAUDE_CONFIG_DIR=~/.config/trv-claude \
-  claude "$@"
-}
