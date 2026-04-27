@@ -5,22 +5,6 @@ let
   anyrunBin = "${anyrunPkgs.anyrun}/bin/anyrun";
   stdinLib = "${anyrunPkgs.stdin}/lib/libstdin.so";
 
-  # See _anyrun.nix for the full explanation. This is a separate minimal
-  # Anyrun picker config for monitor selection, not the same derivation.
-  pickerConfigDir = pkgs.symlinkJoin {
-    name = "anyrun-picker-config";
-    paths = [
-      (pkgs.writeTextDir "anyrun/config.ron" ''
-        Config(
-          plugins: ["${stdinLib}"],
-          show_results_immediately: true,
-          close_on_click: true,
-          hide_plugin_info: true,
-        )
-      '')
-    ];
-  };
-
   monitor-switch = pkgs.writeShellApplication {
     name = "monitor-switch";
     runtimeInputs = with pkgs; [
@@ -29,135 +13,135 @@ let
       libnotify
     ];
     text = ''
-      INTERNAL="eDP-1"
-      INTERNAL_SCALE="1.5"
+            INTERNAL="eDP-1"
+            INTERNAL_SCALE="1.5"
 
-      # Detect external monitor name.
-      # First try hyprctl (works when monitor is active),
-      # then fall back to DRM sysfs (works even when software-disabled).
-      detect_external() {
-        name=$(hyprctl monitors all -j | jq -r '[.[] | select(.name != "'"$INTERNAL"'")][0].name // empty')
-        if [ -n "$name" ]; then
-          echo "$name"
-          return
-        fi
-        for card in /sys/class/drm/card*-*; do
-          conn_status=$(cat "$card/status" 2>/dev/null)
-          conn_name=$(basename "$card" | sed 's/^card[0-9]*-//')
-          if [ "$conn_status" = "connected" ] && [ "$conn_name" != "$INTERNAL" ]; then
-            echo "$conn_name"
-            return
-          fi
-        done
-      }
+            # Detect external monitor name.
+            # First try hyprctl (works when monitor is active),
+            # then fall back to DRM sysfs (works even when software-disabled).
+            detect_external() {
+              name=$(hyprctl monitors all -j | jq -r '[.[] | select(.name != "'"$INTERNAL"'")][0].name // empty')
+              if [ -n "$name" ]; then
+                echo "$name"
+                return
+              fi
+              for card in /sys/class/drm/card*-*; do
+                conn_status=$(cat "$card/status" 2>/dev/null)
+                conn_name=$(basename "$card" | sed 's/^card[0-9]*-//')
+                if [ "$conn_status" = "connected" ] && [ "$conn_name" != "$INTERNAL" ]; then
+                  echo "$conn_name"
+                  return
+                fi
+              done
+            }
 
-      external=$(detect_external)
+            external=$(detect_external)
 
-      # Re-enable a disabled monitor so hyprctl can configure it
-      ensure_enabled() {
-        local mon="$1"
-        hyprctl keyword monitor "$mon, preferred, auto, 1"
-        sleep 0.3
-      }
+            # Re-enable a disabled monitor so hyprctl can configure it
+            ensure_enabled() {
+              local mon="$1"
+              hyprctl keyword monitor "$mon, preferred, auto, 1"
+              sleep 0.3
+            }
 
-      apply_preset() {
-        case "$1" in
-          single)
-            ensure_enabled "$INTERNAL"
-            hyprctl keyword monitor "$INTERNAL, preferred, auto, $INTERNAL_SCALE"
-            [ -n "$external" ] && hyprctl keyword monitor "$external, disable"
-            notify-send "Display" "Single (integrated only)"
-            ;;
-          external-only)
-            [ -z "$external" ] && { notify-send -u critical "Display" "No external monitor detected"; exit 1; }
-            ensure_enabled "$external"
-            hyprctl keyword monitor "$external, preferred, auto, 1"
-            hyprctl keyword monitor "$INTERNAL, disable"
-            notify-send "Display" "External only"
-            ;;
-          extended)
-            [ -z "$external" ] && { notify-send -u critical "Display" "No external monitor detected"; exit 1; }
-            ensure_enabled "$external"
-            ensure_enabled "$INTERNAL"
-            hyprctl keyword monitor "$external, preferred, 0x0, 1"
-            hyprctl keyword monitor "$INTERNAL, preferred, auto-down-right, $INTERNAL_SCALE"
-            notify-send "Display" "Extended (external + integrated)"
-            ;;
-          mirror)
-            [ -z "$external" ] && { notify-send -u critical "Display" "No external monitor detected"; exit 1; }
-            ensure_enabled "$external"
-            ensure_enabled "$INTERNAL"
-            hyprctl keyword monitor "$external, preferred, auto, 1"
-            hyprctl keyword monitor "$INTERNAL, preferred, auto, $INTERNAL_SCALE, mirror, $external"
-            notify-send "Display" "Mirror"
-            ;;
-          *)
-            echo "Usage: monitor-switch {single|external-only|extended|mirror|--pick}" >&2
-            exit 1
-            ;;
-        esac
-      }
+            apply_preset() {
+              case "$1" in
+                single)
+                  ensure_enabled "$INTERNAL"
+                  hyprctl keyword monitor "$INTERNAL, preferred, auto, $INTERNAL_SCALE"
+                  [ -n "$external" ] && hyprctl keyword monitor "$external, disable"
+                  notify-send "Display" "Single (integrated only)"
+                  ;;
+                external-only)
+                  [ -z "$external" ] && { notify-send -u critical "Display" "No external monitor detected"; exit 1; }
+                  ensure_enabled "$external"
+                  hyprctl keyword monitor "$external, preferred, auto, 1"
+                  hyprctl keyword monitor "$INTERNAL, disable"
+                  notify-send "Display" "External only"
+                  ;;
+                extended)
+                  [ -z "$external" ] && { notify-send -u critical "Display" "No external monitor detected"; exit 1; }
+                  ensure_enabled "$external"
+                  ensure_enabled "$INTERNAL"
+                  hyprctl keyword monitor "$external, preferred, 0x0, 1"
+                  hyprctl keyword monitor "$INTERNAL, preferred, auto-down-right, $INTERNAL_SCALE"
+                  notify-send "Display" "Extended (external + integrated)"
+                  ;;
+                mirror)
+                  [ -z "$external" ] && { notify-send -u critical "Display" "No external monitor detected"; exit 1; }
+                  ensure_enabled "$external"
+                  ensure_enabled "$INTERNAL"
+                  hyprctl keyword monitor "$external, preferred, auto, 1"
+                  hyprctl keyword monitor "$INTERNAL, preferred, auto, $INTERNAL_SCALE, mirror, $external"
+                  notify-send "Display" "Mirror"
+                  ;;
+                *)
+                  echo "Usage: monitor-switch {single|external-only|extended|mirror|--pick}" >&2
+                  exit 1
+                  ;;
+              esac
+            }
 
-      detect_active() {
-        # Use "monitors all" to see mirrored monitors too
-        # (mirrored monitors don't appear in plain "monitors")
-        all_json=$(hyprctl monitors all -j)
-        has_internal=false
-        has_external=false
-        is_mirror=false
-        while IFS= read -r entry; do
-          mon_name=$(echo "$entry" | jq -r '.name')
-          mon_mirror=$(echo "$entry" | jq -r '.mirrorOf')
-          mon_disabled=$(echo "$entry" | jq -r '.disabled')
-          # Skip disabled monitors
-          [ "$mon_disabled" = "true" ] && continue
-          if [ "$mon_name" = "$INTERNAL" ]; then
-            has_internal=true
-            # mirrorOf is "none" when not mirroring, or a monitor ID when mirroring
-            if [ "$mon_mirror" != "none" ] && [ "$mon_mirror" != "" ] && [ "$mon_mirror" != "null" ]; then
-              is_mirror=true
+            detect_active() {
+              # Use "monitors all" to see mirrored monitors too
+              # (mirrored monitors don't appear in plain "monitors")
+              all_json=$(hyprctl monitors all -j)
+              has_internal=false
+              has_external=false
+              is_mirror=false
+              while IFS= read -r entry; do
+                mon_name=$(echo "$entry" | jq -r '.name')
+                mon_mirror=$(echo "$entry" | jq -r '.mirrorOf')
+                mon_disabled=$(echo "$entry" | jq -r '.disabled')
+                # Skip disabled monitors
+                [ "$mon_disabled" = "true" ] && continue
+                if [ "$mon_name" = "$INTERNAL" ]; then
+                  has_internal=true
+                  # mirrorOf is "none" when not mirroring, or a monitor ID when mirroring
+                  if [ "$mon_mirror" != "none" ] && [ "$mon_mirror" != "" ] && [ "$mon_mirror" != "null" ]; then
+                    is_mirror=true
+                  fi
+                else
+                  has_external=true
+                fi
+              done < <(echo "$all_json" | jq -c '.[]')
+              if $is_mirror; then
+                echo "mirror"
+              elif $has_internal && $has_external; then
+                echo "extended"
+              elif ! $has_internal && $has_external; then
+                echo "external-only"
+              else
+                echo "single"
+              fi
+            }
+
+            if [ "''${1:-}" = "--pick" ] || [ $# -eq 0 ]; then
+              active=$(detect_active)
+              has_external=false
+              [ -n "$external" ] && has_external=true
+              options=""
+              for preset in single external-only extended mirror; do
+                # Skip external-dependent presets if no external display is physically connected
+                if ! $has_external && [ "$preset" != "single" ]; then
+                  continue
+                fi
+                if [ "$active" = "$preset" ]; then
+                  options="''${options}* $preset
+      "
+                else
+                  options="''${options}$preset
+      "
+                fi
+              done
+              chosen=$(printf '%s' "$options" | ${anyrunBin} --plugins "${stdinLib}" --show_results_immediately true)
+              [ -z "$chosen" ] && exit 0
+              # Strip the active marker before applying
+              chosen="''${chosen#\* }"
+              apply_preset "$chosen"
+            else
+              apply_preset "$1"
             fi
-          else
-            has_external=true
-          fi
-        done < <(echo "$all_json" | jq -c '.[]')
-        if $is_mirror; then
-          echo "mirror"
-        elif $has_internal && $has_external; then
-          echo "extended"
-        elif ! $has_internal && $has_external; then
-          echo "external-only"
-        else
-          echo "single"
-        fi
-      }
-
-      if [ "''${1:-}" = "--pick" ] || [ $# -eq 0 ]; then
-        active=$(detect_active)
-        has_external=false
-        [ -n "$external" ] && has_external=true
-        options=""
-        for preset in single external-only extended mirror; do
-          # Skip external-dependent presets if no external display is physically connected
-          if ! $has_external && [ "$preset" != "single" ]; then
-            continue
-          fi
-          if [ "$active" = "$preset" ]; then
-            options="''${options}* $preset
-"
-          else
-            options="''${options}$preset
-"
-          fi
-        done
-        chosen=$(printf '%s' "$options" | XDG_CONFIG_HOME="${pickerConfigDir}" ${anyrunBin})
-        [ -z "$chosen" ] && exit 0
-        # Strip the active marker before applying
-        chosen="''${chosen#\* }"
-        apply_preset "$chosen"
-      else
-        apply_preset "$1"
-      fi
     '';
   };
 

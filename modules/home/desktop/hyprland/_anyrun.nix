@@ -56,25 +56,6 @@ let
     }
   '';
 
-  # Config dir for stdin-based pickers.
-  # showResultsImmediately is true here (but not in the main launcher config)
-  # so the full list appears as soon as the window opens.
-  # XDG_CONFIG_HOME is overridden per-invocation to point here.
-  pickerConfigDir = pkgs.symlinkJoin {
-    name = "anyrun-picker-config";
-    paths = [
-      (pkgs.writeTextDir "anyrun/config.ron" ''
-        Config(
-          plugins: ["${stdinLib}"],
-          show_results_immediately: true,
-          close_on_click: true,
-          hide_plugin_info: true,
-        )
-      '')
-      (pkgs.writeTextDir "anyrun/style.css" css)
-    ];
-  };
-
   wifi-picker = pkgs.writeShellApplication {
     name = "wifi-picker";
     runtimeInputs = with pkgs; [
@@ -95,7 +76,7 @@ let
         exit 1
       fi
 
-      chosen=$(printf '%s\n' "$networks" | XDG_CONFIG_HOME="${pickerConfigDir}" ${anyrunBin})
+      chosen=$(printf '%s\n' "$networks" | ${anyrunBin} --plugins "${stdinLib}" --show_results_immediately true)
       [ -z "$chosen" ] && exit 0
 
       ssid="''${chosen%% (*}"
@@ -110,24 +91,24 @@ let
       libnotify
     ];
     text = ''
-      current=$(powerprofilesctl get)
-      options=""
-      while IFS= read -r profile; do
-        if [ "$profile" = "$current" ]; then
-          options="''${options}* $profile
-"
-        else
-          options="''${options}$profile
-"
-        fi
-      done < <(powerprofilesctl list \
-        | sed -n 's/^[[:space:]]*\*\?[[:space:]]*\([a-z-]*\):$/\1/p')
+            current=$(powerprofilesctl get)
+            options=""
+            while IFS= read -r profile; do
+              if [ "$profile" = "$current" ]; then
+                options="''${options}* $profile
+      "
+              else
+                options="''${options}$profile
+      "
+              fi
+            done < <(powerprofilesctl list \
+              | sed -n 's/^[[:space:]]*\*\?[[:space:]]*\([a-z-]*\):$/\1/p')
 
-      chosen=$(printf '%s' "$options" | XDG_CONFIG_HOME="${pickerConfigDir}" ${anyrunBin})
-      [ -z "$chosen" ] && exit 0
-      chosen="''${chosen#\* }"
-      powerprofilesctl set "$chosen"
-      notify-send "Performance" "Profile: $chosen"
+            chosen=$(printf '%s' "$options" | ${anyrunBin} --plugins "${stdinLib}" --show_results_immediately true)
+            [ -z "$chosen" ] && exit 0
+            chosen="''${chosen#\* }"
+            powerprofilesctl set "$chosen"
+            notify-send "Performance" "Profile: $chosen"
     '';
   };
 in
@@ -147,18 +128,6 @@ in
       closeOnClick = true;
     };
     extraCss = css;
-    extraConfigFiles."applications.ron".text = ''
-      Config(
-        desktop_actions: false,
-        max_entries: Some(8),
-        terminal: Some("kitty"),
-      )
-    '';
-    extraConfigFiles."symbols.ron".text = ''
-      Config(
-        max_entries: Some(5),
-      )
-    '';
   };
 
   home.packages = [
