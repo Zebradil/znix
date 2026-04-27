@@ -5,7 +5,7 @@
 
   inputs = {
     anyrun = {
-      url = "github:anyrun-org/anyrun";
+      url = "github:anyrun-org/anyrun/v25.12.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     ashell = {
