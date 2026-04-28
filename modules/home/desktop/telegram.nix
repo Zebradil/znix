@@ -13,7 +13,7 @@ _: {
         ];
       };
       impermanence = lib.mkIf osConfig.znix.impermanence.enable {
-        home.persistence."/persist".directories = [ ".config/TelegramDesktop" ];
+        home.persistence."/persist".directories = [ ".local/share/TelegramDesktop" ];
       };
     in
     lib.mkMerge [
