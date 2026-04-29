@@ -4,10 +4,6 @@
   outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
 
   inputs = {
-    anyrun = {
-      url = "github:anyrun-org/anyrun/v25.12.0";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     ashell = {
       url = "github:MalpenZibo/ashell";
       inputs.nixpkgs.follows = "nixpkgs";
