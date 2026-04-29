@@ -1,10 +1,5 @@
-{ inputs, pkgs, ... }:
+{ pkgs, ... }:
 let
-  system = pkgs.stdenv.hostPlatform.system;
-  anyrunPkgs = inputs.anyrun.packages.${system};
-  anyrunBin = "${anyrunPkgs.anyrun}/bin/anyrun";
-  stdinLib = "${anyrunPkgs.stdin}/lib/libstdin.so";
-
   # Shared CSS — applied both to the main launcher and the picker overlay.
   # Explicit resets instead of `all: unset` to avoid breaking GTK4 internals.
   css = /* css */ ''
@@ -59,11 +54,14 @@ let
     }
   '';
 
+  stdinLib = "${pkgs.anyrun}/lib/libstdin.so";
   wifi-picker = pkgs.writeShellApplication {
     name = "wifi-picker";
     runtimeInputs = with pkgs; [
-      networkmanager
+      anyrun
+      gawk
       libnotify
+      networkmanager
     ];
     text = ''
       networks=$(nmcli -t -f SSID,SIGNAL,SECURITY device wifi list --rescan yes 2>/dev/null \
@@ -79,7 +77,7 @@ let
         exit 1
       fi
 
-      chosen=$(printf '%s\n' "$networks" | ${anyrunBin} --plugins "${stdinLib}" --show_results_immediately true)
+      chosen=$(printf '%s\n' "$networks" | anyrun --plugins "${stdinLib}" --show-results-immediately true)
       [ -z "$chosen" ] && exit 0
 
       ssid="''${chosen%% (*}"
@@ -90,45 +88,44 @@ let
   perf-picker = pkgs.writeShellApplication {
     name = "perf-picker";
     runtimeInputs = with pkgs; [
-      power-profiles-daemon
+      anyrun
       libnotify
+      power-profiles-daemon
+      gnused
     ];
     text = ''
-            current=$(powerprofilesctl get)
-            options=""
-            while IFS= read -r profile; do
-              if [ "$profile" = "$current" ]; then
-                options="''${options}* $profile
-      "
-              else
-                options="''${options}$profile
-      "
-              fi
-            done < <(powerprofilesctl list \
-              | sed -n 's/^[[:space:]]*\*\?[[:space:]]*\([a-z-]*\):$/\1/p')
+      chosen=$(powerprofilesctl list \
+        | sed -nE 's/^([* ]{2}[a-z-]+):$/\1/p' \
+        | anyrun --plugins "${stdinLib}" --show-results-immediately true)
+      [ -z "$chosen" ] && exit 0
+      # anyrun weirdly duplicates the chosen string
+      chosen="''${chosen:0:$((''${#chosen}))}"
 
-            chosen=$(printf '%s' "$options" | ${anyrunBin} --plugins "${stdinLib}" --show_results_immediately true)
-            [ -z "$chosen" ] && exit 0
-            chosen="''${chosen#\* }"
-            powerprofilesctl set "$chosen"
-            notify-send "Performance" "Profile: $chosen"
+      profile="''${chosen#\* }"
+      powerprofilesctl set "$profile"
+      notify-send "Performance" "Profile: $profile"
     '';
   };
 in
 {
   programs.anyrun = {
     enable = true;
-    package = anyrunPkgs.anyrun;
     config = {
-      plugins = with anyrunPkgs; [
-        applications
-        symbols
-        rink
+      plugins = map (p: "${pkgs.anyrun}/lib/lib${p}.so") [
+        "actions"
+        "applications"
+        "dictionary"
+        "nix_run"
+        "randr"
+        "rink"
+        "shell"
+        "symbols"
+        "translate"
       ];
+      closeOnClick = true;
+      hidePluginInfo = true;
       width.fraction = 0.3;
       y.fraction = 0.2;
-      hidePluginInfo = true;
-      closeOnClick = true;
     };
     # extraCss = css;
   };

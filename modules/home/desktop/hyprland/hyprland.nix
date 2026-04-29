@@ -5,10 +5,6 @@
       url = "github:MalpenZibo/ashell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    anyrun = {
-      url = "github:anyrun-org/anyrun/v25.12.0";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   flake.modules.homeManager.hyprland =
@@ -100,7 +96,7 @@
 
             tmpfile=$(mktemp)
             exit_code=0
-            "$@" 2>"$tmpfile" || exit_code=$?
+            SHLVL=0 "$@" 2>"$tmpfile" || exit_code=$?
 
             if [ "$exit_code" -ne 0 ]; then
               {
