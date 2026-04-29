@@ -25,6 +25,7 @@
         nix-settings
         openssh
         sops
+        tailscale
         tuxedo-claude
         tuxedo-disko
         tuxedo-hardware
@@ -49,6 +50,7 @@
       wireless.enable = true;
       laptop.enable = true;
       fido.enable = true;
+      tailscale.enable = true;
     };
 
     programs.zsh.enable = true;

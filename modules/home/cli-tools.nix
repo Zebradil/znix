@@ -20,7 +20,6 @@ _: {
         jnv
         k9s
         lazygit
-        tailscale
         tmux
         translate-shell
 
