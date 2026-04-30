@@ -23,7 +23,7 @@ let
   };
 
   baseSettings = {
-    model = "opus[1m]";
+    model = "opusplan";
     editorMode = "vim";
     verbose = true;
     remoteControlAtStartup = true;
@@ -31,7 +31,17 @@ let
     "enabledPlugins" = {
       "gopls-lsp@claude-plugins-official" = true;
     };
-    inherit hooks;
+  };
+
+  companyProfile = {
+    enable = true;
+    configDir = ".config/trv-claude";
+    command = "trv-claude";
+    settings = baseSettings // {
+      inherit hooks;
+      effortLevel = "high";
+      permissions.defaultMode = "default";
+    };
   };
 in
 {
@@ -50,15 +60,12 @@ in
           };
         };
 
-        company = {
-          enable = true;
-          configDir = ".config/trv-claude";
-          command = "trv-claude";
+        company = companyProfile;
+
+        company-key = companyProfile // {
+          command = "trv-claude-key";
+          configDir = ".config/trv-claude-key";
           runtimeEnv.ANTHROPIC_API_KEY = "op read 'op://Employee/Anthropic API key/credential'";
-          settings = baseSettings // {
-            effortLevel = "high";
-            permissions.defaultMode = "default";
-          };
         };
       };
     };
