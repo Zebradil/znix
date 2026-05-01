@@ -152,7 +152,18 @@
               "$mod SHIFT, Q, killactive"
 
               "$mod SHIFT, F, togglefloating"
-              "$mod, L, exec, hypr-exec loginctl lock-session"
+              "$mod SHIFT CTRL, L, exec, hypr-exec loginctl lock-session"
+
+              # Focus movement
+              "$mod, l, movefocus, l"
+              "$mod, h, movefocus, r"
+              "$mod, k, movefocus, u"
+              "$mod, j, movefocus, d"
+              # Window movement
+              "$mod SHIFT, l, movewindow, l"
+              "$mod SHIFT, h, movewindow, r"
+              "$mod SHIFT, k, movewindow, u"
+              "$mod SHIFT, j, movewindow, d"
             ]
             ++ [
               # Focus movement (arrow keys work across all layouts)
