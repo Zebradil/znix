@@ -25,6 +25,7 @@ _: {
           # confirm_os_window_close = 0;
           # copy_on_select = "clipboard";
           update_check_interval = 0;
+          tab_title_template = "{index}: {title}{' [Z]' if layout_name == 'stack' else ''}";
           enabled_layouts = "splits,horizontal,vertical,tall,fat,stack";
           allow_remote_control = true;
         };
