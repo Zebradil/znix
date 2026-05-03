@@ -44,6 +44,7 @@
       boot.enable = true;
       diff.enable = true;
       docker.enable = true;
+      docker.binfmt.enable = true;
       hardware-monitoring.enable = true;
       ephemeral-btrfs.enable = true;
       impermanence.enable = true;

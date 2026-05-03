@@ -6,4 +6,5 @@ _: {
     email = "german.lashevich@gmail.com";
   };
   sshPublicKey = builtins.readFile ./ssh.pub;
+  znix.docker.multiarchBuilder.enable = true;
 }
