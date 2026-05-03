@@ -15,6 +15,7 @@ _: {
             url."ssh://git@github.com/".insteadOf = "https://github.com/";
           };
           ignores = [
+            ".claude/settings.local.json"
             ".dir-locals.el"
             ".direnv"
             ".envrc"
