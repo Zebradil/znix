@@ -1,18 +1,23 @@
-set +o pipefail  # socat exits with broken pipe on disconnect; that's expected
+#!/usr/bin/bash
+
+set +o pipefail # socat exits with broken pipe on disconnect; that's expected
+
 INTERNAL="eDP-1"
 # LOG_LEVEL controls verbosity: "debug" prints all messages, "info" (default) prints
 # only monitor connection/disconnection events and preset changes.
 LOG_LEVEL="${LOG_LEVEL:-info}"
 
-log_info()  { echo "[monitor-daemon] $*"; }
-log_debug() { [ "$LOG_LEVEL" = "debug" ] && echo "[monitor-daemon] DEBUG: $*" || true; }
+log_info() { echo "[monitor-daemon] $*"; }
+log_debug() { [[ $LOG_LEVEL == "debug" ]] && echo "[monitor-daemon] DEBUG: $*" || true; }
 
 ensure_internal() {
   log_debug "ensure_internal: checking active monitors..."
+  local active
   active=$(hyprctl monitors -j 2>/dev/null)
   log_debug "ensure_internal: active monitors: $active"
-  if ! echo "$active" | jq -r '.[].name' 2>/dev/null | grep -q "^$INTERNAL$"; then
+  if ! jq -r '.[].name' <<< "$active" 2>/dev/null | grep -q "^${INTERNAL}$"; then
     log_info "internal monitor $INTERNAL not active, re-enabling..."
+    local result
     result=$(hyprctl keyword monitor "$INTERNAL, preferred, auto, 1.5" 2>&1)
     log_debug "ensure_internal: hyprctl result: $result"
     notify-send "Display" "Single (integrated only)" || true
@@ -28,13 +33,13 @@ while true; do
     log_debug "IPC event: $line"
     event="${line%%>>*}"
     monitor="${line#*>>}"
-    if [ "$monitor" = "$INTERNAL" ]; then
+    if [[ $monitor == "$INTERNAL" ]]; then
       log_debug "ignoring event for internal monitor"
       continue
     fi
     case "$event" in
       monitoradded)
-        if [ "$monitor" = "FALLBACK" ]; then
+        if [[ $monitor == "FALLBACK" ]]; then
           # FALLBACK means all real monitors are gone — re-enable internal
           log_info "FALLBACK monitor appeared, re-enabling internal display..."
           sleep 1
@@ -46,7 +51,7 @@ while true; do
         fi
         ;;
       monitorremoved)
-        if [ "$monitor" = "FALLBACK" ]; then
+        if [[ $monitor == "FALLBACK" ]]; then
           log_debug "FALLBACK monitor removed, ignoring"
         else
           log_info "external monitor removed: $monitor, ensuring internal is on..."

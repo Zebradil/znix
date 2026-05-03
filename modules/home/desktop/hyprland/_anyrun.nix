@@ -99,7 +99,7 @@ let
         | anyrun --plugins "${stdinLib}" --show-results-immediately true)
       [ -z "$chosen" ] && exit 0
       # anyrun weirdly duplicates the chosen string
-      chosen="''${chosen:0:$((''${#chosen}))}"
+      chosen="''${chosen:0:$((''${#chosen} / 2))}"
 
       profile="''${chosen#\* }"
       powerprofilesctl set "$profile"
