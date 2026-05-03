@@ -20,6 +20,15 @@
       };
 
       boot.kernelPackages = pkgs.linuxKernel.packages.linux_xanmod_latest;
+      boot.kernelParams = [
+        # Disable USB autosuspend for Dell WD19TB dock Realtek hubs.
+        # Without this, the kernel suspends the hubs during enumeration,
+        # causing immediate disconnect (err -5, err -32) and breaking
+        # all USB-A ports on the dock. The :n flag sets
+        # USB_QUIRK_NO_AUTOSUSPEND at driver bind time, before any
+        # userspace (udev, powertop) can interfere.
+        "usbcore.quirks=0bda:5487:n,0bda:5413:n"
+      ];
       boot.initrd = {
         availableKernelModules = [
           "nvme"

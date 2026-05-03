@@ -9,11 +9,12 @@ _: {
       options.znix.laptop.enable = lib.mkEnableOption "laptop power and display management";
 
       config = lib.mkIf config.znix.laptop.enable {
-        # powerManagement.powertop.enable = true;
+        powerManagement.powertop.enable = true;
 
         services = {
           upower.enable = true;
           power-profiles-daemon.enable = true;
+          hardware.bolt.enable = true;
           logind.settings.Login = {
             HandleLidSwitch = "suspend";
             HandleLidSwitchExternalPower = "lock";
