@@ -1,6 +1,7 @@
 _: {
   flake.modules.homeManager.ssh =
     {
+      config,
       lib,
       osConfig,
       ...
@@ -16,8 +17,10 @@ _: {
           ];
         };
       };
-      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
-        home.persistence."/persist".files = [ ".ssh/known_hosts" ];
+      impermanence = lib.mkIf (osConfig.znix.impermanence.enable or false) {
+        programs.ssh.extraConfig = ''
+          UserKnownHostsFile /persist${config.home.homeDirectory}/.ssh/known_hosts
+        '';
       };
     in
     lib.mkMerge [
