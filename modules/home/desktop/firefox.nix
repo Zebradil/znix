@@ -178,6 +178,9 @@
               "dom.security.https_only_mode" = true;
               # Tabs in titlebar (required for userChrome.css to fully hide the tab bar)
               "browser.tabs.inTitlebar" = 1;
+              # Ctrl+Tab switches to most recently used tab and shows tab previews
+              "browser.ctrlTab.sortByRecentlyUsed" = true;
+
               # Vertical tabs
               "sidebar.verticalTabs" = false;
               "sidebar.revamp" = false;
