@@ -11,7 +11,11 @@ _: {
               inherit (config.znix.user) email;
             };
             pull.ff = "only";
-            difftool.trustExitCode = true;
+            difftool = {
+              trustExitCode = true;
+              difftastic.cmd = ''difft "$LOCAL" "$REMOTE"'';
+            };
+            alias.dift = "difftool --tool=difftastic --no-prompt";
             url."ssh://git@github.com/".insteadOf = "https://github.com/";
           };
           ignores = [
@@ -23,15 +27,11 @@ _: {
           ];
         };
 
-        difftastic = {
-          enable = true;
-          git.enable = true;
-        };
+        difftastic.enable = true;
 
         delta = {
           enable = true;
-          # Conflicts with difftastic.git.enable
-          # enableGitIntegration = true;
+          enableGitIntegration = true;
         };
       };
     };
