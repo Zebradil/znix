@@ -313,6 +313,12 @@ _: {
     }
     {
       mode = "n";
+      key = "<Leader>fC";
+      action.__raw = "function() Snacks.picker.colorschemes() end";
+      options.desc = "Find colorschemes";
+    }
+    {
+      mode = "n";
       key = "<Leader>f<CR>";
       action.__raw = "function() Snacks.picker.resume() end";
       options.desc = "Resume last picker";
