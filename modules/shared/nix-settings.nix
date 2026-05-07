@@ -32,9 +32,17 @@ let
           registry = lib.mapAttrs (_: flake: { inherit flake; }) flakeInputs;
           nixPath = lib.mapAttrsToList (n: _: "${n}=flake:${n}") flakeInputs;
         }
+        {
+          # Always apply cache settings: on Determinate NixOS, nix.settings routes
+          # to /etc/nix/nix.custom.conf which is included by Determinate Nixd.
+          settings = {
+            inherit (nixSettings) extra-substituters extra-trusted-public-keys;
+          };
+        }
         (lib.mkIf (!usingDeterminate) {
           enable = true;
-          settings = nixSettings // {
+          settings = {
+            inherit (nixSettings) experimental-features warn-dirty;
             auto-optimise-store = lib.mkDefault true;
             flake-registry = "";
             trusted-users = [
