@@ -312,10 +312,10 @@ jobs:
 
           {
             if [[ "$HAS_APP_TOKEN" != "true" ]]; then
-              printf '> [!WARNING]\n'
-              printf '> This PR was created with `GITHUB_TOKEN`. Downstream CI will **not** trigger automatically.\n'
-              printf '> To run CI, close and reopen this PR, or push an empty commit to the branch.\n'
-              printf '> To avoid this in the future, configure `CI_APP_ID` and `CI_APP_PRIVATE_KEY` repository secrets.\n\n'
+              printf "> [!WARNING]  \n"
+              printf "> This PR was created with \`GITHUB_TOKEN\`. Downstream CI will **not** trigger automatically.\n"
+              printf "> To run CI, close and reopen this PR, or push an empty commit to the branch.\n"
+              printf "> To avoid this in the future, configure \`CI_APP_ID\` and \`CI_APP_PRIVATE_KEY\` repository secrets.\n\n"
             fi
             printf $'Automated `nix flake update` run.\n\n'
             printf '### Updated inputs\n\n'
