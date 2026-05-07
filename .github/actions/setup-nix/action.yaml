@@ -1,7 +1,7 @@
 name: Setup Nix
 description: >
-  Install Nix with optional signing key configuration. Installs Nix via cachix/install-nix-action and optionally writes
-  a signing key to disk.
+  Install Nix with optional signing key configuration. Installs Determinate Nix via determinate-nix-action (includes
+  FlakeHub Cache authentication) and optionally writes a signing key to disk.
 
 inputs:
   extra-substituters:
@@ -36,13 +36,12 @@ runs:
   using: composite
   steps:
     - name: Install Nix
-      uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
+      uses: DeterminateSystems/determinate-nix-action@bafaa638b9d5ec0e7e3ac1a7fc80453ef1fd265f # v3.20.0
       with:
-        extra_nix_config: |
-          accept-flake-config = true
+        extra-conf: |
           download-buffer-size = 524288000
-          substituters = ${{ inputs.extra-substituters }} https://cache.nixos.org
-          trusted-public-keys = ${{ inputs.extra-trusted-public-keys }} cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+          extra-substituters = ${{ inputs.extra-substituters }}
+          extra-trusted-public-keys = ${{ inputs.extra-trusted-public-keys }}
 
     - name: Cache Nix download artefacts
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5

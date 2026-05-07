@@ -89,6 +89,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   update-flake-pr:
@@ -96,6 +97,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      id-token: write
     env:
       HAS_APP_TOKEN: ${{ secrets.ci-app-id != '' && secrets.ci-app-private-key != '' }}
       CAN_DIFF: ${{ inputs.diff-targets != '' }}
