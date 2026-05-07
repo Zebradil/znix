@@ -334,10 +334,17 @@ jobs:
 
           existing_pr=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
           if [[ -z "$existing_pr" ]]; then
-            gh pr create \
+            if ! pr_output=$(gh pr create \
               --title "chore: update flake.lock" \
               --head "$BRANCH" \
-              --body-file "$RUNNER_TEMP/pr-body.md"
+              --body-file "$RUNNER_TEMP/pr-body.md" 2>&1); then
+              if [[ "$pr_output" == *"not permitted to create or approve pull requests"* ]]; then
+                echo "::error::Cannot create PR with GITHUB_TOKEN. Either enable 'Allow GitHub Actions to create and approve pull requests' in Settings > Actions > General, or configure CI_APP_ID and CI_APP_PRIVATE_KEY secrets to use a GitHub App token."
+              else
+                echo "$pr_output" >&2
+              fi
+              exit 1
+            fi
             echo "PR created."
           else
             gh pr edit "$existing_pr" --body-file "$RUNNER_TEMP/pr-body.md"
