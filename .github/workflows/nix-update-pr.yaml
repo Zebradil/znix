@@ -1,9 +1,8 @@
 name: Reusable Nix Update PR
 
 # Reusable workflow that updates flake.lock and opens (or updates) a pull request targeting
-# the repository's default branch. Unlike nix-update.yaml, this workflow does NOT build or
-# push to the binary cache — the resulting PR triggers the repo's own CI (e.g. nix-ci.yaml
-# via test.yaml) to handle that.
+# the repository's default branch. When diff-targets and cache secrets are provided, it also
+# builds targets for nvd diffing and pushes the post-update results to the binary cache.
 #
 # If flake.lock is already up to date and an open update PR exists from the configured branch,
 # that PR is automatically closed.
@@ -75,6 +74,18 @@ on:
       ci-app-private-key:
         description: GitHub App private key paired with ci-app-id.
         required: false
+      cache-signing-key:
+        description: Nix binary cache signing private key for pushing built paths after diff.
+        required: false
+      cache-s3-url:
+        description: S3 URL for nix copy --to (e.g. s3://my-bucket?region=eu-central-1).
+        required: false
+      aws-access-key-id:
+        description: AWS access key ID for S3 cache push.
+        required: false
+      aws-secret-access-key:
+        description: AWS secret access key for S3 cache push.
+        required: false
 
 permissions:
   contents: read
@@ -88,6 +99,7 @@ jobs:
     env:
       HAS_APP_TOKEN: ${{ secrets.ci-app-id != '' && secrets.ci-app-private-key != '' }}
       CAN_DIFF: ${{ inputs.diff-targets != '' }}
+      CAN_PUSH_CACHE: ${{ secrets.cache-signing-key != '' && secrets.aws-access-key-id != '' && secrets.aws-secret-access-key != '' }}
     steps:
       # Token generation runs before checkout so that actions/checkout can configure the git
       # remote with push credentials in one step.
@@ -115,10 +127,12 @@ jobs:
           sparse-checkout: .github
 
       - name: Setup Nix
+        id: setup
         uses: ./.znix-ci/.github/actions/setup-nix
         with:
           extra-substituters: ${{ inputs.cache-pull-url }}
           extra-trusted-public-keys: ${{ inputs.cache-public-key }}
+          cache-signing-key: ${{ secrets.cache-signing-key }}
 
       - name: Filter diff targets to current system
         if: ${{ env.CAN_DIFF == 'true' }}
@@ -245,10 +259,43 @@ jobs:
             printf '%s\n' "$diff_output" > "$RUNNER_TEMP/nvd-diff.md"
           fi
 
+      - name: Collect post-update store paths
+        id: post-paths
+        if: ${{ steps.check.outputs.has_changes == 'true' && env.CAN_DIFF == 'true' }}
+        run: |
+          : > "$RUNNER_TEMP/post-update-paths.txt"
+          while IFS= read -r target; do
+            [[ -z "$target" ]] && continue
+            path=$(nix path-info ".#${target}" 2>/dev/null || true)
+            if [[ -n "$path" ]]; then
+              printf '%s\n' "$path" >> "$RUNNER_TEMP/post-update-paths.txt"
+            fi
+          done < "$RUNNER_TEMP/diff-targets.txt"
+          if [[ -s "$RUNNER_TEMP/post-update-paths.txt" ]]; then
+            {
+              echo 'paths<<EOF'
+              cat "$RUNNER_TEMP/post-update-paths.txt"
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+            echo "has_paths=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_paths=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push post-update builds to cache
+        if: ${{ steps.post-paths.outputs.has_paths == 'true' && env.CAN_PUSH_CACHE == 'true' }}
+        uses: ./.znix-ci/.github/actions/push-nix-cache
+        with:
+          store-paths: ${{ steps.post-paths.outputs.paths }}
+          signing-key-file: ${{ steps.setup.outputs.signing-key-file }}
+          s3-url: ${{ secrets.cache-s3-url }}
+          aws-access-key-id: ${{ secrets.aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+
       - name: Create or update PR
-        if: ${{ steps.check.outputs.has_changes == 'true' && env.HAS_APP_TOKEN == 'true' }}
+        if: ${{ steps.check.outputs.has_changes == 'true' }}
         env:
-          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token || github.token }}
           BRANCH: ${{ inputs.branch-name }}
         run: |
           git config user.name "github-actions[bot]"
@@ -264,6 +311,12 @@ jobs:
           fi
 
           {
+            if [[ "$HAS_APP_TOKEN" != "true" ]]; then
+              printf '> [!WARNING]\n'
+              printf '> This PR was created with `GITHUB_TOKEN`. Downstream CI will **not** trigger automatically.\n'
+              printf '> To run CI, close and reopen this PR, or push an empty commit to the branch.\n'
+              printf '> To avoid this in the future, configure `CI_APP_ID` and `CI_APP_PRIVATE_KEY` repository secrets.\n\n'
+            fi
             printf $'Automated `nix flake update` run.\n\n'
             printf '### Updated inputs\n\n'
             printf '%s\n\n' "$input_summary"
@@ -292,9 +345,9 @@ jobs:
           fi
 
       - name: Enable auto-merge
-        if: ${{ steps.check.outputs.has_changes == 'true' && inputs.auto-merge && env.HAS_APP_TOKEN == 'true' }}
+        if: ${{ steps.check.outputs.has_changes == 'true' && inputs.auto-merge }}
         env:
-          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token || github.token }}
           BRANCH: ${{ inputs.branch-name }}
         run: |
           pr_number=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
@@ -306,7 +359,11 @@ jobs:
             fi
           fi
 
-      - name: Warn if app token is missing
+      - name: Warn about GITHUB_TOKEN limitations
         if: ${{ steps.check.outputs.has_changes == 'true' && env.HAS_APP_TOKEN != 'true' }}
         run: |
-          echo "::warning::ci-app-id and/or ci-app-private-key are not configured. Cannot create a PR — PRs created with GITHUB_TOKEN do not trigger pull_request events on the resulting PR, so CI would not run on the changes. Please configure the GitHub App secrets."
+          echo "::notice::PR was created with GITHUB_TOKEN. Downstream CI (pull_request events) will not trigger automatically. Close and reopen the PR, or push to the branch manually, to trigger CI. Configure CI_APP_ID and CI_APP_PRIVATE_KEY secrets to avoid this limitation."
+
+      - name: Clean up signing key
+        if: ${{ always() && steps.setup.outputs.signing-key-file != '' }}
+        run: rm -f '${{ steps.setup.outputs.signing-key-file }}'
