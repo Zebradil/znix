@@ -72,13 +72,13 @@ let
           }' \
         | awk '!seen[$0]++')
 
-      if [ -z "$networks" ]; then
+      if [[ -z "$networks" ]]; then
         notify-send -u critical "WiFi" "No networks found"
         exit 1
       fi
 
       chosen=$(printf '%s\n' "$networks" | anyrun --plugins "${stdinLib}" --show-results-immediately true)
-      [ -z "$chosen" ] && exit 0
+      [[ -z "$chosen" ]] && exit 0
 
       ssid="''${chosen%% (*}"
       nmcli device wifi connect "$ssid" && notify-send "WiFi" "Connected to $ssid"
@@ -97,10 +97,10 @@ let
       chosen=$(powerprofilesctl list \
         | sed -nE 's/^([* ]{2}[a-z-]+):$/\1/p' \
         | anyrun --plugins "${stdinLib}" --show-results-immediately true)
-      [ -z "$chosen" ] && exit 0
+      [[ -z "$chosen" ]] && exit 0
       # anyrun weirdly duplicates the chosen string
       chosen="''${chosen:0:$((''${#chosen} / 2))}"
-
+      chosen="''${chosen#  }"
       profile="''${chosen#\* }"
       powerprofilesctl set "$profile"
       notify-send "Performance" "Profile: $profile"
