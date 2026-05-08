@@ -35,14 +35,17 @@ function add_os_target() {
 		'. + [{"attr":$a,"system":$s,"runner":$r}]')
 }
 
-flake_json=$(nix flake show . --json --all-systems)
+# inventory v2 (Determinate Nix): top-level is {"version":2,"inventory":{...}}
+# Older Nix emits the flat object directly; ".inventory // ." handles both.
+flake_json=$(nix flake show . --json --all-systems | jq '.inventory // .')
 if [[ "${NIX_DISCOVER_DEBUG:-}" =~ ^(1|true|yes)$ ]]; then
 	echo "nix-discover: debug enabled, dumping full flake JSON"
 	echo "$flake_json"
 fi
 
 for type in ${DISCOVERY_TYPES:?DISCOVERY_TYPES is required}; do
-	type_json=$(echo "$flake_json" | jq --arg t "$type" '.[$t]')
+	# inventory v2 nests data under .output.children; fall back to direct key for old format.
+	type_json=$(echo "$flake_json" | jq --arg t "$type" '.[$t].output.children // .[$t]')
 	if [[ $type_json == "null" ]]; then
 		echo "::warning::nix-discover: type '$type' not found in flake output, skipping"
 		continue
@@ -50,34 +53,38 @@ for type in ${DISCOVERY_TYPES:?DISCOVERY_TYPES is required}; do
 
 	case "$type" in
 	nixosConfigurations | darwinConfigurations)
-		# Flat type: first-level keys are logical names, not systems.
-		sys_map='null'
-		if sys_map=$(nix eval --json ".#${type/Configurations/SystemMap}" 2>/dev/null); then
-			:
-		fi
-		if [[ "$sys_map" == "null" ]] || echo "$sys_map" | jq -e 'type == "object" and length == 0' >/dev/null; then
-			echo "::warning::nix-discover: system map for '$type' not found, running expensive evaluation to get it"
-			sys_map=$(nix eval --json ".#$type" --apply 'builtins.mapAttrs (_: v: v.pkgs.stdenv.hostPlatform.system)')
-		fi
+		# inventory v2: each child carries forSystems directly — no nix eval needed.
 		while read -r name sys; do
 			add_os_target "$type" "$name" "$sys" "config.system.build.toplevel"
-		done < <(echo "$sys_map" | jq -r 'to_entries.[] | .key + " " + .value')
+		done < <(echo "$type_json" | jq -r '
+			to_entries[]
+			| select(.value.filtered != true)
+			| .key as $k
+			| (.value.forSystems // [])[]
+			| "\($k) \(.)"
+		')
 		;;
 	*)
 		# Per-system type (e.g. packages, devShells, checks, formatter).
-		# Detect nested (packages.system.name) vs direct (formatter.system) by
-		# checking whether the system-level value is itself a derivation.
+		# inventory v2: system-level nodes are either a direct derivation (has "derivation" key)
+		# or a container with a "children" map of named derivations.
+		# Nodes with {"filtered":true} represent unavailable systems and must be skipped.
 		while read -r sys; do
 			sys_val=$(echo "$type_json" | jq --arg s "$sys" '.[$s]')
 
-			if echo "$sys_val" | jq -e 'has("type")' >/dev/null 2>&1; then
+			if echo "$sys_val" | jq -e '.filtered == true' >/dev/null 2>&1; then
+				continue
+			fi
+
+			if echo "$sys_val" | jq -e 'has("derivation") or has("type")' >/dev/null 2>&1; then
 				# Direct derivation (e.g. formatter.x86_64-linux).
 				add_os_target "$type" "$sys" "$sys"
 			else
 				# Named derivations (e.g. packages.x86_64-linux.default).
+				# inventory v2 nests them under .children; old format uses keys directly.
 				while read -r name; do
 					add_os_target "$type" "$sys.$name" "$sys"
-				done < <(echo "$sys_val" | jq -r 'keys[]')
+				done < <(echo "$sys_val" | jq -r '(.children // .) | keys[]')
 			fi
 		done < <(echo "$type_json" | jq -r 'keys[]')
 		;;
