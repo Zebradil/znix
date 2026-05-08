@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 INTERNAL="eDP-1"
-INTERNAL_SCALE="1.5"
+INTERNAL_SCALE="2.0"
 
 # Detect external monitor name.
 # First try hyprctl (works when monitor is active),
@@ -28,9 +28,17 @@ external=$(detect_external)
 
 # Re-enable a disabled monitor so hyprctl can configure it.
 ensure_enabled() {
-  local mon="$1"
-  hyprctl keyword monitor "$mon, preferred, auto, 1"
-  sleep 0.3
+  local mon="$1" disabled scale="1"
+  if [[ $mon == "$INTERNAL" ]]; then
+    scale="$INTERNAL_SCALE"
+  fi
+  disabled=$(hyprctl monitors all -j | jq -r --arg n "$mon" '.[] | select(.name == $n) | .disabled' 2>/dev/null)
+  # Only bootstrap when disabled — avoids racing the caller's subsequent
+  # hyprctl keyword monitor call, which would otherwise clobber the real scale.
+  if [[ $disabled == "true" ]]; then
+    hyprctl keyword monitor "$mon, preferred, auto, $scale"
+    sleep 0.3
+  fi
 }
 
 # Bail out with a notification when no external monitor is available.
