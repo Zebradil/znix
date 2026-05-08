@@ -10,7 +10,13 @@ _: {
 
       config = lib.mkIf config.znix.wireless.enable {
         hardware.bluetooth.enable = true;
-        services.blueman.enable = true;
+        services.blueman = {
+          enable = true;
+          # home-manager manages the applet via services.blueman-applet; having NixOS also
+          # define systemd.user.services.blueman-applet (the default when withApplet=true)
+          # creates a drop-in that re-declares ExecStart=, conflicting with the HM unit.
+          withApplet = false;
+        };
 
         sops.secrets.wireless = {
           sopsFile = ../../secrets/hosts/common.yaml;
