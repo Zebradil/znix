@@ -11,3 +11,4 @@ Always use the `gh` CLI tool when interacting with GitHub (creating PRs, issues,
 
 - use `fd` instead of `find`
 - use `rg` instead of `grep`
+- never install packages with `brew`; use `nix shell nixpkgs#<package>` for any missing tools
