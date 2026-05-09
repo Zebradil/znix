@@ -119,6 +119,9 @@
     # AI
     opencode
 
+    # TUI
+    lazygit
+
     # Nushell
     nushell
     nufmt

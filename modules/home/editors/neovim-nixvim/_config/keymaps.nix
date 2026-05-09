@@ -338,6 +338,14 @@ _: {
       options.desc = "Base64 decode";
     }
 
+    # ─ LazyGit ─
+    {
+      mode = "n";
+      key = "<Leader>gg";
+      action = "<cmd>LazyGit<cr>";
+      options.desc = "Open LazyGit";
+    }
+
     # ─ OpenCode ─
     {
       mode = "n";
