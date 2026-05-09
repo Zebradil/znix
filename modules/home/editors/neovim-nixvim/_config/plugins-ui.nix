@@ -51,7 +51,63 @@
       };
     };
 
-    which-key.enable = true;
+    which-key = {
+      enable = true;
+      settings = {
+        spec = [
+          {
+            __unkeyed-1 = "<leader>64";
+            group = "Base64";
+            icon = "󰌶 ";
+          }
+          {
+            __unkeyed-1 = "<leader>a";
+            group = "AI / Aerial";
+            icon = "󰚩 ";
+          }
+          {
+            __unkeyed-1 = "<leader>b";
+            group = "Buffer";
+            icon = "󰈔 ";
+          }
+          {
+            __unkeyed-1 = "<leader>c";
+            group = "Copilot";
+            icon = " ";
+          }
+          {
+            __unkeyed-1 = "<leader>d";
+            group = "Debug";
+            icon = " ";
+          }
+          {
+            __unkeyed-1 = "<leader>f";
+            group = "Find / Picker";
+            icon = " ";
+          }
+          {
+            __unkeyed-1 = "<leader>g";
+            group = "Git";
+            icon = "󰊢 ";
+          }
+          {
+            __unkeyed-1 = "<leader>l";
+            group = "LSP";
+            icon = " ";
+          }
+          {
+            __unkeyed-1 = "<leader>t";
+            group = "Test";
+            icon = " ";
+          }
+          {
+            __unkeyed-1 = "<leader>y";
+            group = "Yank";
+            icon = "󰆏 ";
+          }
+        ];
+      };
+    };
 
     snacks = {
       enable = true;
