@@ -9,6 +9,7 @@
     imports =
       (with inputs.self.modules.nixos; [
         _1password
+        audio
         boot
         determinate
         diff
