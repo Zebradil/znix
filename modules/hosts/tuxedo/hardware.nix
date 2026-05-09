@@ -21,13 +21,19 @@
 
       boot.kernelPackages = pkgs.linuxKernel.packages.linux_xanmod_latest;
       boot.kernelParams = [
-        # Disable USB autosuspend for Dell WD19TB dock Realtek hubs.
-        # Without this, the kernel suspends the hubs during enumeration,
-        # causing immediate disconnect (err -5, err -32) and breaking
-        # all USB-A ports on the dock. The :n flag sets
-        # USB_QUIRK_NO_AUTOSUSPEND at driver bind time, before any
-        # userspace (udev, powertop) can interfere.
-        "usbcore.quirks=0bda:5487:n,0bda:5413:n"
+        # Disable USB autosuspend on the Dell WD19TB dock's Realtek hubs.
+        # Each physical hub presents two USB IDs — USB 2.0 (5487/5413) and
+        # USB 3.0 (0487/0413) — and both halves must be quirked. The :n flag
+        # sets USB_QUIRK_NO_AUTOSUSPEND at driver bind time, before userspace
+        # (udev, powertop) can interfere.
+        #
+        # Note: there is also a Bluetooth-correlated dock failure on this
+        # platform (Strix Halo + WD19TB over USB4) that *cannot* be fixed
+        # with USB quirks — it depends on which physical USB-C port on the
+        # laptop the dock is plugged into. Use a port that does not share
+        # a USB controller cluster with the internal MediaTek BT (PCIe
+        # 00:02.3 / bus 62) — empirically, swapping ports resolves it.
+        "usbcore.quirks=0bda:5487:n,0bda:5413:n,0bda:0487:n,0bda:0413:n"
       ];
       boot.initrd = {
         availableKernelModules = [
