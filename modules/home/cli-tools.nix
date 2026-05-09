@@ -25,6 +25,7 @@ _: {
 
         # CLI tools
         bashInteractive
+        comma
         coreutils
         curl
         dive
