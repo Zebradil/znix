@@ -58,6 +58,7 @@ _: {
             save = 100000;
             share = true;
             size = 100000;
+            path = "${config.home.homeDirectory}/.local/state/zsh/history";
           };
           historySubstringSearch.enable = true;
           syntaxHighlighting.enable = true;
@@ -72,7 +73,7 @@ _: {
       };
 
       impermanence = lib.mkIf osConfig.znix.impermanence.enable {
-        home.persistence."/persist".files = [ ".zsh/.zsh_history" ];
+        home.persistence."/persist".directories = [ ".local/state/zsh" ];
       };
 
     in
