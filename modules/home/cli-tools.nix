@@ -69,6 +69,7 @@ _: {
         watchexec
         wget
         yq-go
+        yt-dlp
         ytt
 
         # Languages
