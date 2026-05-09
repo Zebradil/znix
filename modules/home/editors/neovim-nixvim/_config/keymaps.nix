@@ -338,6 +338,26 @@ _: {
       options.desc = "Base64 decode";
     }
 
+    # ─ OpenCode ─
+    {
+      mode = "n";
+      key = "<Leader>ao";
+      action.__raw = ''function() require("opencode").ask() end'';
+      options.desc = "OpenCode: Ask";
+    }
+    {
+      mode = "v";
+      key = "<Leader>ao";
+      action.__raw = ''function() require("opencode").ask() end'';
+      options.desc = "OpenCode: Ask (selection)";
+    }
+    {
+      mode = "n";
+      key = "<Leader>as";
+      action.__raw = ''function() require("opencode").select() end'';
+      options.desc = "OpenCode: Select action";
+    }
+
     # ─ Copilot Chat ─
     {
       mode = "n";

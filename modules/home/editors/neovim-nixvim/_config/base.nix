@@ -47,6 +47,7 @@
     updatetime = 250; # Time in ms before CursorHold fires & swap file is written (snappier diagnostics)
 
     # -- System Integration --
+    autoread = true; # Automatically reload files changed outside of Neovim (required by opencode auto_reload)
     clipboard = "unnamedplus"; # Use the system clipboard for all yank/delete/paste operations
 
     # -- Completion --
@@ -114,6 +115,9 @@
 
     # DAP
     delve
+
+    # AI
+    opencode
 
     # Nushell
     nushell
