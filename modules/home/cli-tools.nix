@@ -13,7 +13,6 @@ _: {
         # CLI apps
         bat
         broot
-        btop
         delta
         difftastic
         htop
