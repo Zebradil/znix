@@ -17,6 +17,8 @@
     let
       addons = (inputs.firefox-addons.overlays.default pkgs pkgs).firefox-addons;
       base = {
+        home.sessionVariables.MOZ_ENABLE_WAYLAND = "1";
+
         # Extensions are managed declaratively via `extensions.packages`.
         # Firefox persists extension enabled/disabled state in `extensions.json`,
         # which conflicts with declarative management after reboot (via impermanence).
