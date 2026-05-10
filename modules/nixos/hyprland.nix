@@ -15,5 +15,19 @@ _: {
       environment.systemPackages = [
         pkgs.kitty # required for the default Hyprland config
       ];
+
+      # Workaround for hyprlock crashing when the system suspends before it finishes rendering
+      # the background (e.g., blurring a screenshot).
+      # See: https://github.com/hyprwm/hyprlock/issues/972
+      # and: https://github.com/hyprwm/hyprlock/issues/1006
+      systemd.services.hyprlock-suspend-workaround = {
+        description = "Delay sleep to allow hyprlock to render";
+        before = [ "sleep.target" ];
+        wantedBy = [ "sleep.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.coreutils}/bin/sleep 2";
+        };
+      };
     };
 }
