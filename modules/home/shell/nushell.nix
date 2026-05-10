@@ -12,7 +12,6 @@ _: {
             NVIM_COMMAND = "nvim-profile";
             NVIM_PROFILE_NAME = "astro4";
             LANG = "en_US.UTF-8";
-            LC_ALL = "en_US.UTF-8";
             LC_TIME = "en_DK.UTF-8";
             LESS = "--RAW-CONTROL-CHARS --mouse --wheel-lines=3 --quit-if-one-screen --ignore-case --tabs=4";
             MANPAGER = "nvim +Man!";

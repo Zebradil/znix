@@ -23,6 +23,7 @@
         hyprland
         impermanence
         laptop
+        locale
         nix-settings
         openssh
         sops
