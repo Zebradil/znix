@@ -119,8 +119,9 @@
               "browser.bookmarks.restore_default_bookmarks" = false;
               "browser.bookmarks.addedImportButton" = true;
 
-              # Don't ask for download dir
-              "browser.download.useDownloadDir" = false;
+              # Save regular downloads directly into ~/Downloads.
+              # Use "Save Link As..." when a one-off destination is needed.
+              "browser.download.useDownloadDir" = true;
 
               # Disable crappy home activity stream page
               "browser.newtabpage.activity-stream.feeds.topsites" = false;
