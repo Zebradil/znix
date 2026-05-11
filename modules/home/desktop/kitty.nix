@@ -1,8 +1,15 @@
 _: {
   flake.modules.homeManager.kitty =
-    { pkgs, lib, ... }:
+    {
+      pkgs,
+      lib,
+      isDarwin,
+      ...
+    }:
     let
-      fontFamily = "family='IosevkaTerm Nerd Font'";
+      fontFamily =
+        if isDarwin then "family='IosevkaTerm Nerd Font Mono'" else "family='IosevkaTerm Nerd Font'";
+      fontSize = if isDarwin then 18.0 else 12.0;
       themeDir = "${pkgs.kitty-themes}/share/kitty-themes/themes";
       assertTheme =
         name:
@@ -15,7 +22,7 @@ _: {
         enable = true;
         font = {
           name = "${fontFamily} style=Light";
-          size = 12.0;
+          size = fontSize;
         };
         settings = {
           italic_font = "${fontFamily} style='Light Italic'";
