@@ -278,7 +278,16 @@ for i in "${!nodes[@]}"; do
     else
         log::info "$MSG"
         log::say "Draining node"
-        kubectl drain --delete-emptydir-data --ignore-daemonsets "$n"
+        drain_output=""
+        if drain_output=$(kubectl drain --delete-emptydir-data --ignore-daemonsets "$n" 2>&1); then
+            echo "$drain_output"
+        elif [[ "$drain_output" == *"NotFound"* ]] || [[ "$drain_output" == *"not found"* ]]; then
+            log::info "Node $n is already gone (likely deleted by the cluster autoscaler); skipping"
+            continue
+        else
+            log::err "$drain_output"
+            exit 1
+        fi
         if $DELETE; then
             read -r project zone <<<"$(
                 kubectl get node "$n" \

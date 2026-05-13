@@ -188,12 +188,15 @@ function z:gke:np:nodes:with-pods() (
 
 # Drain and delete a node pool:
 #  - Select a node pool interactively if not provided
+#  - Optionally taint the pool (NoSchedule) so new nodes are unschedulable
 #  - Disable autoscaling
 #  - Drain all nodes in the node pool and delete them
 #  - Delete the node pool
-# Usage: z:gke:np:drain-delete <node-pool|-> [drain-nodes-args...]
+# Usage: z:gke:np:drain-delete <node-pool|-> [--taint-pool] [drain-nodes-args...]
 # Args:
 #   <node-pool|->          node pool name or '-' to select interactively
+#   --taint-pool           apply zebradil.dev/draining=true:NoSchedule to the pool
+#                          so any nodes GKE spawns during drain are unschedulable
 #   [drain-nodes-args...]  additional arguments to pass to drain-nodes
 function z:gke:np:drain-delete() (
   set -euo pipefail
@@ -205,13 +208,32 @@ function z:gke:np:drain-delete() (
   if [[ -z $np ]]; then
     return 1
   fi
+
+  local taint_pool=false
+  local -a drain_args=()
+  while (( $# > 0 )); do
+    case "$1" in
+      --taint-pool) taint_pool=true ;;
+      *)            drain_args+=("$1") ;;
+    esac
+    shift
+  done
+
+  if $taint_pool; then
+    # --node-taints REPLACES the pool's taints; acceptable since the pool is
+    # about to be deleted. This taint applies to NEW nodes only; existing nodes
+    # are handled by drain-nodes --cordon.
+    log::info "Tainting node pool $np (zebradil.dev/draining=true:NoSchedule) ..."
+    z:gke:np:do update $np --node-taints=zebradil.dev/draining=true:NoSchedule
+  fi
+
   log::info "Disabling autoscaling and autorepair on node pool $np ..."
   # Workaround for fantom autoscaling noticed in GKE v1.35: before disabling autoscaling set max nodes to 0
   z:gke:np:do update $np --total-min-nodes=0 --total-max-nodes=0
   z:gke:np:do update $np --no-enable-autoscaling
   z:gke:np:do update $np --no-enable-autorepair
   log::info "Draining and deleting nodes in node pool $np ..."
-  z:gke:np:nodes $np | drain-nodes --delete $@
+  z:gke:np:nodes $np | drain-nodes --delete "${drain_args[@]}"
   log::info "Deleting node pool $np ..."
   z:gke:np:do delete $np
 )
