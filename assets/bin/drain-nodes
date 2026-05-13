@@ -288,11 +288,19 @@ for i in "${!nodes[@]}"; do
             group="${n%-*}-grp"
             log::info "Deleting node $n from $project/$zone/$group group"
             log::say "Deleting node"
-            gcloud compute instance-groups managed delete-instances \
+            delete_output=""
+            if delete_output=$(gcloud compute instance-groups managed delete-instances \
                 --project="$project" \
                 --zone="$zone" \
                 --instances="$n" \
-                "$group"
+                "$group" 2>&1); then
+                echo "$delete_output"
+            elif [[ "$delete_output" == *"already being deleted"* ]]; then
+                log::info "Node $n is already being deleted (likely by the cluster autoscaler); skipping"
+            else
+                log::err "$delete_output"
+                exit 1
+            fi
         fi
     fi
     log::success "Node $nID is drained"

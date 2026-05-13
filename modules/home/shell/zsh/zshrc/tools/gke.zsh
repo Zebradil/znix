@@ -206,6 +206,8 @@ function z:gke:np:drain-delete() (
     return 1
   fi
   log::info "Disabling autoscaling and autorepair on node pool $np ..."
+  # Workaround for fantom autoscaling noticed in GKE v1.35: before disabling autoscaling set max nodes to 0
+  z:gke:np:do update $np --total-min-nodes=0 --total-max-nodes=0
   z:gke:np:do update $np --no-enable-autoscaling
   z:gke:np:do update $np --no-enable-autorepair
   log::info "Draining and deleting nodes in node pool $np ..."
