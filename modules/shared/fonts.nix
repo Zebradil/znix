@@ -4,9 +4,16 @@ let
     { pkgs, ... }:
     {
       fonts.packages = with pkgs; [
-        iosevka-bin
         nerd-fonts.iosevka-term
+        noto-fonts-color-emoji
       ];
+      fonts.fontconfig.defaultFonts = {
+        monospace = [
+          "IosevkaTerm Nerd Font"
+          "Noto Color Emoji"
+        ];
+        emoji = [ "Noto Color Emoji" ];
+      };
     };
 in
 {
