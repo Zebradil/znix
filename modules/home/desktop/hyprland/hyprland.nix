@@ -135,6 +135,9 @@
       ];
       wayland.windowManager.hyprland = {
         enable = true;
+        # Home Manager 26.05 defaults to Lua configs, but the currently pinned
+        # Hyprland release on this host still expects hyprlang in hyprland.conf.
+        configType = "hyprlang";
         plugins = with pkgs; [
           # hyprlandPlugins.hyprbars
         ];
