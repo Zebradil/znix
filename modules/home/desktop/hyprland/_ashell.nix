@@ -40,9 +40,10 @@
         };
       };
       keyboard_layout.labels = {
-        "English (US)" = "🇺🇸";
-        "English (Dvorak)" = "◈";
-        "Russian (phonetic, Dvorak)" = "🇷🇺";
+        "English (US)" = "US";
+        "English (Dvorak)" = "Dv";
+        "Russian (phonetic, Dvorak)" = "Ё";
+        "Russian (phonetic)" = "Я";
       };
       modules = {
         center = [
