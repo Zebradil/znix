@@ -18,11 +18,18 @@ ensure_internal() {
   if ! jq -r '.[].name' <<< "$active" 2>/dev/null | grep -q "^${INTERNAL}$"; then
     log_info "internal monitor $INTERNAL not active, re-enabling..."
     local result
-    result=$(hyprctl keyword monitor "$INTERNAL, preferred, auto, 1.5" 2>&1)
+    result=$(hyprctl keyword monitor "$INTERNAL, preferred, auto, 2.0" 2>&1)
     log_debug "ensure_internal: hyprctl result: $result"
     notify-send "Display" "Single (integrated only)" || true
   else
     log_debug "ensure_internal: $INTERNAL already active, nothing to do"
+  fi
+}
+
+reconcile_monitors() {
+  if ! monitor-switch --reconcile; then
+    log_info "reconcile failed; ensuring internal display is on..."
+    ensure_internal
   fi
 }
 
@@ -40,28 +47,27 @@ while true; do
     case "$event" in
       monitoradded)
         if [[ $monitor == "FALLBACK" ]]; then
-          # FALLBACK means all real monitors are gone — re-enable internal
+          # FALLBACK means all real monitors are gone - re-enable internal
           log_info "FALLBACK monitor appeared, re-enabling internal display..."
           sleep 1
-          ensure_internal
+          reconcile_monitors
         else
-          log_info "external monitor added: $monitor, switching to external-only..."
+          log_info "external monitor added: $monitor, reconciling preset..."
           sleep 1
-          monitor-switch external-only
+          reconcile_monitors
         fi
         ;;
       monitorremoved)
         if [[ $monitor == "FALLBACK" ]]; then
           log_debug "FALLBACK monitor removed, ignoring"
         else
-          log_info "external monitor removed: $monitor, ensuring internal is on..."
+          log_info "external monitor removed: $monitor, reconciling preset..."
           sleep 1
-          ensure_internal
+          reconcile_monitors
         fi
         ;;
     esac
   done
-  log_info "socat disconnected, ensuring internal display is on in 2s..."
+  log_info "socat disconnected, waiting 2s before reconnect..."
   sleep 2
-  ensure_internal
 done

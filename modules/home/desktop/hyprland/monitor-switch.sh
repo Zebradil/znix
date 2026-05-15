@@ -2,6 +2,80 @@
 
 INTERNAL="eDP-1"
 INTERNAL_SCALE="2.0"
+STATE_DIR="${XDG_RUNTIME_DIR:-/tmp}/hyprland"
+STATE_FILE="$STATE_DIR/monitor-switch-state.json"
+
+connected_monitors() {
+  local outputs=()
+  local card conn_status conn_name
+
+  for card in /sys/class/drm/card*-*; do
+    [[ -f "$card/status" ]] || continue
+    conn_status=$(<"$card/status")
+    conn_name=$(basename "$card" | sed 's/^card[0-9]*-//')
+    if [[ $conn_status == "connected" ]]; then
+      outputs+=("$conn_name")
+    fi
+  done
+
+  if [[ ${#outputs[@]} -gt 0 ]]; then
+    printf '%s\n' "${outputs[@]}" | sort -u
+  fi
+}
+
+detect_topology() {
+  local outputs=()
+  local joined=""
+  local output
+
+  mapfile -t outputs < <(connected_monitors)
+
+  for output in "${outputs[@]}"; do
+    if [[ -n $joined ]]; then
+      joined+=","
+    fi
+    joined+="$output"
+  done
+
+  printf '%s\n' "$joined"
+}
+
+load_state() {
+  state_preset=""
+  state_mode=""
+  state_topology=""
+
+  [[ -f $STATE_FILE ]] || return 0
+
+  state_preset=$(jq -r '.preset // empty' "$STATE_FILE" 2>/dev/null)
+  state_mode=$(jq -r '.mode // empty' "$STATE_FILE" 2>/dev/null)
+  state_topology=$(jq -r '.topology // empty' "$STATE_FILE" 2>/dev/null)
+}
+
+save_state() {
+  local preset="$1"
+  local mode="$2"
+  local topology="${3:-$(detect_topology)}"
+
+  mkdir -p "$STATE_DIR"
+  jq -n \
+    --arg preset "$preset" \
+    --arg mode "$mode" \
+    --arg topology "$topology" \
+    '{ preset: $preset, mode: $mode, topology: $topology }' > "$STATE_FILE.tmp"
+  mv "$STATE_FILE.tmp" "$STATE_FILE"
+}
+
+valid_preset() {
+  case "$1" in
+  single|external-only|extended|mirror)
+    return 0
+    ;;
+  *)
+    return 1
+    ;;
+  esac
+}
 
 # Detect external monitor name.
 # First try hyprctl (works when monitor is active),
@@ -13,15 +87,12 @@ detect_external() {
     echo "$name"
     return
   fi
-  for card in /sys/class/drm/card*-*; do
-    local conn_status conn_name
-    conn_status=$(<"$card/status" 2>/dev/null) || continue
-    conn_name=$(basename "$card" | sed 's/^card[0-9]*-//')
-    if [[ $conn_status == "connected" && $conn_name != "$INTERNAL" ]]; then
-      echo "$conn_name"
+  while IFS= read -r name; do
+    if [[ $name != "$INTERNAL" ]]; then
+      echo "$name"
       return
     fi
-  done
+  done < <(connected_monitors)
 }
 
 external=$(detect_external)
@@ -33,7 +104,7 @@ ensure_enabled() {
     scale="$INTERNAL_SCALE"
   fi
   disabled=$(hyprctl monitors all -j | jq -r --arg n "$mon" '.[] | select(.name == $n) | .disabled' 2>/dev/null)
-  # Only bootstrap when disabled — avoids racing the caller's subsequent
+  # Only bootstrap when disabled - avoids racing the caller's subsequent
   # hyprctl keyword monitor call, which would otherwise clobber the real scale.
   if [[ $disabled == "true" ]]; then
     hyprctl keyword monitor "$mon, preferred, auto, $scale"
@@ -81,7 +152,7 @@ apply_preset() {
     notify-send "Display" "Mirror"
     ;;
   *)
-    echo "Usage: monitor-switch {single|external-only|extended|mirror|--pick}" >&2
+    echo "Usage: monitor-switch {single|external-only|extended|mirror|--pick|--reconcile}" >&2
     exit 1
     ;;
   esac
@@ -122,6 +193,32 @@ detect_active() {
   fi
 }
 
+reconcile_preset() {
+  local preserve_manual="$1"
+  local topology desired desired_mode active
+
+  external=$(detect_external)
+  topology=$(detect_topology)
+  load_state
+
+  if [[ -z $external ]]; then
+    desired="single"
+    desired_mode="auto"
+  elif [[ $preserve_manual == "true" && $state_mode == "manual" && $state_topology == "$topology" ]] && valid_preset "$state_preset"; then
+    desired="$state_preset"
+    desired_mode="manual"
+  else
+    desired="external-only"
+    desired_mode="auto"
+  fi
+
+  active=$(detect_active 2>/dev/null || true)
+  if [[ $active != "$desired" ]]; then
+    apply_preset "$desired"
+  fi
+  save_state "$desired" "$desired_mode" "$topology"
+}
+
 if [[ "${1:-}" == "--pick" || $# -eq 0 ]]; then
   active=$(detect_active)
   has_external=false
@@ -146,6 +243,12 @@ if [[ "${1:-}" == "--pick" || $# -eq 0 ]]; then
   chosen="${chosen:0:$((${#chosen} / 2))}"
   chosen="${chosen#\* }"
   apply_preset "$chosen"
+  save_state "$chosen" "manual"
+elif [[ "${1:-}" == "--reconcile" ]]; then
+  reconcile_preset true
+elif [[ "${1:-}" == "--default" ]]; then
+  reconcile_preset false
 else
   apply_preset "$1"
+  save_state "$1" "manual"
 fi
