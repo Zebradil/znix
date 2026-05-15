@@ -33,6 +33,9 @@ reconcile_monitors() {
   fi
 }
 
+log_info "starting daemon, running initial reconciliation..."
+reconcile_monitors
+
 while true; do
   socket="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
   log_debug "connecting to socket: $socket"
@@ -40,6 +43,14 @@ while true; do
     log_debug "IPC event: $line"
     event="${line%%>>*}"
     monitor="${line#*>>}"
+    
+    if [[ $event == "configreloaded" ]]; then
+      log_info "hyprland config reloaded, reconciling preset..."
+      sleep 1
+      reconcile_monitors
+      continue
+    fi
+
     if [[ $monitor == "$INTERNAL" ]]; then
       log_debug "ignoring event for internal monitor"
       continue
