@@ -7,7 +7,7 @@
     settings = {
       appearance = {
         font_name = "IosevkaTerm Nerd Font";
-        scale_factor = 1.0;
+        scale_factor = 1.5;
         style = "Solid";
 
         success_color = "#a6e3a1";
