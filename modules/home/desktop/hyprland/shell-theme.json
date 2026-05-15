@@ -1,0 +1,22 @@
+{
+  "font": {
+    "name": "IosevkaTerm Nerd Font",
+    "size": 11
+  },
+  "colors": {
+    "fg": "#cdd6f4",
+    "bg": "#1e1e2e",
+    "bgWeak": "#313244",
+    "bgStrong": "#45475a",
+    "accent": "#fab387",
+    "success": "#a6e3a1",
+    "danger": "#f38ba8",
+    "warning": "#f9e2af",
+    "secondary": "#11111b",
+    "secondaryStrong": "#1b1b25"
+  },
+  "radius": 8,
+  "barHeight": 40,
+  "margin": 6,
+  "scaleFactor": 1.5
+}

@@ -1,0 +1,95 @@
+$fg: #cdd6f4;
+$bg: #1e1e2e;
+$bg-weak: #313244;
+$bg-strong: #45475a;
+$accent: #fab387;
+$danger: #f38ba8;
+$warning: #f9e2af;
+
+window.Bar {
+  background: transparent;
+  color: $fg;
+  font-family: "IosevkaTerm Nerd Font";
+  font-size: 11pt;
+
+  >centerbox {
+    margin: 6px;
+    min-height: 40px;
+  }
+}
+
+.segment {
+  background: rgba($bg, 0.92);
+  border: 1px solid $bg-strong;
+  border-radius: 8px;
+  padding: 0 8px;
+}
+
+.segment > * {
+  margin: 0 4px;
+}
+
+.workspaces button,
+.audio button,
+.bluetooth button,
+.notifications button,
+.notifications menubutton,
+.tray button {
+  border-radius: 8px;
+}
+
+.notifications-popover {
+  min-width: 320px;
+  padding: 10px;
+  background: $bg;
+  color: $fg;
+  border: 1px solid $bg-strong;
+  border-radius: 8px;
+}
+
+.notifications-popover-header {
+  margin-bottom: 8px;
+}
+
+.notifications-list {
+  min-width: 300px;
+}
+
+.notification-item {
+  padding: 8px 0;
+  border-top: 1px solid $bg-strong;
+}
+
+.notification-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.notification-title {
+  font-weight: 600;
+}
+
+.notification-body,
+.notifications-empty {
+  color: $fg;
+  opacity: 0.85;
+}
+
+.notification-dismiss,
+.notification-clear {
+  min-width: 0;
+  padding: 0 6px;
+}
+
+.workspaces button.active {
+  background: $accent;
+  color: $bg;
+}
+
+.warning {
+  color: $warning;
+}
+
+.critical {
+  color: $danger;
+}

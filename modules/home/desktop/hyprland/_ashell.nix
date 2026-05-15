@@ -1,42 +1,51 @@
-{ inputs, pkgs, ... }:
 {
+  config,
+  inputs,
+  lib,
+  pkgs,
+  ...
+}:
+let
+  theme = builtins.fromJSON (builtins.readFile ./shell-theme.json);
+in
+lib.mkIf (config.znix.desktop.hyprland.shellPreset == "ashell") {
   programs.ashell = {
     enable = true;
     package = inputs.ashell.packages.${pkgs.stdenv.hostPlatform.system}.default;
     systemd.enable = true;
     settings = {
       appearance = {
-        font_name = "IosevkaTerm Nerd Font";
-        scale_factor = 1.5;
+        font_name = theme.font.name;
+        scale_factor = theme.scaleFactor;
         style = "Solid";
 
-        success_color = "#a6e3a1";
-        text_color = "#cdd6f4";
+        success_color = theme.colors.success;
+        text_color = theme.colors.fg;
         workspace_colors = [
-          "#fab387"
+          theme.colors.accent
           "#b4befe"
           "#cba6f7"
         ];
 
         primary_color = {
-          base = "#fab387";
-          text = "#1e1e2e";
+          base = theme.colors.accent;
+          text = theme.colors.bg;
         };
 
         danger_color = {
-          base = "#f38ba8";
-          weak = "#f9e2af";
+          base = theme.colors.danger;
+          weak = theme.colors.warning;
         };
 
         background_color = {
-          base = "#1e1e2e";
-          weak = "#313244";
-          strong = "#45475a";
+          base = theme.colors.bg;
+          weak = theme.colors.bgWeak;
+          strong = theme.colors.bgStrong;
         };
 
         secondary_color = {
-          base = "#11111b";
-          strong = "#1b1b25";
+          base = theme.colors.secondary;
+          strong = theme.colors.secondaryStrong;
         };
       };
       keyboard_layout.labels = {
