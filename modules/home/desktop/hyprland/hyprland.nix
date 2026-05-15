@@ -81,6 +81,7 @@
         ./_swayosd.nix
       ];
       home.packages = with pkgs; [
+        pavucontrol
         playerctl
         # Wrapper for hyprland exec bindings: captures stderr, appends failures
         # to a persistent session log, and pops a notification.
