@@ -21,6 +21,7 @@ _: {
           };
           ignores = [
             ".claude/settings.local.json"
+            ".claude/worktrees"
             ".dir-locals.el"
             ".direnv"
             ".envrc"
