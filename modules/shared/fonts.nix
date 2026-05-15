@@ -9,15 +9,21 @@ let
       ];
     };
 
-  nixosFonts = {
-    fonts.fontconfig.defaultFonts = {
-      monospace = [
-        "IosevkaTerm Nerd Font"
-        "Noto Color Emoji"
+  nixosFonts =
+    { pkgs, ... }:
+    {
+      fonts.fontconfig.defaultFonts = {
+        monospace = [
+          "IosevkaTerm Nerd Font"
+          "Noto Color Emoji"
+        ];
+        emoji = [ "Noto Color Emoji" ];
+      };
+
+      environment.systemPackages = [
+        pkgs.font-manager
       ];
-      emoji = [ "Noto Color Emoji" ];
     };
-  };
 in
 {
   flake.modules.nixos.fonts = {
