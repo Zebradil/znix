@@ -10,6 +10,7 @@ _: {
 
       config = lib.mkIf config.znix.wireless.enable {
         hardware.bluetooth.enable = true;
+        services.udisks2.enable = true;
         services.blueman = {
           enable = true;
           # home-manager manages the applet via services.blueman-applet; having NixOS also

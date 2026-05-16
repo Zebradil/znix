@@ -222,6 +222,12 @@
       services = {
         network-manager-applet.enable = true;
         blueman-applet.enable = true;
+        udiskie = {
+          enable = true;
+          tray = "auto";
+          automount = true;
+          notify = true;
+        };
       };
     };
 }
