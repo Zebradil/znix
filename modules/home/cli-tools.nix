@@ -53,6 +53,7 @@ _: {
         nh
         nmap
         nodejs
+        pciutils
         rage
         rancher
         repgrep
@@ -63,6 +64,7 @@ _: {
         sops
         stern
         terraform
+        usbutils
         vals
         velero
         vendir
