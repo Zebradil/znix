@@ -5,6 +5,10 @@ INTERNAL_SCALE="2.0"
 STATE_DIR="${XDG_RUNTIME_DIR:-/tmp}/hyprland"
 STATE_FILE="$STATE_DIR/monitor-switch-state.json"
 
+is_real_external() {
+  [[ -n ${1:-} && $1 != "$INTERNAL" && $1 != "FALLBACK" ]]
+}
+
 connected_monitors() {
   local outputs=()
   local card conn_status conn_name
@@ -82,13 +86,13 @@ valid_preset() {
 # then fall back to DRM sysfs (works even when software-disabled).
 detect_external() {
   local name
-  name=$(hyprctl monitors all -j | jq -r '[.[] | select(.name != "'"$INTERNAL"'")][0].name // empty')
-  if [[ -n $name ]]; then
+  name=$(hyprctl monitors all -j | jq -r '[.[] | select(.name != "'"$INTERNAL"'" and .name != "FALLBACK")][0].name // empty')
+  if is_real_external "$name"; then
     echo "$name"
     return
   fi
   while IFS= read -r name; do
-    if [[ $name != "$INTERNAL" ]]; then
+    if is_real_external "$name"; then
       echo "$name"
       return
     fi
@@ -177,7 +181,7 @@ detect_active() {
       if [[ $mon_mirror != "none" && -n $mon_mirror && $mon_mirror != "null" ]]; then
         is_mirror=true
       fi
-    else
+    elif is_real_external "$mon_name"; then
       has_external=true
     fi
   done < <(jq -c '.[]' <<<"$all_json")
