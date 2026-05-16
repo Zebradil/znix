@@ -10,14 +10,15 @@ _: {
       fido-sound = pkgs.writeShellScript "fido-sound" ''
         if [ -n "$PAM_USER" ]; then
           USER_ID=$(id -u "$PAM_USER")
-          CMD="env XDG_RUNTIME_DIR=/run/user/$USER_ID ${pkgs.pipewire}/bin/pw-play ${pkgs.sound-theme-freedesktop}/share/sounds/freedesktop/stereo/message.oga"
-
+          
           if [ -d "/run/user/$USER_ID" ]; then
+            CMD="env XDG_RUNTIME_DIR=/run/user/$USER_ID DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$USER_ID/bus ${pkgs.systemd}/bin/systemd-run --user --quiet ${pkgs.pipewire}/bin/pw-play ${pkgs.sound-theme-freedesktop}/share/sounds/freedesktop/stereo/message.oga"
+
             if [ "$(id -u)" -eq 0 ]; then
               USER_GID=$(id -g "$PAM_USER")
-              ${pkgs.util-linux}/bin/setpriv --reuid="$USER_ID" --regid="$USER_GID" --init-groups $CMD >/dev/null 2>&1 &
+              ${pkgs.util-linux}/bin/setpriv --reuid="$USER_ID" --regid="$USER_GID" --init-groups $CMD >/dev/null 2>&1
             else
-              sh -c "$CMD >/dev/null 2>&1 &"
+              sh -c "$CMD >/dev/null 2>&1"
             fi
           fi
         fi
