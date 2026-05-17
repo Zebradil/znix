@@ -1,5 +1,39 @@
 #!/usr/bin/bash
 
+# ==============================================================================
+# Monitor Switching Architecture & Expected Behavior
+# ==============================================================================
+# 
+# This script manages monitor layouts (single, external-only, extended, mirror).
+# It can be used manually via CLI (using --pick to select with anyrun) or 
+# triggered automatically by `monitor-switch-daemon.sh` when monitor connection
+# events occur.
+#
+# Key Concepts:
+# 1. Topology: The set of physically/logically connected monitors (e.g., eDP-1,DP-8).
+#    We determine this via `hyprctl monitors all -j`. We DO NOT use DRM sysfs
+#    fallback anymore because Thunderbolt docks and KVM switches often report
+#    "connected" to sysfs even when the display is switched away.
+# 2. Preset: The desired layout (single, external-only, extended, mirror).
+# 3. State file: Saves the last applied preset and the topology it was applied to.
+#
+# Use Cases & Workflows:
+# - Manual Pick (--pick): User chooses a preset. It is applied and saved as "manual"
+#   mode for the current topology.
+# - Reconcile (--reconcile): Called by the daemon on hotplug events.
+#   - If no external monitor exists -> defaults to "single".
+#   - If an external monitor exists:
+#     - Checks if we have a saved "manual" state for the EXACT SAME topology.
+#     - If yes, restores that manual preset.
+#     - If no (or topology changed), defaults to "external-only".
+# - Default (--default): Re-applies the default logic (ignoring saved manual state).
+#
+# Fallback Monitor:
+# When all physical displays disconnect, Hyprland spawns a virtual "FALLBACK"
+# monitor so apps don't crash. We ignore FALLBACK when calculating topology, 
+# and the daemon uses it as a cue to immediately switch back to "single".
+# ==============================================================================
+
 INTERNAL="eDP-1"
 INTERNAL_SCALE="2.0"
 STATE_DIR="${XDG_RUNTIME_DIR:-/tmp}/hyprland"
@@ -9,30 +43,16 @@ is_real_external() {
   [[ -n ${1:-} && $1 != "$INTERNAL" && $1 != "FALLBACK" ]]
 }
 
-connected_monitors() {
-  local outputs=()
-  local card conn_status conn_name
-
-  for card in /sys/class/drm/card*-*; do
-    [[ -f "$card/status" ]] || continue
-    conn_status=$(<"$card/status")
-    conn_name=$(basename "$card" | sed 's/^card[0-9]*-//')
-    if [[ $conn_status == "connected" ]]; then
-      outputs+=("$conn_name")
-    fi
-  done
-
-  if [[ ${#outputs[@]} -gt 0 ]]; then
-    printf '%s\n' "${outputs[@]}" | sort -u
-  fi
-}
-
+# Returns a comma-separated list of monitor names currently known to Hyprland
 detect_topology() {
   local outputs=()
   local joined=""
   local output
 
-  mapfile -t outputs < <(connected_monitors)
+  # We strictly rely on hyprctl rather than /sys/class/drm to avoid ghosting
+  # issues with KVMs/docks that keep the physical port "connected" even when
+  # the display is switched away.
+  mapfile -t outputs < <(hyprctl monitors all -j | jq -r '[.[] | select(.name != "FALLBACK")] | map(.name) | sort | .[]')
 
   for output in "${outputs[@]}"; do
     if [[ -n $joined ]]; then
@@ -82,21 +102,13 @@ valid_preset() {
 }
 
 # Detect external monitor name.
-# First try hyprctl (works when monitor is active),
-# then fall back to DRM sysfs (works even when software-disabled).
+# We solely rely on hyprctl to avoid ghosting issues caused by KVMs/docks.
 detect_external() {
   local name
   name=$(hyprctl monitors all -j | jq -r '[.[] | select(.name != "'"$INTERNAL"'" and .name != "FALLBACK")][0].name // empty')
   if is_real_external "$name"; then
     echo "$name"
-    return
   fi
-  while IFS= read -r name; do
-    if is_real_external "$name"; then
-      echo "$name"
-      return
-    fi
-  done < <(connected_monitors)
 }
 
 external=$(detect_external)
@@ -192,8 +204,10 @@ detect_active() {
     echo "extended"
   elif ! $has_internal && $has_external; then
     echo "external-only"
-  else
+  elif $has_internal && ! $has_external; then
     echo "single"
+  else
+    echo "none"
   fi
 }
 
