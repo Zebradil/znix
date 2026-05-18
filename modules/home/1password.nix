@@ -9,6 +9,25 @@ _: {
       ...
     }:
     let
+      onePasswordStartup = pkgs.writeShellApplication {
+        name = "1password-startup";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.procps
+        ];
+        text = ''
+          log_dir="${config.xdg.stateHome}/1password"
+          mkdir -p "$log_dir"
+
+          if pgrep -x 1password >/dev/null; then
+            exit 0
+          fi
+
+          # Keep startup observable; current builds can die early on this host.
+          exec 1password --silent >>"$log_dir/startup.log" 2>&1
+        '';
+      };
+
       base =
         let
           allowedSignersFile = pkgs.writeText "allowed-signers" ''
@@ -33,7 +52,7 @@ _: {
 
       nixos = {
         programs.ssh.matchBlocks."*".identityAgent = "~/.1password/agent.sock";
-        wayland.windowManager.hyprland.settings.exec-once = [ "1password --silent" ];
+        wayland.windowManager.hyprland.settings.exec-once = [ "${lib.getExe onePasswordStartup}" ];
       };
 
       impermanence = lib.mkIf osConfig.znix.impermanence.enable {
