@@ -4,20 +4,23 @@ _: {
       lib,
       osConfig,
       pkgs,
+      isDarwin,
       ...
     }:
-    let
-      base = {
-        home.packages = with pkgs; [
-          orca-slicer
-        ];
-      };
-      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
-        home.persistence."/persist".directories = [ ".config/OrcaSlicer" ];
-      };
-    in
-    lib.mkMerge [
-      base
-      impermanence
-    ];
+    lib.mkIf (!isDarwin) (
+      let
+        base = {
+          home.packages = with pkgs; [
+            orca-slicer
+          ];
+        };
+        impermanence = lib.mkIf (osConfig.znix.impermanence.enable or false) {
+          home.persistence."/persist".directories = [ ".config/OrcaSlicer" ];
+        };
+      in
+      lib.mkMerge [
+        base
+        impermanence
+      ]
+    );
 }
