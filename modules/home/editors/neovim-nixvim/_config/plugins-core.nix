@@ -117,6 +117,11 @@
         nushell.enable = true;
         terraformls.enable = true;
         tflint.enable = true;
+        rust_analyzer = {
+          enable = true;
+          installCargo = false;
+          installRustc = false;
+        };
       };
     };
 
@@ -158,6 +163,7 @@
           html = [ "oxfmt" ];
           css = [ "oxfmt" ];
           javascript = [ "oxfmt" ];
+          rust = [ "rustfmt" ];
         };
         format_on_save = {
           timeout_ms = 3200;
