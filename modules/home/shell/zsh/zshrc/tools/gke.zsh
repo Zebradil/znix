@@ -84,14 +84,14 @@ function z:gke:np:list() (
     -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}')
 
   {
-    print "NAME\tMACHINE_TYPE\tSPOT\tAUTOSCALING\tNODES\tPODS"
+    print "NAME\tMACHINE_TYPE\tSPOT\tAUTOSCALING\tPPN\tNODES\tPODS"
     gcloud container node-pools list \
       --cluster "$cluster_name" \
       --project "$project_id" \
       --location "$location" \
-      --format='value[separator="	"](name,config.machineType,config.spot.yesno(yes=True,no=False),autoscaling.enabled.yesno(yes=True,no=False))' \
-    | while IFS=$'\t' read -r name mtype spot as; do
-        print "$name\t$mtype\t$spot\t$as\t${node_count[$name]:-0}\t${pod_count[$name]:-0}"
+      --format='value[separator="	"](name,config.machineType,config.spot.yesno(yes=True,no=False),autoscaling.enabled.yesno(yes=True,no=False),maxPodsConstraint.maxPodsPerNode)' \
+    | while IFS=$'\t' read -r name mtype spot as ppn; do
+        print "$name\t$mtype\t$spot\t$as\t${ppn:-?}\t${node_count[$name]:-0}\t${pod_count[$name]:-0}"
       done
   } | column -ts $'\t'
 )
