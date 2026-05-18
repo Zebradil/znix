@@ -47,7 +47,7 @@ _: {
             sudo.disabled = false;
             shlvl.disabled = false;
             time.disabled = false;
-            fill.symbol = " ";
+            fill.symbol = ".";
 
             # Nerd Font Symbols
             # - custom
