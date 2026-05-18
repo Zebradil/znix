@@ -18,7 +18,7 @@ _: {
             export NVIM_COMMAND=nvim-profile
             export NVIM_PROFILE_NAME=astro4
             export LANG=en_US.UTF-8
-            export LC_TIME=en_DK.UTF-8
+            export LC_TIME=en_IE.UTF-8
             export LESS='--RAW-CONTROL-CHARS --mouse --wheel-lines=3 --quit-if-one-screen --ignore-case --tabs=4'
             export MANPAGER='nvim +Man!'
             export WORKSPACE=$HOME
