@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# Retrieves all unresolved review comments from the current branch's GitHub PR.
+# Requires: gh (GitHub CLI), jq
+# Usage: gh-pr-unresolved-comments
+
+set -euo pipefail
+
+pr_json=$(gh pr view --json number) || {
+  echo "Unable to retrieve PR number." >&2
+  exit 1
+}
+pr_number=$(echo "$pr_json" | jq -r '.number')
+
+repo_json=$(gh repo view --json owner,name)
+owner=$(echo "$repo_json" | jq -r '.owner.login')
+repo=$(echo "$repo_json" | jq -r '.name')
+
+echo "# PR Context"
+echo "owner: $owner"
+echo "repo: $repo"
+echo "pr_number: $pr_number"
+echo ""
+
+# Paginate through all review threads (PRs with >100 threads only get first
+# page without pagination, silently missing later threads).
+all_nodes='[]'
+cursor=""
+first_page=true
+
+while true; do
+  # shellcheck disable=SC2016
+  response=$(gh api graphql \
+    -f query='
+query($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $pr) {
+      reviewThreads(first: 100, after: $cursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id
+          isResolved
+          isOutdated
+          path
+          line
+          comments(first: 100) {
+            nodes {
+              id
+              databaseId
+              body
+              author {
+                login
+              }
+              createdAt
+              path
+              line
+              url
+            }
+          }
+        }
+      }
+    }
+  }
+}' \
+    -f owner="$owner" \
+    -f repo="$repo" \
+    -F pr="$pr_number" \
+    -f cursor="$cursor")
+
+  if echo "$response" | jq -e '.errors' >/dev/null 2>&1; then
+    echo "GitHub GraphQL API returned errors:" >&2
+    echo "$response" | jq '.errors' >&2
+    exit 1
+  fi
+
+  if $first_page && echo "$response" | jq -e '.data.repository.pullRequest == null' >/dev/null 2>&1; then
+    echo "GraphQL returned no pullRequest data for $owner/$repo#$pr_number — check repo access/visibility." >&2
+    exit 1
+  fi
+  first_page=false
+
+  page_nodes=$(echo "$response" | jq '.data.repository.pullRequest.reviewThreads.nodes')
+  all_nodes=$(jq -n --argjson acc "$all_nodes" --argjson page "$page_nodes" '$acc + $page')
+
+  has_next=$(echo "$response" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
+  [[ "$has_next" == "true" ]] || break
+  cursor=$(echo "$response" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor')
+done
+
+unresolved=$(echo "$all_nodes" | jq '[.[] | select(.isResolved == false)] | length')
+
+if [[ "$unresolved" -eq 0 ]]; then
+  echo "No unresolved review threads."
+  exit 0
+fi
+
+echo "$all_nodes" | jq -r '
+  map(select(.isResolved == false))
+  | map("## File: " + (.path // "—") + ":" + (if .line == null then "—" else (.line | tostring) end) + "\n\n" +
+      ([ .comments.nodes | sort_by(.createdAt) | .[]
+        | "### By @" + (.author.login // "unknown") + " at " + .createdAt + " <" + .url + "> [databaseId: " + (.databaseId | tostring) + "]\n" +
+          (.body // "") + "\n\n"
+      ] | add)
+    )
+  | join("---\n\n")
+'

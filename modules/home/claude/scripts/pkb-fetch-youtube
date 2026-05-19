@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# pkb-fetch-youtube <URL> — fetch metadata + auto-subs for a YouTube URL,
+# emit one JSON blob to stdout with the cleaned transcript. Cleans /tmp/yt-*
+# before exit. No fallbacks — yt-dlp must be installed.
+set -euo pipefail
+
+URL="${1:?usage: pkb-fetch-youtube <URL>}"
+
+for tool in yt-dlp jq; do
+  command -v "$tool" >/dev/null 2>&1 || {
+    echo "ERROR: '$tool' not installed. Install it (e.g. nix profile install nixpkgs#$tool) and retry." >&2
+    exit 1
+  }
+done
+
+WORK=$(mktemp -d -t pkb-yt-XXXXXX)
+trap 'rm -rf "$WORK"' EXIT
+
+# One yt-dlp invocation: writes JSON sidecar + .vtt subs, no media download.
+yt-dlp \
+  --skip-download \
+  --write-info-json \
+  --write-subs --write-auto-subs \
+  --sub-lang 'en.*' --sub-format vtt \
+  --no-warnings --quiet \
+  -o "$WORK/yt.%(ext)s" \
+  "$URL" >&2 || {
+    echo "ERROR: yt-dlp failed for $URL" >&2
+    exit 1
+  }
+
+INFO_JSON=$(ls "$WORK"/*.info.json 2>/dev/null | head -n1 || true)
+[[ -n "$INFO_JSON" ]] || {
+  echo "ERROR: no info JSON produced by yt-dlp" >&2
+  exit 1
+}
+
+VTT=$(ls "$WORK"/*.vtt 2>/dev/null | head -n1 || true)
+has_subs=false
+transcript=""
+if [[ -n "$VTT" ]]; then
+  has_subs=true
+  # Strip WEBVTT header, NOTE blocks, cue numbers, timestamps, inline tags;
+  # then dedupe consecutive duplicate lines (rolling captions).
+  transcript=$(
+    awk '
+      /^WEBVTT/ {next}
+      /^Kind:/ {next}
+      /^Language:/ {next}
+      /^NOTE/ {skip=1; next}
+      skip && /^$/ {skip=0; next}
+      skip {next}
+      /-->/ {next}
+      /^[0-9]+$/ {next}
+      {gsub(/<[^>]*>/, ""); gsub(/&nbsp;/, " "); print}
+    ' "$VTT" \
+      | sed 's/[[:space:]]\+/ /g; s/^ //; s/ $//' \
+      | awk 'NF && $0 != prev {print; prev=$0}'
+  )
+fi
+
+jq -n \
+  --slurpfile info "$INFO_JSON" \
+  --arg transcript "$transcript" \
+  --argjson has_subs "$has_subs" \
+  '{
+    id:           $info[0].id,
+    title:        $info[0].title,
+    channel:      $info[0].channel,
+    duration:     $info[0].duration,
+    upload_date:  $info[0].upload_date,
+    description:  $info[0].description,
+    has_subs:     $has_subs,
+    transcript:   $transcript
+  }'

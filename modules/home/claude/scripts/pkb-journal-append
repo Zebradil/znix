@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# pkb-journal-append <basename> <summary>
+# Append "- Captured [[<basename>]] — <summary>" to today's journal under
+# ## Log. Create the journal from templates/daily.md if missing.
+# Prints the absolute path of the journal file on success.
+set -euo pipefail
+
+KNOW_ROOT="${KNOW_ROOT:-/home/zebradil/code/github.com/zebradil/know}"
+BASENAME="${1:?usage: pkb-journal-append <basename> <summary>}"
+SUMMARY="${2:?usage: pkb-journal-append <basename> <summary>}"
+
+today=$(date +%Y-%m-%d)
+year=$(date +%Y)
+month=$(date +%m)
+weekday=$(date +%A)
+
+dir="$KNOW_ROOT/journal/$year/$month"
+file="$dir/$today.md"
+template="$KNOW_ROOT/templates/daily.md"
+
+mkdir -p "$dir"
+
+if [[ ! -f "$file" ]]; then
+  if [[ -f "$template" ]]; then
+    sed \
+      -e "s/{{date:YYYY-MM-DD}}/$today/g" \
+      -e "s/{{date:dddd}}/$weekday/g" \
+      "$template" > "$file"
+  else
+    cat > "$file" <<EOF
+---
+tags: []
+---
+
+# $today $weekday
+
+## Log
+
+-
+EOF
+  fi
+fi
+
+# Ensure ## Log section exists.
+if ! rg -q '^## Log$' "$file"; then
+  printf '\n## Log\n\n-\n' >> "$file"
+fi
+
+line="- Captured [[$BASENAME]] — $SUMMARY"
+
+# Insert the line after the "## Log" heading. If the placeholder "-"
+# (single dash on its own line) follows immediately, replace it; otherwise
+# append after any existing log entries.
+awk -v line="$line" '
+  BEGIN { inlog=0; inserted=0 }
+  /^## Log$/ { print; inlog=1; next }
+  inlog && !inserted && /^## / { print line; print ""; inserted=1; inlog=0; print; next }
+  inlog && !inserted && /^-[[:space:]]*$/ { print line; inserted=1; next }
+  { print }
+  END {
+    if (inlog && !inserted) {
+      print line
+    }
+  }
+' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+
+printf '%s\n' "$file"

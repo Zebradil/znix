@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# pkb-related <kw1> [kw2 ...] — print absolute paths of PKB notes
+# matching any of the keywords (per _pkb-routing.md §7). One per line.
+set -euo pipefail
+
+KNOW_ROOT="${KNOW_ROOT:-/home/zebradil/code/github.com/zebradil/know}"
+
+command -v rg >/dev/null 2>&1 || {
+  echo "ERROR: 'rg' not installed. Install it (e.g. nix profile install nixpkgs#ripgrep) and retry." >&2
+  exit 1
+}
+
+(( $# > 0 )) || {
+  echo "usage: pkb-related <keyword> [keyword ...]" >&2
+  exit 1
+}
+
+args=()
+for kw in "$@"; do
+  args+=(-e "$kw")
+done
+
+rg -l -i --glob '!archive' --glob '!templates' "${args[@]}" "$KNOW_ROOT" 2>/dev/null || true

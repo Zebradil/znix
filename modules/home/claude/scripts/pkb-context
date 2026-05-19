@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# pkb-context — emit one JSON blob with PKB constants, existing tags,
+# reference subdirs, and project slugs. Single call replaces multiple
+# date/rg/ls invocations from the skill body.
+set -euo pipefail
+
+KNOW_ROOT="${KNOW_ROOT:-/home/zebradil/code/github.com/zebradil/know}"
+
+for tool in rg jq fd; do
+  command -v "$tool" >/dev/null 2>&1 || {
+    echo "ERROR: '$tool' not installed. Install it (e.g. nix profile install nixpkgs#$tool) and retry." >&2
+    exit 1
+  }
+done
+
+[[ -d "$KNOW_ROOT" ]] || {
+  echo "ERROR: KNOW_ROOT does not exist: $KNOW_ROOT" >&2
+  exit 1
+}
+
+today=$(date +%Y-%m-%d)
+now_min=$(date +%Y-%m-%dT%H:%M)
+
+tags_json=$(
+  rg --no-filename --no-line-number '^tags:' "$KNOW_ROOT" \
+    --glob '!archive' --glob '!templates' 2>/dev/null \
+    | sed 's/^tags:[[:space:]]*//' | tr -d '[]' | tr ',' '\n' \
+    | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' \
+    | rg -v '^$' | sort -u | jq -R . | jq -s .
+)
+
+ref_domains_json=$(
+  if [[ -d "$KNOW_ROOT/reference" ]]; then
+    fd --type d --max-depth 1 --base-directory "$KNOW_ROOT/reference" \
+      | sed 's:/$::' | sort -u | jq -R . | jq -s .
+  else
+    echo '[]'
+  fi
+)
+
+project_slugs_json=$(
+  if [[ -d "$KNOW_ROOT/projects" ]]; then
+    fd --max-depth 1 --base-directory "$KNOW_ROOT/projects" \
+      | sed 's:/$::; s:\.md$::' | sort -u | jq -R . | jq -s .
+  else
+    echo '[]'
+  fi
+)
+
+jq -n \
+  --arg know_root "$KNOW_ROOT" \
+  --arg today "$today" \
+  --arg now_min "$now_min" \
+  --argjson tags "$tags_json" \
+  --argjson reference_domains "$ref_domains_json" \
+  --argjson project_slugs "$project_slugs_json" \
+  '{know_root:$know_root, today:$today, now_min:$now_min, tags:$tags, reference_domains:$reference_domains, project_slugs:$project_slugs}'
