@@ -254,11 +254,23 @@ function z:gke:np:drain-delete() (
     fi
 
     if $taint_pool; then
-      # --node-taints REPLACES the pool's taints; acceptable since the pool is
-      # about to be deleted. This taint applies to NEW nodes only; existing nodes
-      # are handled by drain-nodes --cordon.
-      log::info "Tainting node pool $np (zebradil.dev/draining=true:NoSchedule) ..."
-      z:gke:np:do update $np --node-taints=zebradil.dev/draining=true:NoSchedule
+      # Appends the draining taint to whatever the pool already has.
+      log::info "Appending taint zebradil.dev/draining=true:NoSchedule to node pool $np ..."
+      local merged_taints
+      merged_taints=$(
+        z:gke:np:do describe $np --format=json \
+          | jq -r '
+              (.config.taints // [])
+              | map(select(.key != "zebradil.dev/draining"))
+              | map("\(.key)=\(.value):" + (
+                  {NO_SCHEDULE:"NoSchedule",
+                   PREFER_NO_SCHEDULE:"PreferNoSchedule",
+                   NO_EXECUTE:"NoExecute"}[.effect] // .effect))
+              + ["zebradil.dev/draining=true:NoSchedule"]
+              | join(",")
+            '
+      )
+      z:gke:np:do update $np --node-taints="$merged_taints" --quiet
     fi
 
     log::info "Disabling autoscaling and autorepair on node pool $np ..."
