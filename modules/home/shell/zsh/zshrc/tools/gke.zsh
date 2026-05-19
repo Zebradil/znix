@@ -244,7 +244,7 @@ function z:gke:np:drain-delete() (
   local idx=0
   local np
   for np in "${resolved[@]}"; do
-    (( idx++ ))
+    (( ++idx ))
     log::info "===== Processing node pool $np ($idx/$total) ====="
 
     local -a nodes=("${(@f)$(z:gke:np:nodes $np)}")
