@@ -278,16 +278,18 @@ for i in "${!nodes[@]}"; do
     else
         log::info "$MSG"
         log::say "Draining node"
-        drain_output=""
-        if drain_output=$(kubectl drain --delete-emptydir-data --ignore-daemonsets "$n" 2>&1); then
-            echo "$drain_output"
-        elif [[ "$drain_output" == *"NotFound"* ]] || [[ "$drain_output" == *"not found"* ]]; then
+        drain_log=$(mktemp)
+        if kubectl drain --delete-emptydir-data --ignore-daemonsets "$n" 2>&1 | tee "$drain_log"; then
+            :
+        elif grep -qE 'NotFound|not found' "$drain_log"; then
             log::info "Node $n is already gone (likely deleted by the cluster autoscaler); skipping"
+            rm -f "$drain_log"
             continue
         else
-            log::err "$drain_output"
+            rm -f "$drain_log"
             exit 1
         fi
+        rm -f "$drain_log"
         if $DELETE; then
             read -r project zone <<<"$(
                 kubectl get node "$n" \
@@ -297,19 +299,20 @@ for i in "${!nodes[@]}"; do
             group="${n%-*}-grp"
             log::info "Deleting node $n from $project/$zone/$group group"
             log::say "Deleting node"
-            delete_output=""
-            if delete_output=$(gcloud compute instance-groups managed delete-instances \
+            delete_log=$(mktemp)
+            if gcloud compute instance-groups managed delete-instances \
                 --project="$project" \
                 --zone="$zone" \
                 --instances="$n" \
-                "$group" 2>&1); then
-                echo "$delete_output"
-            elif [[ "$delete_output" == *"already being deleted"* ]]; then
+                "$group" 2>&1 | tee "$delete_log"; then
+                :
+            elif grep -q 'already being deleted' "$delete_log"; then
                 log::info "Node $n is already being deleted (likely by the cluster autoscaler); skipping"
             else
-                log::err "$delete_output"
+                rm -f "$delete_log"
                 exit 1
             fi
+            rm -f "$delete_log"
         fi
     fi
     log::success "Node $nID is drained"

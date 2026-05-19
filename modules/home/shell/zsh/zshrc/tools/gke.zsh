@@ -198,11 +198,12 @@ function z:gke:np:nodes:with-pods() (
 #  - For non-empty pools: optionally taint, disable autoscaling/autorepair,
 #    drain all nodes, then delete the pool
 #  - Pools are processed one by one in order
-# Usage: z:gke:np:drain-delete <node-pool|->... [--taint-pool] [drain-nodes-args...]
+# Usage: z:gke:np:drain-delete <node-pool|->... [--taint-pool] [--yes|-y] [drain-nodes-args...]
 # Args:
 #   <node-pool|->...       one or more pool names; '-' opens a multi-select fzf picker
 #   --taint-pool           apply zebradil.dev/draining=true:NoSchedule to the pool
 #                          so any nodes GKE spawns during drain are unschedulable
+#   --yes, -y              suppress gcloud confirmation prompts on update/delete calls
 #   [drain-nodes-args...]  additional arguments to pass to drain-nodes
 function z:gke:np:drain-delete() (
   set -euo pipefail
@@ -231,10 +232,11 @@ function z:gke:np:drain-delete() (
   (( ${#resolved[@]} == 0 )) && return 1
 
   local taint_pool=false
-  local -a drain_args=()
+  local -a drain_args=() gcloud_yes_args=()
   while (( $# > 0 )); do
     case "$1" in
       --taint-pool) taint_pool=true ;;
+      --yes|-y)     gcloud_yes_args=(--quiet) ;;
       *)            drain_args+=("$1") ;;
     esac
     shift
@@ -252,7 +254,7 @@ function z:gke:np:drain-delete() (
 
     if (( ${#nodes[@]} == 0 )); then
       log::info "Node pool $np has 0 nodes — deleting directly"
-      z:gke:np:do delete $np
+      z:gke:np:do delete $np "${gcloud_yes_args[@]}"
       continue
     fi
 
@@ -283,15 +285,15 @@ function z:gke:np:drain-delete() (
 
     log::info "Disabling autoscaling and autorepair on node pool $np ..."
     # Workaround for fantom autoscaling noticed in GKE v1.35: before disabling autoscaling set max nodes to 0
-    z:gke:np:do update $np --total-min-nodes=0 --total-max-nodes=0
-    z:gke:np:do update $np --no-enable-autoscaling
-    z:gke:np:do update $np --no-enable-autorepair
+    z:gke:np:do update $np --total-min-nodes=0 --total-max-nodes=0 "${gcloud_yes_args[@]}"
+    z:gke:np:do update $np --no-enable-autoscaling "${gcloud_yes_args[@]}"
+    z:gke:np:do update $np --no-enable-autorepair "${gcloud_yes_args[@]}"
 
     log::info "Draining and deleting ${#nodes[@]} node(s) in node pool $np ..."
     printf '%s\n' "${nodes[@]}" | drain-nodes --delete "${drain_args[@]}"
 
     log::info "Deleting node pool $np ..."
-    z:gke:np:do delete $np
+    z:gke:np:do delete $np "${gcloud_yes_args[@]}"
   done
 )
 
