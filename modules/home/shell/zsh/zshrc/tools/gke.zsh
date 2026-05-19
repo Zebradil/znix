@@ -264,7 +264,12 @@ function z:gke:np:drain-delete() (
         z:gke:np:do describe $np --format=json \
           | jq -r '
               (.config.taints // [])
-              | map(select(.key != "zebradil.dev/draining"))
+              | map(select(
+                  .key != "zebradil.dev/draining"
+                  and (.key | startswith("kubernetes.io/") | not)
+                  and (.key | startswith("node.kubernetes.io/") | not)
+                  and (.key | startswith("node-role.kubernetes.io/") | not)
+                ))
               | map("\(.key)=\(.value):" + (
                   {NO_SCHEDULE:"NoSchedule",
                    PREFER_NO_SCHEDULE:"PreferNoSchedule",
