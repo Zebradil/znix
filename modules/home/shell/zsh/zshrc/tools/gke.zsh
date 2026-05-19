@@ -92,7 +92,7 @@ function z:gke:np:list() (
       --format='value[separator="	"](name,config.machineType,config.spot.yesno(yes=True,no=False),autoscaling.enabled.yesno(yes=True,no=False),maxPodsConstraint.maxPodsPerNode)' \
     | while IFS=$'\t' read -r name mtype spot as ppn; do
         print "$name\t$mtype\t$spot\t$as\t${ppn:-?}\t${node_count[$name]:-0}\t${pod_count[$name]:-0}"
-      done
+      done | sort
   } | column -ts $'\t'
 )
 
@@ -129,20 +129,26 @@ function z:gke:np:do() (
 )
 
 # Interactively select a node pool to operate on
-# Usage: z:gke:np:select
+# Usage: z:gke:np:select [--multi]
+# Args:
+#   --multi  allow selecting multiple node pools (one name per output line)
 function z:gke:np:select() (
   set -euo pipefail
-  local np list
+  local multi=false
+  [[ ${1:-} == "--multi" ]] && multi=true
+  local list selected
   list=$(z:gke:np:list)
   if [[ -z $list ]]; then
     return 1
   fi
-  np=$(echo "$list" | fzf --header-lines=1 | awk '{print $1}')
-  if [[ -z $np ]]; then
+  local -a fzf_args=(--header-lines=1)
+  $multi && fzf_args+=(--multi)
+  selected=$(echo "$list" | fzf "${fzf_args[@]}" | awk '{print $1}')
+  if [[ -z $selected ]]; then
     log::error "No node pool selected"
     return 1
   fi
-  echo "$np"
+  echo "$selected"
 )
 
 # Print all nodes in a node pool
@@ -186,28 +192,43 @@ function z:gke:np:nodes:with-pods() (
   done
 )
 
-# Drain and delete a node pool:
-#  - Select a node pool interactively if not provided
-#  - Optionally taint the pool (NoSchedule) so new nodes are unschedulable
-#  - Disable autoscaling
-#  - Drain all nodes in the node pool and delete them
-#  - Delete the node pool
-# Usage: z:gke:np:drain-delete <node-pool|-> [--taint-pool] [drain-nodes-args...]
+# Drain and delete one or more node pools:
+#  - Select node pools interactively if '-' is given
+#  - Pools with 0 nodes are deleted directly (no drain steps)
+#  - For non-empty pools: optionally taint, disable autoscaling/autorepair,
+#    drain all nodes, then delete the pool
+#  - Pools are processed one by one in order
+# Usage: z:gke:np:drain-delete <node-pool|->... [--taint-pool] [drain-nodes-args...]
 # Args:
-#   <node-pool|->          node pool name or '-' to select interactively
+#   <node-pool|->...       one or more pool names; '-' opens a multi-select fzf picker
 #   --taint-pool           apply zebradil.dev/draining=true:NoSchedule to the pool
 #                          so any nodes GKE spawns during drain are unschedulable
 #   [drain-nodes-args...]  additional arguments to pass to drain-nodes
 function z:gke:np:drain-delete() (
   set -euo pipefail
-  local np=${1:?node pool missing}
-  shift
-  if [[ $np == "-" ]]; then
-    np=$(z:gke:np:select)
-  fi
-  if [[ -z $np ]]; then
+
+  local -a pools=()
+  while (( $# > 0 )) && [[ $1 != --* ]]; do
+    pools+=("$1")
+    shift
+  done
+  if (( ${#pools[@]} == 0 )); then
+    log::error "node pool missing"
     return 1
   fi
+
+  local -a resolved=()
+  local p picked_lines
+  for p in "${pools[@]}"; do
+    if [[ $p == "-" ]]; then
+      picked_lines=("${(@f)$(z:gke:np:select --multi)}")
+      (( ${#picked_lines[@]} == 0 )) && return 1
+      resolved+=("${picked_lines[@]}")
+    else
+      resolved+=("$p")
+    fi
+  done
+  (( ${#resolved[@]} == 0 )) && return 1
 
   local taint_pool=false
   local -a drain_args=()
@@ -219,22 +240,38 @@ function z:gke:np:drain-delete() (
     shift
   done
 
-  if $taint_pool; then
-    # --node-taints REPLACES the pool's taints; acceptable since the pool is
-    # about to be deleted. This taint applies to NEW nodes only; existing nodes
-    # are handled by drain-nodes --cordon.
-    log::info "Tainting node pool $np (zebradil.dev/draining=true:NoSchedule) ..."
-    z:gke:np:do update $np --node-taints=zebradil.dev/draining=true:NoSchedule
-  fi
+  local np
+  for np in "${resolved[@]}"; do
+    log::info "===== Processing node pool $np ====="
 
-  log::info "Disabling autoscaling and autorepair on node pool $np ..."
-  # Workaround for fantom autoscaling noticed in GKE v1.35: before disabling autoscaling set max nodes to 0
-  z:gke:np:do update $np --total-min-nodes=0 --total-max-nodes=0
-  z:gke:np:do update $np --no-enable-autoscaling
-  z:gke:np:do update $np --no-enable-autorepair
-  log::info "Draining and deleting nodes in node pool $np ..."
-  z:gke:np:nodes $np | drain-nodes --delete "${drain_args[@]}"
-  log::info "Deleting node pool $np ..."
-  z:gke:np:do delete $np
+    local -a nodes=("${(@f)$(z:gke:np:nodes $np)}")
+    (( ${#nodes[@]} == 1 )) && [[ -z ${nodes[1]} ]] && nodes=()
+
+    if (( ${#nodes[@]} == 0 )); then
+      log::info "Node pool $np has 0 nodes — deleting directly"
+      z:gke:np:do delete $np
+      continue
+    fi
+
+    if $taint_pool; then
+      # --node-taints REPLACES the pool's taints; acceptable since the pool is
+      # about to be deleted. This taint applies to NEW nodes only; existing nodes
+      # are handled by drain-nodes --cordon.
+      log::info "Tainting node pool $np (zebradil.dev/draining=true:NoSchedule) ..."
+      z:gke:np:do update $np --node-taints=zebradil.dev/draining=true:NoSchedule
+    fi
+
+    log::info "Disabling autoscaling and autorepair on node pool $np ..."
+    # Workaround for fantom autoscaling noticed in GKE v1.35: before disabling autoscaling set max nodes to 0
+    z:gke:np:do update $np --total-min-nodes=0 --total-max-nodes=0
+    z:gke:np:do update $np --no-enable-autoscaling
+    z:gke:np:do update $np --no-enable-autorepair
+
+    log::info "Draining and deleting ${#nodes[@]} node(s) in node pool $np ..."
+    printf '%s\n' "${nodes[@]}" | drain-nodes --delete "${drain_args[@]}"
+
+    log::info "Deleting node pool $np ..."
+    z:gke:np:do delete $np
+  done
 )
 
