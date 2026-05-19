@@ -240,9 +240,12 @@ function z:gke:np:drain-delete() (
     shift
   done
 
+  local total=${#resolved[@]}
+  local idx=0
   local np
   for np in "${resolved[@]}"; do
-    log::info "===== Processing node pool $np ====="
+    (( idx++ ))
+    log::info "===== Processing node pool $np ($idx/$total) ====="
 
     local -a nodes=("${(@f)$(z:gke:np:nodes $np)}")
     (( ${#nodes[@]} == 1 )) && [[ -z ${nodes[1]} ]] && nodes=()
