@@ -198,13 +198,22 @@ function z:gke:np:nodes:with-pods() (
 #  - For non-empty pools: optionally taint, disable autoscaling/autorepair,
 #    drain all nodes, then delete the pool
 #  - Pools are processed one by one in order
-# Usage: z:gke:np:drain-delete <node-pool|->... [--taint-pool] [--yes|-y] [drain-nodes-args...]
+# Usage: z:gke:np:drain-delete <node-pool|->... [--taint-pool] [--yes|-y] [--notify[=<channel>[:<thread_ts>]]] [--no-notify] [drain-nodes-args...]
 # Args:
 #   <node-pool|->...       one or more pool names; '-' opens a multi-select fzf picker
 #   --taint-pool           apply zebradil.dev/draining=true:NoSchedule to the pool
 #                          so any nodes GKE spawns during drain are unschedulable
 #   --yes, -y              suppress gcloud confirmation prompts on update/delete calls
 #   [drain-nodes-args...]  additional arguments to pass to drain-nodes
+# Notifications (Slack):
+#   Configure via env:
+#     ZNIX_SLACK_TOKEN_OP_REF  1Password ref to the bot token (required when notifying)
+#     ZNIX_SLACK_CHANNEL       channel id, or "<channel>:<thread_ts>" to pin to a thread
+#     ZNIX_SLACK_USER_HANDLE   optional mention prefix (e.g. "<@U0123456789>")
+#   --notify[=<channel>[:<thread_ts>]]  enable; override channel/thread if given
+#   --no-notify                         skip without prompting
+#   With neither flag the function prompts once for the whole run; answering
+#   "yes" with required env unset aborts with an error.
 function z:gke:np:drain-delete() (
   set -euo pipefail
 
@@ -232,30 +241,71 @@ function z:gke:np:drain-delete() (
   (( ${#resolved[@]} == 0 )) && return 1
 
   local taint_pool=false
+  local notify_flag=""
+  # notify_channel may be "<channel>" or "<channel>:<thread_ts>" — z:slack:post
+  # and z:slack:update both accept the combined form.
+  local notify_channel="${ZNIX_SLACK_CHANNEL:-}"
   local -a drain_args=() gcloud_yes_args=()
   while (( $# > 0 )); do
     case "$1" in
       --taint-pool) taint_pool=true ;;
       --yes|-y)     gcloud_yes_args=(--quiet) ;;
-      *)            drain_args+=("$1") ;;
+      --no-notify)  notify_flag="no" ;;
+      --notify)     notify_flag="yes" ;;
+      --notify=*)
+        notify_flag="yes"
+        notify_channel="${1#--notify=}"
+        ;;
+      *) drain_args+=("$1") ;;
     esac
     shift
   done
 
-  local total=${#resolved[@]}
-  local idx=0
-  local np
-  for np in "${resolved[@]}"; do
-    (( ++idx ))
-    log::info "===== Processing node pool $np ($idx/$total) ====="
+  local notify=false
+  if [[ $notify_flag == "no" ]]; then
+    notify=false
+  elif [[ $notify_flag == "yes" ]]; then
+    notify=true
+  else
+    if read -q "REPLY?Send Slack notifications? [y/N] "; then
+      notify=true
+    fi
+    print
+  fi
 
+  local slack_token=""
+  if $notify; then
+    if [[ -z ${ZNIX_SLACK_TOKEN_OP_REF:-} ]]; then
+      log::error "Slack notifications requested but ZNIX_SLACK_TOKEN_OP_REF is not set"
+      return 1
+    fi
+    if [[ -z $notify_channel ]]; then
+      log::error "Slack notifications requested but no channel configured (set ZNIX_SLACK_CHANNEL or use --notify=<channel>)"
+      return 1
+    fi
+    slack_token=$(op read "$ZNIX_SLACK_TOKEN_OP_REF") || {
+      log::error "Failed to fetch Slack bot token from 1Password"
+      return 1
+    }
+  fi
+
+  local cluster_name info
+  info=$(z:gke:cluster:info)
+  if [[ -z $info ]]; then
+    return 1
+  fi
+  read -r cluster_name _ _ <<< "$info"
+
+  function _process_pool() (
+    set -euo pipefail
+    local np=$1
     local -a nodes=("${(@f)$(z:gke:np:nodes $np)}")
     (( ${#nodes[@]} == 1 )) && [[ -z ${nodes[1]} ]] && nodes=()
 
     if (( ${#nodes[@]} == 0 )); then
       log::info "Node pool $np has 0 nodes — deleting directly"
       z:gke:np:do delete $np "${gcloud_yes_args[@]}"
-      continue
+      return
     fi
 
     if $taint_pool; then
@@ -294,6 +344,35 @@ function z:gke:np:drain-delete() (
 
     log::info "Deleting node pool $np ..."
     z:gke:np:do delete $np "${gcloud_yes_args[@]}"
+  )
+
+  local total=${#resolved[@]}
+  local idx=0
+  local np
+  for np in "${resolved[@]}"; do
+    (( ++idx ))
+    log::info "===== Processing node pool $np ($idx/$total) ====="
+
+    local slack_ts="" slack_text=""
+    if $notify; then
+      local -a nodes_preview=("${(@f)$(z:gke:np:nodes $np 2>/dev/null)}")
+      (( ${#nodes_preview[@]} == 1 )) && [[ -z ${nodes_preview[1]} ]] && nodes_preview=()
+      local node_count=${#nodes_preview[@]}
+      if (( node_count == 0 )); then
+        slack_text="${ZNIX_SLACK_USER_HANDLE:+${ZNIX_SLACK_USER_HANDLE} }:progress-bubble: Deleting empty node pool \`${np}\` in \`${cluster_name}\` cluster."
+      else
+        slack_text="${ZNIX_SLACK_USER_HANDLE:+${ZNIX_SLACK_USER_HANDLE} }:progress-bubble: Draining and deleting node pool \`${np}\` in \`${cluster_name}\` cluster (${node_count} node(s))."
+      fi
+      slack_ts=$(z:slack:post "$slack_token" "$notify_channel" "$slack_text") || slack_ts=""
+    fi
+
+    if _process_pool "$np"; then
+      [[ -n $slack_ts ]] && z:slack:update "$slack_token" "$notify_channel" "$slack_ts" "${slack_text//:progress-bubble:/:check:}" || true
+    else
+      [[ -n $slack_ts ]] && z:slack:update "$slack_token" "$notify_channel" "$slack_ts" "${slack_text//:progress-bubble:/:x:}" || true
+      log::error "Failed to process node pool $np"
+      return 1
+    fi
   done
 )
 
