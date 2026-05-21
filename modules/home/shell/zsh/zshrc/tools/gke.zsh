@@ -342,13 +342,26 @@ function z:gke:np:drain-delete() (
     log::info "Draining and deleting ${#nodes[@]} node(s) in node pool $np ..."
     printf '%s\n' "${nodes[@]}" | drain-nodes --delete "${drain_args[@]}"
 
-    log::info "Verifying node pool $np is empty before deletion ..."
+    log::info "Verifying node pool $np has no unexpected nodes before deletion ..."
     local -a remaining=("${(@f)$(z:gke:np:nodes $np)}")
     (( ${#remaining[@]} == 1 )) && [[ -z ${remaining[1]} ]] && remaining=()
-    if (( ${#remaining[@]} > 0 )); then
-      log::error "Refusing to delete node pool $np: ${#remaining[@]} node(s) still present after drain:"
-      printf '  - %s\n' "${remaining[@]}" >&2
+
+    local -A processed=()
+    local n
+    for n in "${nodes[@]}"; do processed[$n]=1; done
+    local -a unexpected=()
+    for n in "${remaining[@]}"; do
+      [[ -z ${processed[$n]:-} ]] && unexpected+=("$n")
+    done
+
+    if (( ${#unexpected[@]} > 0 )); then
+      log::error "Refusing to delete node pool $np: ${#unexpected[@]} unexpected node(s) present (not part of the originally-drained set):"
+      printf '  - %s\n' "${unexpected[@]}" >&2
       return 1
+    fi
+
+    if (( ${#remaining[@]} > 0 )); then
+      log::info "Node pool $np has ${#remaining[@]} lingering K8s Node object(s) from drained nodes; proceeding (cloud-controller-manager will GC them)."
     fi
 
     log::info "Deleting node pool $np ..."
