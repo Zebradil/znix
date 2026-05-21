@@ -102,9 +102,10 @@ in
         enabled = lib.filterAttrs (_: p: p.enable) profiles;
         assetsRoot = osConfig.znix.claude.assetsRoot;
         knowRoot =
-          if osConfig.znix.claude.knowRoot != null
-          then osConfig.znix.claude.knowRoot
-          else "${config.home.homeDirectory}/code/github.com/zebradil/know";
+          if osConfig.znix.claude.knowRoot != null then
+            osConfig.znix.claude.knowRoot
+          else
+            "${config.home.homeDirectory}/code/github.com/zebradil/know";
 
         mkWrapper =
           name: profile:
@@ -180,13 +181,16 @@ in
             sessionVariables.KNOW_ROOT = knowRoot;
 
             file = lib.mkMerge (
-              lib.mapAttrsToList (name: profile: {
-                "${profile.configDir}/CLAUDE.md".source = "${assetsRoot}/CLAUDE.md";
-                "${profile.configDir}/statusline-command.sh".source = "${assetsRoot}/statusline-command.sh";
-              }
-              // mkCategoryFiles profile "skills"
-              // mkCategoryFiles profile "agents"
-              // mkCategoryFiles profile "commands") enabled
+              lib.mapAttrsToList (
+                name: profile:
+                {
+                  "${profile.configDir}/CLAUDE.md".source = "${assetsRoot}/CLAUDE.md";
+                  "${profile.configDir}/statusline-command.sh".source = "${assetsRoot}/statusline-command.sh";
+                }
+                // mkCategoryFiles profile "skills"
+                // mkCategoryFiles profile "agents"
+                // mkCategoryFiles profile "commands"
+              ) enabled
             );
             activation = lib.mkMerge (
               lib.mapAttrsToList (
