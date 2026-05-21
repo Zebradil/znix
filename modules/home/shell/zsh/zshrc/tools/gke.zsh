@@ -349,6 +349,7 @@ function z:gke:np:drain-delete() (
   local total=${#resolved[@]}
   local idx=0
   local np
+  local -a succeeded=() failed=()
   for np in "${resolved[@]}"; do
     (( ++idx ))
     log::info "===== Processing node pool $np ($idx/$total) ====="
@@ -368,11 +369,28 @@ function z:gke:np:drain-delete() (
 
     if _process_pool "$np"; then
       [[ -n $slack_ts ]] && z:slack:update "$slack_token" "$notify_channel" "$slack_ts" "${slack_text//:progress-bubble:/:check:}" || true
+      succeeded+=("$np")
     else
       [[ -n $slack_ts ]] && z:slack:update "$slack_token" "$notify_channel" "$slack_ts" "${slack_text//:progress-bubble:/:x:}" || true
       log::error "Failed to process node pool $np"
-      return 1
+      failed+=("$np")
     fi
   done
+
+  if $notify; then
+    local summary_icon summary_text
+    if (( ${#failed[@]} == 0 )); then
+      summary_icon=":check:"
+      summary_text="${ZNIX_SLACK_USER_HANDLE:+${ZNIX_SLACK_USER_HANDLE} }${summary_icon} Finished draining \`${cluster_name}\`: ${#succeeded[@]}/${total} node pool(s) processed successfully."
+    else
+      summary_icon=":x:"
+      local failed_list="${(j:, :)${failed[@]/#/\`}/%/\`}"
+      summary_text="${ZNIX_SLACK_USER_HANDLE:+${ZNIX_SLACK_USER_HANDLE} }${summary_icon} Finished draining \`${cluster_name}\`: ${#succeeded[@]}/${total} succeeded, ${#failed[@]} failed (${failed_list})."
+    fi
+    z:slack:post "$slack_token" "$notify_channel" "$summary_text" >/dev/null || true
+  fi
+
+  (( ${#failed[@]} > 0 )) && return 1
+  return 0
 )
 
