@@ -342,6 +342,15 @@ function z:gke:np:drain-delete() (
     log::info "Draining and deleting ${#nodes[@]} node(s) in node pool $np ..."
     printf '%s\n' "${nodes[@]}" | drain-nodes --delete "${drain_args[@]}"
 
+    log::info "Verifying node pool $np is empty before deletion ..."
+    local -a remaining=("${(@f)$(z:gke:np:nodes $np)}")
+    (( ${#remaining[@]} == 1 )) && [[ -z ${remaining[1]} ]] && remaining=()
+    if (( ${#remaining[@]} > 0 )); then
+      log::error "Refusing to delete node pool $np: ${#remaining[@]} node(s) still present after drain:"
+      printf '  - %s\n' "${remaining[@]}" >&2
+      return 1
+    fi
+
     log::info "Deleting node pool $np ..."
     z:gke:np:do delete $np "${gcloud_yes_args[@]}"
   )
