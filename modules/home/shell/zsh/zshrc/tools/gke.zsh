@@ -171,25 +171,57 @@ function z:gke:np:nodes() (
     -l=cloud.google.com/gke-nodepool="$np"
 )
 
+# List all pods running on the nodes of a node pool
+# Usage: z:gke:np:nodes:pods <node-pool|->
+# Args:
+#   <node-pool|->  node pool name or '-' to select interactively
+function z:gke:np:nodes:pods() (
+  set -euo pipefail
+  local np=${1:?node pool missing}
+  if [[ $np == "-" ]]; then
+    np=$(z:gke:np:select)
+  fi
+  if [[ -z $np ]]; then
+    return 1
+  fi
+  log::info "Listing pods on nodes of pool $np ..."
+  {
+    printf 'NODE\tNAMESPACE\tNAME\n'
+    local node
+    for node in $(z:gke:np:nodes $np); do
+      kubectl get pods \
+        --all-namespaces \
+        --field-selector spec.nodeName=$node \
+        -o custom-columns=NODE:.spec.nodeName,NAMESPACE:.metadata.namespace,NAME:.metadata.name \
+        --no-headers \
+        | awk -v OFS='\t' '{print $1, $2, $3}'
+    done
+  } | column -ts $'\t'
+)
+
 # Print all nodes in a node pool with more than a minimum number of pods
 # Useful for identifying nodes that have only pods of daemonsets
 # TODO: Implement proper detection of daemonset pods
+# Usage: z:gke:np:nodes:with-pods <node-pool|-> [min_pods]
+# Args:
+#   <node-pool|->  node pool name or '-' to select interactively
+#   [min_pods]     minimum pod count threshold (default 1)
 function z:gke:np:nodes:with-pods() (
   set -euo pipefail
   local np=${1:?node pool missing}
   local min_pods=${2:-1}
-  for node in $(z:gke:np:nodes $np); do
-    log::info "Listing pods on node $node ..."
-    pod_count=$(kubectl get pods \
-      --all-namespaces \
-      --field-selector spec.nodeName=$node \
-      --output=name \
-      --no-headers \
-      | wc -l)
-    if (( $pod_count > $min_pods - 1 )); then
-      echo $node
-    fi
-  done
+  if [[ $np == "-" ]]; then
+    np=$(z:gke:np:select)
+  fi
+  if [[ -z $np ]]; then
+    return 1
+  fi
+  z:gke:np:nodes:pods $np \
+    | tail -n +2 \
+    | awk '{print $1}' \
+    | sort \
+    | uniq -c \
+    | awk -v min="$min_pods" '$1 >= min {print $2}'
 )
 
 # Drain and delete one or more node pools:
