@@ -304,7 +304,7 @@ function z:gke:np:drain-delete() (
 
     if (( ${#nodes[@]} == 0 )); then
       log::info "Node pool $np has 0 nodes — deleting directly"
-      z:gke:np:do delete $np "${gcloud_yes_args[@]}"
+      z:gke:np:do delete $np "${gcloud_yes_args[@]}" || return 1
       return
     fi
 
@@ -329,18 +329,23 @@ function z:gke:np:drain-delete() (
               + ["zebradil.dev/draining=true:NoSchedule"]
               | join(",")
             '
-      )
-      z:gke:np:do update $np --node-taints="$merged_taints" --quiet
+      ) || return 1
+      z:gke:np:do update $np --node-taints="$merged_taints" --quiet || return 1
     fi
 
     log::info "Disabling autoscaling and autorepair on node pool $np ..."
     # Workaround for fantom autoscaling noticed in GKE v1.35: before disabling autoscaling set max nodes to 0
-    z:gke:np:do update $np --total-min-nodes=0 --total-max-nodes=0 "${gcloud_yes_args[@]}"
-    z:gke:np:do update $np --no-enable-autoscaling "${gcloud_yes_args[@]}"
-    z:gke:np:do update $np --no-enable-autorepair "${gcloud_yes_args[@]}"
+    z:gke:np:do update $np --total-min-nodes=0 --total-max-nodes=0 "${gcloud_yes_args[@]}" || return 1
+    z:gke:np:do update $np --no-enable-autoscaling "${gcloud_yes_args[@]}" || return 1
+    z:gke:np:do update $np --no-enable-autorepair "${gcloud_yes_args[@]}" || return 1
 
     log::info "Draining and deleting ${#nodes[@]} node(s) in node pool $np ..."
-    printf '%s\n' "${nodes[@]}" | drain-nodes --delete "${drain_args[@]}"
+    # set -e is suppressed when this function runs inside a conditional (`if _process_pool`),
+    # so critical commands need explicit exit-code checks.
+    if ! printf '%s\n' "${nodes[@]}" | drain-nodes --delete "${drain_args[@]}"; then
+      log::error "drain-nodes failed for node pool $np — aborting pool deletion"
+      return 1
+    fi
 
     log::info "Verifying node pool $np has no unexpected nodes before deletion ..."
     local -a remaining=("${(@f)$(z:gke:np:nodes $np)}")
@@ -365,7 +370,7 @@ function z:gke:np:drain-delete() (
     fi
 
     log::info "Deleting node pool $np ..."
-    z:gke:np:do delete $np "${gcloud_yes_args[@]}"
+    z:gke:np:do delete $np "${gcloud_yes_args[@]}" || return 1
   )
 
   local total=${#resolved[@]}
