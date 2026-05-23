@@ -14,12 +14,18 @@ _: {
         drag_lock = true;
       };
     };
-    device = {
-      name = "splitkb.com-aurora-sofle-v2-rev1";
-      kb_layout = "us,ru";
-      kb_variant = ",phonetic";
-      kb_options = "grp:caps_toggle";
-    };
+    device = [
+      {
+        name = "splitkb.com-aurora-sofle-v2-rev1";
+        kb_layout = "us,ru";
+        kb_variant = ",phonetic";
+        kb_options = "grp:caps_toggle";
+      }
+      {
+        name = "keychron--keychron-link-km";
+        natural_scroll = true;
+      }
+    ];
     gesture = "4, horizontal, workspace";
     gestures = {
       workspace_swipe_distance = 300;
