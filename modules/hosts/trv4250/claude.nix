@@ -5,23 +5,6 @@ let
     command = "/usr/local/bin/aicodemetricsd hook claude --hook-input stdin";
   };
 
-  hooks = {
-    PostToolUse = [
-      {
-        matcher = "Write|Edit|MultiEdit";
-        hooks = [ aicodemetricsdHook ];
-      }
-    ];
-    PreToolUse = [
-      {
-        matcher = "Write|Edit|MultiEdit";
-        hooks = [ aicodemetricsdHook ];
-      }
-    ];
-    PreCompact = [ { hooks = [ aicodemetricsdHook ]; } ];
-    SessionEnd = [ { hooks = [ aicodemetricsdHook ]; } ];
-  };
-
   baseSettings = {
     model = "opusplan";
     editorMode = "vim";
@@ -32,40 +15,95 @@ let
       "gopls-lsp@claude-plugins-official" = true;
     };
   };
-
-  companyProfile = {
-    enable = true;
-    configDir = ".config/trv-claude";
-    command = "trv-claude";
-    settings = baseSettings // {
-      inherit hooks;
-      effortLevel = "high";
-      permissions.defaultMode = "default";
-    };
-  };
 in
 {
   flake.modules.darwin.trv4250-claude =
-    { ... }:
-    {
-      imports = [ inputs.self.modules.darwin.claude ];
-
-      znix.claude.profiles = {
-        personal = {
-          enable = true;
-          configDir = ".config/personal-claude";
-          command = "claude";
-          settings = baseSettings // {
-            effortLevel = "medium";
+    { pkgs, ... }:
+    let
+      cavemanHooks =
+        configDir:
+        let
+          mkHook = script: {
+            type = "command";
+            command = ''${pkgs.nodejs}/bin/node "$HOME/${configDir}/hooks/${script}"'';
+            timeout = 5;
           };
+        in
+        {
+          SessionStart = [ { hooks = [ (mkHook "caveman-activate.js") ]; } ];
+          UserPromptSubmit = [ { hooks = [ (mkHook "caveman-mode-tracker.js") ]; } ];
         };
 
-        company = companyProfile;
+      mkHooks =
+        configDir:
+        {
+          PostToolUse = [
+            {
+              matcher = "Write|Edit|MultiEdit";
+              hooks = [ aicodemetricsdHook ];
+            }
+          ];
+          PreToolUse = [
+            {
+              matcher = "Write|Edit|MultiEdit";
+              hooks = [ aicodemetricsdHook ];
+            }
+          ];
+          PreCompact = [ { hooks = [ aicodemetricsdHook ]; } ];
+          SessionEnd = [ { hooks = [ aicodemetricsdHook ]; } ];
+        }
+        // (cavemanHooks configDir);
 
-        company-key = companyProfile // {
-          command = "trv-claude-key";
-          configDir = ".config/trv-claude-key";
-          runtimeEnv.ANTHROPIC_API_KEY = "op read 'op://Employee/Anthropic API key/credential'";
+      mkCompanyProfile =
+        { configDir, command }:
+        {
+          enable = true;
+          inherit configDir command;
+          settings = baseSettings // {
+            hooks = mkHooks configDir;
+            effortLevel = "high";
+            permissions.defaultMode = "default";
+          };
+        };
+    in
+    {
+      imports = [
+        inputs.self.modules.darwin.claude
+        inputs.self.modules.darwin.claude-caveman
+      ];
+
+      znix.claude = {
+        caveman = {
+          enable = true;
+          profiles = [
+            "company"
+            "company-key"
+          ];
+        };
+
+        profiles = {
+          personal = {
+            enable = true;
+            configDir = ".config/personal-claude";
+            command = "claude";
+            settings = baseSettings // {
+              effortLevel = "medium";
+            };
+          };
+
+          company = mkCompanyProfile {
+            configDir = ".config/trv-claude";
+            command = "trv-claude";
+          };
+
+          company-key =
+            (mkCompanyProfile {
+              configDir = ".config/trv-claude-key";
+              command = "trv-claude-key";
+            })
+            // {
+              runtimeEnv.ANTHROPIC_API_KEY = "op read 'op://Employee/Anthropic API key/credential'";
+            };
         };
       };
     };
