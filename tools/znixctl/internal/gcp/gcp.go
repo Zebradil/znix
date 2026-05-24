@@ -27,7 +27,7 @@ func DeleteInstance(project, zone, group, instance string) (DeleteResult, error)
 		group)
 	var buf bytes.Buffer
 	c.Stdout = io.MultiWriter(os.Stdout, &buf)
-	c.Stderr = io.MultiWriter(os.Stdout, &buf)
+	c.Stderr = io.MultiWriter(os.Stderr, &buf)
 	err := c.Run()
 	if err == nil {
 		return DeleteOK, nil
@@ -35,5 +35,5 @@ func DeleteInstance(project, zone, group, instance string) (DeleteResult, error)
 	if strings.Contains(buf.String(), "already being deleted") {
 		return DeleteAlreadyDeleting, nil
 	}
-	return DeleteOK, fmt.Errorf("gcloud delete-instances %s: %w", instance, err)
+	return 0, fmt.Errorf("gcloud delete-instances %s: %w", instance, err)
 }

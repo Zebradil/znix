@@ -69,7 +69,7 @@ func Drain(node string) (DrainResult, error) {
 	c := exec.Command("kubectl", "drain", "--delete-emptydir-data", "--ignore-daemonsets", node)
 	var buf bytes.Buffer
 	c.Stdout = io.MultiWriter(os.Stdout, &buf)
-	c.Stderr = io.MultiWriter(os.Stdout, &buf)
+	c.Stderr = io.MultiWriter(os.Stderr, &buf)
 	err := c.Run()
 	if err == nil {
 		return DrainOK, nil
@@ -78,7 +78,7 @@ func Drain(node string) (DrainResult, error) {
 	if strings.Contains(out, "NotFound") || strings.Contains(out, "not found") {
 		return DrainNotFound, nil
 	}
-	return DrainOK, fmt.Errorf("kubectl drain %s: %w", node, err)
+	return 0, fmt.Errorf("kubectl drain %s: %w", node, err)
 }
 
 // ProviderInfo extracts project and zone from a node's .spec.providerID.
