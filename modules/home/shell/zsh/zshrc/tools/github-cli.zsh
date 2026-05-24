@@ -9,7 +9,7 @@ if lib::check_commands gh; then
     if [[ ! "$repo" =~ / ]]; then
       repo="zebradil/$repo"
     fi
-    local dir="${WORKSPACE:?}/code/github.com/$repo"
+    local dir="${WORKSPACE:?}/code/github.com/${(L)repo}"
     if [[ ! -d "$dir" ]]; then
       gh repo clone "$repo" "$dir"
       cd "$dir"
