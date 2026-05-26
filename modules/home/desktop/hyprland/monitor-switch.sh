@@ -3,9 +3,9 @@
 # ==============================================================================
 # Monitor Switching Architecture & Expected Behavior
 # ==============================================================================
-# 
+#
 # This script manages monitor layouts (single, external-only, extended, mirror).
-# It can be used manually via CLI (using --pick to select with anyrun) or 
+# It can be used manually via CLI (using --pick to select with anyrun) or
 # triggered automatically by `monitor-switch-daemon.sh` when monitor connection
 # events occur.
 #
@@ -30,12 +30,12 @@
 #
 # Fallback Monitor:
 # When all physical displays disconnect, Hyprland spawns a virtual "FALLBACK"
-# monitor so apps don't crash. We ignore FALLBACK when calculating topology, 
+# monitor so apps don't crash. We ignore FALLBACK when calculating topology,
 # and the daemon uses it as a cue to immediately switch back to "single".
 # ==============================================================================
 
 INTERNAL="eDP-1"
-INTERNAL_SCALE="2.0"
+INTERNAL_SCALE="1.5"
 STATE_DIR="${XDG_RUNTIME_DIR:-/tmp}/hyprland"
 STATE_FILE="$STATE_DIR/monitor-switch-state.json"
 
@@ -86,13 +86,13 @@ save_state() {
     --arg preset "$preset" \
     --arg mode "$mode" \
     --arg topology "$topology" \
-    '{ preset: $preset, mode: $mode, topology: $topology }' > "$STATE_FILE.tmp"
+    '{ preset: $preset, mode: $mode, topology: $topology }' >"$STATE_FILE.tmp"
   mv "$STATE_FILE.tmp" "$STATE_FILE"
 }
 
 valid_preset() {
   case "$1" in
-  single|external-only|extended|mirror)
+  single | external-only | extended | mirror)
     return 0
     ;;
   *)
