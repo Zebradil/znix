@@ -103,6 +103,12 @@ func runDrainNodes(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	t, ttyErr := tty.Open()
+	if ttyErr != nil {
+		log.Info("tty unavailable (%v); interactive controls disabled", ttyErr)
+	}
+	defer t.Close()
+
 	if o.cordon {
 		log.Info("Cordon nodes")
 		log.Say("Cordon nodes")
@@ -176,16 +182,11 @@ func runDrainNodes(cmd *cobra.Command, _ []string) error {
 			break
 		}
 
-		t, ttyErr := tty.Open()
-		if ttyErr != nil {
-			log.Info("tty unavailable (%v); interactive controls disabled", ttyErr)
-		}
 		if o.adaptive {
 			doAdaptiveWait(o, baseline, t)
 		} else {
 			doFixedWait(o, t)
 		}
-		t.Close()
 	}
 
 	log.Say("All nodes are drained")

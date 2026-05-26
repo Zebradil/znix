@@ -34,6 +34,13 @@
 
 ## Known gotchas
 
+- `internal/tty/tty.go::readLoop` uses raw `unix.Read`; closing the fd via
+  `t.f.Close()` does NOT reliably unblock a thread blocked in `read(2)` on a
+  tty on macOS (`// unblocks readLoop` comment is incorrect). The hang is
+  avoided by opening tty once per command (not per loop iteration), so the
+  close-while-read condition never occurs. A proper fix would use kqueue, a
+  self-pipe, or the runtime pollster to make Close actually interrupt the read.
+
 - `vendorHash` must be regenerated when go.mod deps change (bootstrap with `lib.fakeHash`, copy from nix build error)
 - `home.file.".local/bin"` recursive symlink + explicit `.local/bin/drain-nodes` entry coexist because the old script
   was deleted; adding new compat symlinks for future ports follows the same pattern

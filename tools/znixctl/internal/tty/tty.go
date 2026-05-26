@@ -5,16 +5,17 @@ import (
 	"time"
 
 	"golang.org/x/sys/unix"
-	"golang.org/x/term"
 )
 
-// TTY wraps /dev/tty in raw mode for single-key input.
+// TTY wraps /dev/tty with minimal termios changes for single-key input.
+// Only ICANON and ECHO are cleared; OPOST/ISIG/IEXTEN are left intact so that
+// \n→\r\n translation and signal keys (Ctrl-C) continue to work normally.
 // If Open fails (e.g. no TTY attached) callers may pass nil — methods are nil-safe.
 type TTY struct {
-	f        *os.File
-	fd       int
-	oldState *term.State
-	ch       chan byte
+	f    *os.File
+	fd   int
+	oldT *unix.Termios
+	ch   chan byte
 }
 
 func Open() (*TTY, error) {
@@ -23,12 +24,22 @@ func Open() (*TTY, error) {
 		return nil, err
 	}
 	fd := int(f.Fd())
-	st, err := term.MakeRaw(fd)
+
+	old, err := unix.IoctlGetTermios(fd, ioctlGet)
 	if err != nil {
 		_ = f.Close()
 		return nil, err
 	}
-	t := &TTY{f: f, fd: fd, oldState: st, ch: make(chan byte, 8)}
+	newT := *old
+	newT.Lflag &^= unix.ICANON | unix.ECHO
+	newT.Cc[unix.VMIN] = 1
+	newT.Cc[unix.VTIME] = 0
+	if err := unix.IoctlSetTermios(fd, ioctlSet, &newT); err != nil {
+		_ = f.Close()
+		return nil, err
+	}
+
+	t := &TTY{f: f, fd: fd, oldT: old, ch: make(chan byte, 8)}
 	go t.readLoop()
 	return t, nil
 }
@@ -49,10 +60,10 @@ func (t *TTY) Close() {
 	if t == nil {
 		return
 	}
-	if t.oldState != nil {
-		_ = term.Restore(t.fd, t.oldState)
+	if t.oldT != nil {
+		_ = unix.IoctlSetTermios(t.fd, ioctlSet, t.oldT)
 	}
-	_ = t.f.Close() // unblocks readLoop
+	_ = t.f.Close()
 }
 
 // ReadKey waits up to timeout for a single byte. Empty string on timeout.
