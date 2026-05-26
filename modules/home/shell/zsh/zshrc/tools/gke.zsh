@@ -453,3 +453,51 @@ function z:gke:np:drain-delete() (
   return 0
 )
 
+function z:gke:node:select() (
+  set -euo pipefail
+
+  local list selected
+  list=$(kubectl get node -owide)
+  if [[ -z $list ]]; then
+    return 1
+  fi
+
+  selected=$(echo "$list" | fzf --header-lines=1 --no-multi | awk '{print $1}')
+  if [[ -z $selected ]]; then
+    log::error "No node pool selected"
+    return 1
+  fi
+
+  echo "$selected"
+)
+
+function z:gke:node:ssh() (
+  set -euo pipefail
+
+  local node=${1:?node name missing, use - to select}
+  if [[ $node == "-" ]]; then
+    node=$(z:gke:node:select)
+  fi
+  if [[ -z $node ]]; then
+    return 1
+  fi
+
+  local zone
+  zone=$(kubectl get node "$node" -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}')
+  if [[ -z $zone ]]; then
+    return 1
+  fi
+
+  local cluster_name project_id region info
+  info=$(z:gke:cluster:info)
+  if [[ -z $info ]]; then
+    return 1
+  fi
+  read -r cluster_name project_id region <<< "$info"
+  log::info "SSH-ing into $node of $cluster_name..."
+
+  gcloud compute ssh "$node" \
+    --project="$project_id" \
+    --zone="$zone" \
+    --tunnel-through-iap
+)
