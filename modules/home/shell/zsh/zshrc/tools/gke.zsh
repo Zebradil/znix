@@ -46,7 +46,7 @@ function z:gke:cluster:do() (
   if [[ -z $info ]]; then
     return 1
   fi
-  read -r cluster_name project_id location <<< "$info"
+  read -r cluster_name project_id location <<<"$info"
   log::info "Running command: $cmd on cluster $cluster_name ..."
   gcloud container clusters "${cmd}" "$cluster_name" \
     --project "$project_id" \
@@ -63,7 +63,7 @@ function z:gke:np:list() (
   if [[ -z $info ]]; then
     return 1
   fi
-  read -r cluster_name project_id location <<< "$info"
+  read -r cluster_name project_id location <<<"$info"
   log::info "Listing node pools for cluster $cluster_name ..."
 
   typeset -A node_count pod_count node_pool
@@ -71,14 +71,14 @@ function z:gke:np:list() (
   while IFS=$'\t' read -r pool node; do
     [[ -z $pool || -z $node ]] && continue
     node_pool[$node]=$pool
-    (( node_count[$pool]++ )) || true
+    ((node_count[$pool]++)) || true
   done < <(kubectl get nodes \
     -o jsonpath='{range .items[*]}{.metadata.labels.cloud\.google\.com/gke-nodepool}{"\t"}{.metadata.name}{"\n"}{end}')
 
   while read -r node; do
     [[ -z $node ]] && continue
     pool=${node_pool[$node]:-}
-    [[ -n $pool ]] && (( pod_count[$pool]++ )) || true
+    [[ -n $pool ]] && ((pod_count[$pool]++)) || true
   done < <(kubectl get pods --all-namespaces \
     --field-selector=status.phase=Running \
     -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}')
@@ -90,7 +90,7 @@ function z:gke:np:list() (
       --project "$project_id" \
       --location "$location" \
       --format='value[separator="	"](name,config.machineType,config.spot.yesno(yes=True,no=False),autoscaling.enabled.yesno(yes=True,no=False),maxPodsConstraint.maxPodsPerNode)' \
-    | while IFS=$'\t' read -r name mtype spot as ppn; do
+      | while IFS=$'\t' read -r name mtype spot as ppn; do
         print "$name\t$mtype\t$spot\t$as\t${ppn:-?}\t${node_count[$name]:-0}\t${pod_count[$name]:-0}"
       done | sort
   } | column -ts $'\t'
@@ -119,13 +119,13 @@ function z:gke:np:do() (
   if [[ -z $np ]]; then
     return 1
   fi
-  read -r cluster_name project_id location <<< "$info"
+  read -r cluster_name project_id location <<<"$info"
   log::info "Running command: $cmd on node pool $np ..."
   gcloud container node-pools "${cmd}" "${np}" \
     --cluster "$cluster_name" \
     --project "$project_id" \
     --location "$location" \
-      "$@"
+    "$@"
 )
 
 # Interactively select a node pool to operate on
@@ -250,11 +250,11 @@ function z:gke:np:drain-delete() (
   set -euo pipefail
 
   local -a pools=()
-  while (( $# > 0 )) && [[ $1 != --* ]]; do
+  while (($# > 0)) && [[ $1 != --* ]]; do
     pools+=("$1")
     shift
   done
-  if (( ${#pools[@]} == 0 )); then
+  if ((${#pools[@]} == 0)); then
     log::error "node pool missing"
     return 1
   fi
@@ -264,13 +264,13 @@ function z:gke:np:drain-delete() (
   for p in "${pools[@]}"; do
     if [[ $p == "-" ]]; then
       picked_lines=("${(@f)$(z:gke:np:select --multi)}")
-      (( ${#picked_lines[@]} == 0 )) && return 1
+      ((${#picked_lines[@]} == 0)) && return 1
       resolved+=("${picked_lines[@]}")
     else
       resolved+=("$p")
     fi
   done
-  (( ${#resolved[@]} == 0 )) && return 1
+  ((${#resolved[@]} == 0)) && return 1
 
   local taint_pool=false
   local notify_flag=""
@@ -278,17 +278,17 @@ function z:gke:np:drain-delete() (
   # and z:slack:update both accept the combined form.
   local notify_channel="${ZNIX_SLACK_CHANNEL:-}"
   local -a drain_args=() gcloud_yes_args=()
-  while (( $# > 0 )); do
+  while (($# > 0)); do
     case "$1" in
-      --taint-pool) taint_pool=true ;;
-      --yes|-y)     gcloud_yes_args=(--quiet) ;;
-      --no-notify)  notify_flag="no" ;;
-      --notify)     notify_flag="yes" ;;
-      --notify=*)
-        notify_flag="yes"
-        notify_channel="${1#--notify=}"
-        ;;
-      *) drain_args+=("$1") ;;
+    --taint-pool) taint_pool=true ;;
+    --yes | -y) gcloud_yes_args=(--quiet) ;;
+    --no-notify) notify_flag="no" ;;
+    --notify) notify_flag="yes" ;;
+    --notify=*)
+      notify_flag="yes"
+      notify_channel="${1#--notify=}"
+      ;;
+    *) drain_args+=("$1") ;;
     esac
     shift
   done
@@ -326,15 +326,15 @@ function z:gke:np:drain-delete() (
   if [[ -z $info ]]; then
     return 1
   fi
-  read -r cluster_name _ _ <<< "$info"
+  read -r cluster_name _ _ <<<"$info"
 
   function _process_pool() (
     set -euo pipefail
     local np=$1
     local -a nodes=("${(@f)$(z:gke:np:nodes $np)}")
-    (( ${#nodes[@]} == 1 )) && [[ -z ${nodes[1]} ]] && nodes=()
+    ((${#nodes[@]} == 1)) && [[ -z ${nodes[1]} ]] && nodes=()
 
-    if (( ${#nodes[@]} == 0 )); then
+    if ((${#nodes[@]} == 0)); then
       log::info "Node pool $np has 0 nodes — deleting directly"
       z:gke:np:do delete $np "${gcloud_yes_args[@]}" || return 1
       return
@@ -381,7 +381,7 @@ function z:gke:np:drain-delete() (
 
     log::info "Verifying node pool $np has no unexpected nodes before deletion ..."
     local -a remaining=("${(@f)$(z:gke:np:nodes $np)}")
-    (( ${#remaining[@]} == 1 )) && [[ -z ${remaining[1]} ]] && remaining=()
+    ((${#remaining[@]} == 1)) && [[ -z ${remaining[1]} ]] && remaining=()
 
     local -A processed=()
     local n
@@ -391,13 +391,13 @@ function z:gke:np:drain-delete() (
       [[ -z ${processed[$n]:-} ]] && unexpected+=("$n")
     done
 
-    if (( ${#unexpected[@]} > 0 )); then
+    if ((${#unexpected[@]} > 0)); then
       log::error "Refusing to delete node pool $np: ${#unexpected[@]} unexpected node(s) present (not part of the originally-drained set):"
       printf '  - %s\n' "${unexpected[@]}" >&2
       return 1
     fi
 
-    if (( ${#remaining[@]} > 0 )); then
+    if ((${#remaining[@]} > 0)); then
       log::info "Node pool $np has ${#remaining[@]} lingering K8s Node object(s) from drained nodes; proceeding (cloud-controller-manager will GC them)."
     fi
 
@@ -410,15 +410,15 @@ function z:gke:np:drain-delete() (
   local np
   local -a succeeded=() failed=()
   for np in "${resolved[@]}"; do
-    (( ++idx ))
+    ((++idx))
     log::info "===== Processing node pool $np ($idx/$total) ====="
 
     local slack_ts="" slack_text=""
     if $notify; then
       local -a nodes_preview=("${(@f)$(z:gke:np:nodes $np 2>/dev/null)}")
-      (( ${#nodes_preview[@]} == 1 )) && [[ -z ${nodes_preview[1]} ]] && nodes_preview=()
+      ((${#nodes_preview[@]} == 1)) && [[ -z ${nodes_preview[1]} ]] && nodes_preview=()
       local node_count=${#nodes_preview[@]}
-      if (( node_count == 0 )); then
+      if ((node_count == 0)); then
         slack_text="${ZNIX_SLACK_USER_HANDLE:+${ZNIX_SLACK_USER_HANDLE} }:progress-bubble: Deleting empty node pool \`${np}\` in \`${cluster_name}\` cluster."
       else
         slack_text="${ZNIX_SLACK_USER_HANDLE:+${ZNIX_SLACK_USER_HANDLE} }:progress-bubble: Draining and deleting node pool \`${np}\` in \`${cluster_name}\` cluster (${node_count} node(s))."
@@ -438,7 +438,7 @@ function z:gke:np:drain-delete() (
 
   if $notify; then
     local summary_icon summary_text
-    if (( ${#failed[@]} == 0 )); then
+    if ((${#failed[@]} == 0)); then
       summary_icon=":check:"
       summary_text="${ZNIX_SLACK_USER_HANDLE:+${ZNIX_SLACK_USER_HANDLE} }${summary_icon} Finished draining \`${cluster_name}\`: ${#succeeded[@]}/${total} node pool(s) processed successfully."
     else
@@ -449,7 +449,7 @@ function z:gke:np:drain-delete() (
     z:slack:post "$slack_token" "$notify_channel" "$summary_text" >/dev/null || true
   fi
 
-  (( ${#failed[@]} > 0 )) && return 1
+  ((${#failed[@]} > 0)) && return 1
   return 0
 )
 
@@ -493,7 +493,7 @@ function z:gke:node:ssh() (
   if [[ -z $info ]]; then
     return 1
   fi
-  read -r cluster_name project_id region <<< "$info"
+  read -r cluster_name project_id region <<<"$info"
   log::info "SSH-ing into $node of $cluster_name..."
 
   gcloud compute ssh "$node" \
