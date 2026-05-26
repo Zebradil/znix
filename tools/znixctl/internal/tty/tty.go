@@ -1,19 +1,20 @@
 package tty
 
 import (
-	"errors"
 	"os"
 	"time"
 
+	"golang.org/x/sys/unix"
 	"golang.org/x/term"
 )
 
-// TTY wraps /dev/tty in raw mode for single-key input with deadlines.
+// TTY wraps /dev/tty in raw mode for single-key input.
 // If Open fails (e.g. no TTY attached) callers may pass nil — methods are nil-safe.
 type TTY struct {
 	f        *os.File
 	fd       int
 	oldState *term.State
+	ch       chan byte
 }
 
 func Open() (*TTY, error) {
@@ -27,7 +28,21 @@ func Open() (*TTY, error) {
 		_ = f.Close()
 		return nil, err
 	}
-	return &TTY{f: f, fd: fd, oldState: st}, nil
+	t := &TTY{f: f, fd: fd, oldState: st, ch: make(chan byte, 8)}
+	go t.readLoop()
+	return t, nil
+}
+
+// readLoop feeds bytes from the tty into ch. Exits when the fd is closed.
+func (t *TTY) readLoop() {
+	var buf [1]byte
+	for {
+		n, err := unix.Read(t.fd, buf[:])
+		if err != nil || n == 0 {
+			return
+		}
+		t.ch <- buf[0]
+	}
 }
 
 func (t *TTY) Close() {
@@ -37,7 +52,7 @@ func (t *TTY) Close() {
 	if t.oldState != nil {
 		_ = term.Restore(t.fd, t.oldState)
 	}
-	_ = t.f.Close()
+	_ = t.f.Close() // unblocks readLoop
 }
 
 // ReadKey waits up to timeout for a single byte. Empty string on timeout.
@@ -47,21 +62,12 @@ func (t *TTY) ReadKey(timeout time.Duration) (string, error) {
 		time.Sleep(timeout)
 		return "", nil
 	}
-	if err := t.f.SetReadDeadline(time.Now().Add(timeout)); err != nil {
-		return "", err
-	}
-	buf := make([]byte, 1)
-	n, err := t.f.Read(buf)
-	if err != nil {
-		if errors.Is(err, os.ErrDeadlineExceeded) {
-			return "", nil
-		}
-		return "", err
-	}
-	if n == 0 {
+	select {
+	case b := <-t.ch:
+		return string([]byte{b}), nil
+	case <-time.After(timeout):
 		return "", nil
 	}
-	return string(buf[:n]), nil
 }
 
 // WaitKey blocks indefinitely for one key. Returns "" if t is nil.
@@ -69,13 +75,6 @@ func (t *TTY) WaitKey() (string, error) {
 	if t == nil {
 		return "", nil
 	}
-	if err := t.f.SetReadDeadline(time.Time{}); err != nil {
-		return "", err
-	}
-	buf := make([]byte, 1)
-	n, err := t.f.Read(buf)
-	if err != nil {
-		return "", err
-	}
-	return string(buf[:n]), nil
+	b := <-t.ch
+	return string([]byte{b}), nil
 }

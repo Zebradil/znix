@@ -238,7 +238,7 @@ func doAdaptiveWait(o drainOpts, baseline int, t *tty.TTY) {
 		if waitFor <= 0 {
 			break
 		}
-		key, _ := t.ReadKey(waitFor)
+		key := waitForKey(t, waitFor)
 		switch key {
 		case "p":
 			elapsed := pause(t)
@@ -286,7 +286,7 @@ func doAdaptiveWait(o drainOpts, baseline int, t *tty.TTY) {
 		log.Info("adaptive: signal=%d target=%d stable=%d/%ds left=%ds  [p=pause s=skip]",
 			signal, target, stableSecs, o.stableFor, leftSecs)
 
-		key, _ := t.ReadKey(pollDur)
+		key := waitForKey(t, pollDur)
 		switch key {
 		case "p":
 			elapsed := pause(t)
@@ -303,15 +303,14 @@ func doAdaptiveWait(o drainOpts, baseline int, t *tty.TTY) {
 
 func doFixedWait(o drainOpts, t *tty.TTY) {
 	deadline := time.Now().Add(time.Duration(o.maxWait) * time.Second)
-	log.Info("Fixed wait: %ds  [p=pause s=skip any=time-left]", o.maxWait)
+	log.Info("Fixed wait: %ds  [p=pause s=skip]", o.maxWait)
 	log.Say("Waiting")
 	for {
 		left := time.Until(deadline)
-		log.Info("Seconds left: %d", int(left.Seconds()))
 		if left <= 0 {
 			return
 		}
-		key, _ := t.ReadKey(left)
+		key := waitForKey(t, left)
 		switch key {
 		case "p":
 			elapsed := pause(t)
@@ -322,11 +321,34 @@ func doFixedWait(o drainOpts, t *tty.TTY) {
 	}
 }
 
+// waitForKey waits up to d for a keypress, printing an in-place countdown every second.
+// Returns the key pressed, or "" on timeout.
+func waitForKey(t *tty.TTY, d time.Duration) string {
+	end := time.Now().Add(d)
+	for {
+		left := time.Until(end)
+		if left <= 0 {
+			fmt.Fprintf(os.Stdout, "\r\x1b[K")
+			return ""
+		}
+		chunk := time.Second
+		if left < chunk {
+			chunk = left
+		}
+		fmt.Fprintf(os.Stdout, "\r\x1b[K    next poll in %.0fs  [p=pause s=skip]", left.Seconds())
+		key, _ := t.ReadKey(chunk)
+		if key != "" {
+			fmt.Fprintf(os.Stdout, "\r\x1b[K")
+			return key
+		}
+	}
+}
+
 func pause(t *tty.TTY) time.Duration {
 	pauseStart := time.Now()
 	log.Info("Paused — press any key to continue")
 	_, _ = t.WaitKey()
-	fmt.Println()
+	fmt.Print("\r\n")
 	elapsed := time.Since(pauseStart)
 	log.Info("Resumed")
 	return elapsed

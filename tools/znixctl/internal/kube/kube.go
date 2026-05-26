@@ -2,12 +2,14 @@ package kube
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // SignalErr is returned by Signal when kubectl polling fails.
@@ -18,8 +20,12 @@ func (e *SignalErr) Error() string { return fmt.Sprintf("signal snapshot: %v", e
 
 // Signal returns (pending pods) + (non-terminal not-Ready pods) cluster-wide.
 // On any kubectl failure, returns 9999 + SignalErr so a bad poll never looks "caught up".
+// Each kubectl call is bounded by a 30s timeout so a slow API server can't stall the wait loop.
 func Signal() (int, error) {
-	pendingOut, err := output(exec.Command("kubectl", "get", "pods", "-A",
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	pendingOut, err := output(exec.CommandContext(ctx, "kubectl", "get", "pods", "-A",
 		"--field-selector=status.phase=Pending",
 		"-o", "go-template={{len .items}}"))
 	if err != nil {
@@ -31,7 +37,7 @@ func Signal() (int, error) {
 	}
 
 	tmpl := `{{range .items}}{{range .status.conditions}}{{if and (eq .type "Ready") (ne .status "True")}}x{{"\n"}}{{end}}{{end}}{{end}}`
-	notReadyOut, err := output(exec.Command("kubectl", "get", "pods", "-A",
+	notReadyOut, err := output(exec.CommandContext(ctx, "kubectl", "get", "pods", "-A",
 		"--field-selector=status.phase!=Succeeded,status.phase!=Failed",
 		"-o", "go-template="+tmpl))
 	if err != nil {
