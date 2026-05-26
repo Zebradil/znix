@@ -109,7 +109,14 @@
             };
           };
         };
-        bashls.enable = true;
+        bashls = {
+          enable = true;
+          filetypes = [
+            "sh"
+            "bash"
+            "zsh"
+          ];
+        };
         cssls.enable = true;
         emmet_language_server.enable = true;
         html.enable = true;
@@ -160,6 +167,7 @@
           tf = [ "terraform_fmt" ];
           sh = [ "shfmt" ];
           bash = [ "shfmt" ];
+          zsh = [ "shfmt" ];
           nu = [ "nufmt" ];
           yaml = [ "oxfmt" ];
           markdown = [ "oxfmt" ];
@@ -182,9 +190,17 @@
         go = [ "golangcilint" ];
         sh = [ "shellcheck" ];
         bash = [ "shellcheck" ];
+        zsh = [ "shellcheck" ];
         nix = [
           "deadnix"
           "statix"
+        ];
+      };
+      linters = {
+        shellcheck.args = [
+          "--shell=bash"
+          "--format=json"
+          "-"
         ];
       };
       autoCmd.event = [
