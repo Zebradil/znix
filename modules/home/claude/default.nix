@@ -56,6 +56,8 @@ let
                     description = "settings.json content; statusLine is computed automatically";
                   };
 
+                  caveman = lib.mkEnableOption "caveman hooks/skills/commands for this profile";
+
                   excludeAssets = lib.mkOption {
                     default = { };
                     description = "Per-category asset names (without .md) to omit for this profile";
@@ -118,19 +120,38 @@ in
             exec ${pkgs.claude-code}/bin/claude "$@"
           '';
 
+        cavemanEnabled = osConfig.znix.claude.caveman.enable or false;
+
+        mkCavemanHook = configDir: script: {
+          type = "command";
+          command = ''${pkgs.nodejs}/bin/node "$HOME/${configDir}/hooks/${script}"'';
+          timeout = 5;
+        };
+
+        mkCavemanHooks =
+          profile:
+          lib.optionalAttrs (profile.caveman && cavemanEnabled) {
+            SessionStart = [ { hooks = [ (mkCavemanHook profile.configDir "caveman-activate.js") ]; } ];
+            UserPromptSubmit = [ { hooks = [ (mkCavemanHook profile.configDir "caveman-mode-tracker.js") ]; } ];
+          };
+
         mkSettingsFile =
           name: profile:
-          pkgs.writeText "claude-${name}-settings.json" (
-            builtins.toJSON (
-              profile.settings
+          let
+            base = profile.settings.hooks or { };
+            contributions = mkCavemanHooks profile;
+            mergedHooks = base // lib.mapAttrs (k: v: (base.${k} or [ ]) ++ v) contributions;
+            finalSettings =
+              (builtins.removeAttrs profile.settings [ "hooks" ])
+              // lib.optionalAttrs (mergedHooks != { }) { hooks = mergedHooks; }
               // {
                 statusLine = {
                   type = "command";
                   command = "bash ${config.home.homeDirectory}/${profile.configDir}/statusline-command.sh";
                 };
-              }
-            )
-          );
+              };
+          in
+          pkgs.writeText "claude-${name}-settings.json" (builtins.toJSON finalSettings);
 
         # Enumerate entries in assets/<category>/, filtering excluded items.
         # Handles both foo.md files and foo/ bundle directories.

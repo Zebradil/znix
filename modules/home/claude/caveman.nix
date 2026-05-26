@@ -3,14 +3,7 @@ let
   cavemanOptionsModule =
     { lib, ... }:
     {
-      options.znix.claude.caveman = {
-        enable = lib.mkEnableOption "caveman hooks for claude profiles";
-        profiles = lib.mkOption {
-          type = lib.types.listOf lib.types.str;
-          default = [ ];
-          description = "Profile names (keys of znix.claude.profiles) that get caveman deployed";
-        };
-      };
+      options.znix.claude.caveman.enable = lib.mkEnableOption "caveman hooks for claude profiles";
     };
 in
 {
@@ -32,15 +25,9 @@ in
         ...
       }:
       let
-        cavemanCfg =
-          osConfig.znix.claude.caveman or {
-            enable = false;
-            profiles = [ ];
-          };
+        cavemanCfg = osConfig.znix.claude.caveman or { enable = false; };
         allProfiles = osConfig.znix.claude.profiles or { };
-        enabled = lib.filterAttrs (
-          n: p: p.enable && cavemanCfg.enable && lib.elem n cavemanCfg.profiles
-        ) allProfiles;
+        enabled = lib.filterAttrs (_: p: p.enable && cavemanCfg.enable && p.caveman) allProfiles;
 
         cavemanSrc = inputs.caveman;
         znixStatusline = "${osConfig.znix.claude.assetsRoot}/statusline-command.sh";

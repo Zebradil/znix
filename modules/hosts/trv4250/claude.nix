@@ -15,57 +15,40 @@ let
       "gopls-lsp@claude-plugins-official" = true;
     };
   };
+
+  aicodemetricsdHooks = {
+    PostToolUse = [
+      {
+        matcher = "Write|Edit|MultiEdit";
+        hooks = [ aicodemetricsdHook ];
+      }
+    ];
+    PreToolUse = [
+      {
+        matcher = "Write|Edit|MultiEdit";
+        hooks = [ aicodemetricsdHook ];
+      }
+    ];
+    PreCompact = [ { hooks = [ aicodemetricsdHook ]; } ];
+    SessionEnd = [ { hooks = [ aicodemetricsdHook ]; } ];
+  };
+
+  mkCompanyProfile =
+    { configDir, command }:
+    {
+      enable = true;
+      caveman = true;
+      inherit configDir command;
+      settings = baseSettings // {
+        hooks = aicodemetricsdHooks;
+        effortLevel = "high";
+        permissions.defaultMode = "default";
+      };
+    };
 in
 {
   flake.modules.darwin.trv4250-claude =
-    { pkgs, ... }:
-    let
-      cavemanHooks =
-        configDir:
-        let
-          mkHook = script: {
-            type = "command";
-            command = ''${pkgs.nodejs}/bin/node "$HOME/${configDir}/hooks/${script}"'';
-            timeout = 5;
-          };
-        in
-        {
-          SessionStart = [ { hooks = [ (mkHook "caveman-activate.js") ]; } ];
-          UserPromptSubmit = [ { hooks = [ (mkHook "caveman-mode-tracker.js") ]; } ];
-        };
-
-      mkHooks =
-        configDir:
-        {
-          PostToolUse = [
-            {
-              matcher = "Write|Edit|MultiEdit";
-              hooks = [ aicodemetricsdHook ];
-            }
-          ];
-          PreToolUse = [
-            {
-              matcher = "Write|Edit|MultiEdit";
-              hooks = [ aicodemetricsdHook ];
-            }
-          ];
-          PreCompact = [ { hooks = [ aicodemetricsdHook ]; } ];
-          SessionEnd = [ { hooks = [ aicodemetricsdHook ]; } ];
-        }
-        // (cavemanHooks configDir);
-
-      mkCompanyProfile =
-        { configDir, command }:
-        {
-          enable = true;
-          inherit configDir command;
-          settings = baseSettings // {
-            hooks = mkHooks configDir;
-            effortLevel = "high";
-            permissions.defaultMode = "default";
-          };
-        };
-    in
+    { ... }:
     {
       imports = [
         inputs.self.modules.darwin.claude
@@ -73,17 +56,12 @@ in
       ];
 
       znix.claude = {
-        caveman = {
-          enable = true;
-          profiles = [
-            "company"
-            "company-key"
-          ];
-        };
+        caveman.enable = true;
 
         profiles = {
           personal = {
             enable = true;
+            caveman = true;
             configDir = ".config/personal-claude";
             command = "claude";
             settings = baseSettings // {
