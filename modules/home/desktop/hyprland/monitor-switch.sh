@@ -237,7 +237,9 @@ reconcile_preset() {
   save_state "$desired" "$desired_mode" "$topology"
 }
 
-if [[ "${1:-}" == "--pick" || $# -eq 0 ]]; then
+if [[ "${1:-}" == "--internal-name" ]]; then
+  echo "$INTERNAL"
+elif [[ "${1:-}" == "--pick" || $# -eq 0 ]]; then
   active=$(detect_active)
   has_external=false
   [[ -n $external ]] && has_external=true

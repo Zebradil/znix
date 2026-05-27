@@ -2,35 +2,27 @@
 
 set +o pipefail # socat exits with broken pipe on disconnect; that's expected
 
-INTERNAL="eDP-1"
 # LOG_LEVEL controls verbosity: "debug" prints all messages, "info" (default) prints
 # only monitor connection/disconnection events and preset changes.
 LOG_LEVEL="${LOG_LEVEL:-info}"
 
-log_info() { echo "[monitor-daemon] $*"; }
+log_info()  { echo "[monitor-daemon] $*"; }
 log_debug() { [[ $LOG_LEVEL == "debug" ]] && echo "[monitor-daemon] DEBUG: $*" || true; }
 
-ensure_internal() {
-  log_debug "ensure_internal: checking active monitors..."
-  local active
-  active=$(hyprctl monitors -j 2>/dev/null)
-  log_debug "ensure_internal: active monitors: $active"
-  if ! jq -r '.[].name' <<< "$active" 2>/dev/null | grep -q "^${INTERNAL}$"; then
-    log_info "internal monitor $INTERNAL not active, re-enabling..."
-    local result
-    result=$(hyprctl keyword monitor "$INTERNAL, preferred, auto, 2.0" 2>&1)
-    log_debug "ensure_internal: hyprctl result: $result"
-    notify-send "Display" "Single (integrated only)" || true
-  else
-    log_debug "ensure_internal: $INTERNAL already active, nothing to do"
-  fi
-}
+INTERNAL=$(monitor-switch --internal-name)
 
 reconcile_monitors() {
   if ! monitor-switch --reconcile; then
-    log_info "reconcile failed; ensuring internal display is on..."
-    ensure_internal
+    log_info "reconcile failed, forcing single..."
+    monitor-switch single || true
   fi
+}
+
+handle_external_event() {
+  local kind="$1" mon="$2"
+  log_info "$kind: $mon, reconciling..."
+  sleep 1
+  reconcile_monitors
 }
 
 log_info "starting daemon, running initial reconciliation..."
@@ -43,11 +35,9 @@ while true; do
     log_debug "IPC event: $line"
     event="${line%%>>*}"
     monitor="${line#*>>}"
-    
+
     if [[ $event == "configreloaded" ]]; then
-      log_info "hyprland config reloaded, reconciling preset..."
-      sleep 1
-      reconcile_monitors
+      handle_external_event "config reloaded" "n/a"
       continue
     fi
 
@@ -55,26 +45,17 @@ while true; do
       log_debug "ignoring event for internal monitor"
       continue
     fi
+
     case "$event" in
       monitoradded)
-        if [[ $monitor == "FALLBACK" ]]; then
-          # FALLBACK means all real monitors are gone - re-enable internal
-          log_info "FALLBACK monitor appeared, re-enabling internal display..."
-          sleep 1
-          reconcile_monitors
-        else
-          log_info "external monitor added: $monitor, reconciling preset..."
-          sleep 1
-          reconcile_monitors
-        fi
+        # FALLBACK appears when all real monitors disconnect; reconcile handles it.
+        handle_external_event "monitor added" "$monitor"
         ;;
       monitorremoved)
         if [[ $monitor == "FALLBACK" ]]; then
           log_debug "FALLBACK monitor removed, ignoring"
         else
-          log_info "external monitor removed: $monitor, reconciling preset..."
-          sleep 1
-          reconcile_monitors
+          handle_external_event "monitor removed" "$monitor"
         fi
         ;;
     esac

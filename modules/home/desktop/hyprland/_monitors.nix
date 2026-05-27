@@ -20,7 +20,6 @@ let
       pkgs.jq
       pkgs.libnotify
     ];
-    excludeShellChecks = [ "SC2312" ];
     text = builtins.readFile ./monitor-switch-daemon.sh;
   };
 
