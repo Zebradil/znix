@@ -63,6 +63,7 @@ in
     enable = true;
     settings = {
       preload = [ currentWallpaper ];
+      splash = false;
       wallpaper = [
         {
           monitor = "";
