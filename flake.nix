@@ -55,7 +55,7 @@
       url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/d233902339c02a9c334e7e593de68855ad26c4cb";
     nixpkgs-pin-google-cloud-sdk.url = "github:NixOS/nixpkgs/be8205a2a0bab0384deca31042b9b940fbcf24aa";
     nixpkgs-pin-nushell.url = "github:NixOS/nixpkgs/e787d9e711e78599f0ad3ec517fcef8192efd47e";
     nixvim = {
