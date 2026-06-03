@@ -61,6 +61,7 @@ _: {
             map("n", "<Leader>gR", gs.reset_buffer, { desc = "Reset buffer" })
             map("n", "<Leader>gp", gs.preview_hunk, { desc = "Preview hunk" })
             map("n", "<Leader>gb", function() gs.blame_line({ full = true }) end, { desc = "Blame line" })
+            map("n", "<Leader>gB", function() gs.blame() end, { desc = "Blame file" })
             map("n", "<Leader>gd", gs.diffthis, { desc = "Diff this" })
           end
         '';
