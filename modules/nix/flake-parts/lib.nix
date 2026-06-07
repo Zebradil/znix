@@ -13,14 +13,21 @@
 
   config.flake.lib = {
 
-    mkNixos = system: name: {
-      ${name} = inputs.nixpkgs.lib.nixosSystem {
-        modules = [
-          inputs.self.modules.nixos.${name}
-          { nixpkgs.hostPlatform = lib.mkDefault system; }
-        ];
+    # `nixpkgs` lets a host pin its own nixpkgs input (e.g. tuxedo stays on a
+    # known-good GDM rev) without dragging every other host off unstable.
+    mkNixos =
+      system: name:
+      {
+        nixpkgs ? inputs.nixpkgs,
+      }:
+      {
+        ${name} = nixpkgs.lib.nixosSystem {
+          modules = [
+            inputs.self.modules.nixos.${name}
+            { nixpkgs.hostPlatform = lib.mkDefault system; }
+          ];
+        };
       };
-    };
 
     mkDarwin = system: name: {
       ${name} = inputs.nix-darwin.lib.darwinSystem {

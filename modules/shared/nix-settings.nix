@@ -1,7 +1,11 @@
 { inputs, self, ... }:
 let
+  # "nixpkgs" is intentionally excluded: each NixOS system already
+  # self-registers its own nixpkgs flake (nixpkgs-flake.nix). Overriding it
+  # here would conflict for hosts that pin a different nixpkgs (e.g. tuxedo),
+  # and the self-registered value is the correct one anyway.
   flakeInputs = inputs.nixpkgs.lib.filterAttrs (
-    n: v: n != "self" && inputs.nixpkgs.lib.isType "flake" v
+    n: v: n != "self" && n != "nixpkgs" && inputs.nixpkgs.lib.isType "flake" v
   ) inputs;
 
   # Shared nix settings values, reusable across platforms

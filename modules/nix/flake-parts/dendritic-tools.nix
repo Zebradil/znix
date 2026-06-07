@@ -12,12 +12,7 @@
   # https://github.com/vic/import-tree
 
   flake-file.inputs = {
-    # Temporarily pinned to the last known-good nixpkgs-unstable rev
-    # before the 26.11 / GDM 50 jump that broke the Wayland greeter on
-    # tuxedo (gdm-wayland-session: "Unable to run session" -> GDM gives
-    # up -> black screen). Revert to "nixpkgs-unstable" once upstream
-    # ships a fix for GDM 50 / gnome-shell greeter.
-    nixpkgs.url = "github:NixOS/nixpkgs/d233902339c02a9c334e7e593de68855ad26c4cb";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     flake-file.url = "github:vic/flake-file";
     import-tree.url = "github:vic/import-tree";
