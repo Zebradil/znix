@@ -44,6 +44,7 @@
           python
           rust
           starlark
+          svelte
           terraform
           toml
           vim
@@ -122,6 +123,7 @@
         html.enable = true;
         marksman.enable = true;
         nushell.enable = true;
+        svelte.enable = true;
         terraformls.enable = true;
         tflint.enable = true;
         rust_analyzer = {
