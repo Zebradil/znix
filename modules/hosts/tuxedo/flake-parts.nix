@@ -7,7 +7,7 @@
     # screen). Scoped to this host so other hosts (darwin) stay on unstable.
     # Drop once upstream ships a fix for GDM 50 / gnome-shell greeter and let
     # tuxedo follow the global nixpkgs again.
-    nixpkgs-tuxedo.url = "github:NixOS/nixpkgs/d233902339c02a9c334e7e593de68855ad26c4cb";
+    nixpkgs-tuxedo.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
   };
 
   flake.nixosConfigurations = inputs.self.lib.mkNixos "x86_64-linux" "tuxedo" {
