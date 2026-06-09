@@ -50,7 +50,7 @@
     system = {
       primaryUser = "glashevich";
       defaults.CustomUserPreferences."digital.twisted.noTunes" = {
-        replacement = "/Users/glashevich/Applications/Edge Apps.localized/YouTube Music.app";
+        replacement = "/Users/glashevich/Applications/Home Manager Apps/YouTube Music Desktop App.app";
       };
 
       configurationRevision = self.rev or self.dirtyRev or null;
