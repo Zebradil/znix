@@ -1,4 +1,4 @@
-{ inputs, lib, ... }:
+{ inputs, lib, self, ... }:
 let
   # ===========================================================
   # Package pins — edit here to pin packages to specific refs.
@@ -63,6 +63,7 @@ in
     inputs.tree-sitter-ytt_annotation.overlays.default
     (final: _prev: {
       inherit (inputs.gke-kubeconfiger.packages.${final.stdenv.hostPlatform.system}) gke-kubeconfiger;
+      inherit (self.packages.${final.stdenv.hostPlatform.system}) znixctl;
     })
     pinsOverlay
   ];
