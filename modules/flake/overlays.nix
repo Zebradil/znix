@@ -41,7 +41,19 @@ let
       name: _:
       (import inputs.${inputName name} {
         system = prev.stdenv.hostPlatform.system;
-        config = prev.config;
+        # prev.config is the *evaluated* config: it carries every option default
+        # (rewriteURL, replaceStdenv, assertions, ...). Re-importing a pinned
+        # nixpkgs re-runs its config module against it, and any option whose type
+        # changed between revs (e.g. rewriteURL) breaks eval. Forward only the
+        # plain user-intent options the pins actually need.
+        config = lib.filterAttrs (
+          n: _:
+          builtins.elem n [
+            "allowUnfree"
+            "allowUnfreePredicate"
+            "permittedInsecurePackages"
+          ]
+        ) prev.config;
       }).${name}
     ) (lib.filterAttrs (_: p: appliesTo prev.stdenv.hostPlatform.system p) normalized);
 in
