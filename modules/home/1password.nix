@@ -51,7 +51,7 @@ _: {
       };
 
       nixos = {
-        programs.ssh.matchBlocks."*".identityAgent = "~/.1password/agent.sock";
+        programs.ssh.settings."*".IdentityAgent = "~/.1password/agent.sock";
         wayland.windowManager.hyprland.settings.exec-once = [ "${lib.getExe onePasswordStartup}" ];
       };
 
