@@ -219,16 +219,6 @@
           ];
         };
       };
-      # Workaround: blueman 2.4.6 ships its own user unit with ExecStart=,
-      # and home-manager's blueman-applet module adds a drop-in that also sets
-      # ExecStart= without resetting first. systemd refuses (>1 ExecStart for
-      # non-oneshot). Prepended reset drop-in clears the base unit's ExecStart
-      # before HM's overrides.conf is applied (lexical order).
-      xdg.configFile."systemd/user/blueman-applet.service.d/00-reset-execstart.conf".text = ''
-        [Service]
-        ExecStart=
-      '';
-
       services = {
         network-manager-applet.enable = true;
         blueman-applet.enable = true;
