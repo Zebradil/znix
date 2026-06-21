@@ -1,4 +1,4 @@
-{ inputs, self, ... }:
+{ inputs, ... }:
 {
   flake-file.inputs = {
     homebrew-core = {
@@ -53,7 +53,6 @@
         replacement = "/Users/glashevich/Applications/Home Manager Apps/YouTube Music Desktop App.app";
       };
 
-      configurationRevision = self.rev or self.dirtyRev or null;
       stateVersion = 4;
     };
   };
