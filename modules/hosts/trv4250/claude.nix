@@ -66,6 +66,22 @@ in
             command = "claude";
             settings = baseSettings // {
               effortLevel = "medium";
+              # renovate-sweep: read + red-agent comment/push, merge stays gated
+              permissions.allow = [
+                "Bash(gh pr list:*)"
+                "Bash(gh pr checks:*)"
+                "Bash(gh pr view:*)"
+                "Bash(gh run view:*)"
+                "Bash(gh pr comment:*)"
+                "Bash(git fetch:*)"
+                "Bash(git worktree:*)"
+                "Bash(git add:*)"
+                "Bash(git commit:*)"
+                "Bash(git push:*)"
+                "Bash(nix flake check)"
+                "Bash(nixos-rebuild build:*)"
+                "Bash(darwin-rebuild build:*)"
+              ];
             };
           };
 

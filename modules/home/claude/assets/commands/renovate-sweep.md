@@ -1,6 +1,7 @@
 ---
 description: Triage every open dependency-update PR and route each to the cheap (green) or capable (red) agent.
 model: haiku
+allowed-tools: Bash(gh pr list:*), Bash(gh pr checks:*), Bash(gh pr view:*)
 ---
 
 Process every open dependency-update pull request in this repository. Two bots open them here:
