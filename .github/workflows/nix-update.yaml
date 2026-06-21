@@ -145,14 +145,28 @@ jobs:
       runner-mapping: ${{ inputs.runner-mapping }}
       attr-filter: ${{ inputs.attr-filter }}
 
-  build:
+  probe:
     needs:
       - update-flake
       - discover
     if: ${{ !failure() && !cancelled() && needs.discover.outputs.has-targets == 'true' }}
+    uses: ./.github/workflows/nix-probe.yaml
+    with:
+      matrix: ${{ needs.discover.outputs.matrix }}
+      cache-pull-url: ${{ inputs.cache-pull-url }}
+      cache-public-key: ${{ inputs.cache-public-key }}
+      nix-infra-ref: ${{ inputs.nix-infra-ref }}
+      # Download the post-update lock so we probe the new store paths, not the old ones.
+      lock-artifact: ${{ needs.update-flake.result == 'success' && needs.update-flake.outputs.has_changes == 'true' && 'flake-lock' || '' }}
+
+  build:
+    needs:
+      - update-flake
+      - probe
+    if: ${{ !failure() && !cancelled() && needs.probe.outputs.has-targets == 'true' }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.probe.outputs.matrix) }}
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout repository
@@ -209,13 +223,19 @@ jobs:
     needs:
       - update-flake
       - discover
+      - probe
       - build
+    # build is 'skipped' when probe found every target already cached — still a valid,
+    # buildable lock, so treat skipped (alongside success) as a pass.
     if: >-
       ${{ always()
           && inputs.run-flake-update
           && inputs.auto-commit
+          && needs.update-flake.result == 'success'
           && needs.update-flake.outputs.has_changes == 'true'
-          && (needs.discover.outputs.has-targets != 'true' || needs.build.result == 'success') }}
+          && needs.discover.result == 'success'
+          && (needs.probe.result == 'success' || needs.probe.result == 'skipped')
+          && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

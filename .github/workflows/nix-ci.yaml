@@ -123,20 +123,32 @@ jobs:
 
       - name: Check flake
         if: ${{ inputs.check-flake }}
-        run: nix flake check
+        # --no-build: evaluate checks only. The build job builds every check on its
+        # matching runner, so building here too would be redundant work.
+        run: nix flake check --no-build
 
       - name: Verify formatting
         if: ${{ inputs.check-formatting }}
         run: nix fmt -- --check
 
+  probe:
+    needs: discover
+    if: ${{ needs.discover.outputs.has-targets == 'true' }}
+    uses: ./.github/workflows/nix-probe.yaml
+    with:
+      matrix: ${{ needs.discover.outputs.matrix }}
+      cache-pull-url: ${{ inputs.cache-pull-url }}
+      cache-public-key: ${{ inputs.cache-public-key }}
+      nix-infra-ref: ${{ inputs.nix-infra-ref }}
+
   build:
     needs:
-      - discover
+      - probe
       - check
-    if: ${{ needs.discover.outputs.has-targets == 'true' }}
+    if: ${{ needs.probe.outputs.has-targets == 'true' }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.probe.outputs.matrix) }}
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout repository

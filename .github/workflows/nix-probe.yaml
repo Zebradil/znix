@@ -1,0 +1,95 @@
+name: Reusable Nix Probe
+
+# Reusable workflow that filters a build matrix down to targets not yet in the binary cache.
+#
+# For each target it evaluates the output store path (pure eval, no build, cross-system) and
+# probes the cache for the matching `.narinfo`. Cached targets are dropped so they never spin a
+# runner; everything else is kept. On any uncertainty the target is kept (build is the safe
+# default), preserving the "main is always green and cached" invariant.
+#
+# Usage:
+#   jobs:
+#     probe:
+#       uses: ./.github/workflows/nix-probe.yaml
+#       with:
+#         matrix: ${{ needs.discover.outputs.matrix }}
+#         cache-pull-url: https://cache.example.com
+
+on:
+  workflow_call:
+    inputs:
+      matrix:
+        description: JSON matrix object from discover, e.g. '{"include":[{"attr":...}]}'.
+        type: string
+        required: true
+      cache-pull-url:
+        description: HTTPS base URL of the binary cache to probe. Empty disables probing (builds all).
+        type: string
+        required: false
+        default: ''
+      cache-public-key:
+        description: Trusted public key for the remote binary cache (used for eval-time substitution).
+        type: string
+        required: false
+        default: ''
+      lock-artifact:
+        description: >
+          Name of an uploaded flake.lock artifact to download before eval. Set this when probing
+          after a `nix flake update` so post-update store paths are evaluated. Empty skips download.
+        type: string
+        required: false
+        default: ''
+      nix-infra-ref:
+        description: Git ref of zebradil/znix to use for CI actions and scripts.
+        type: string
+        required: false
+        default: main
+    outputs:
+      matrix:
+        description: Filtered '{"include":[...]}' object containing only uncached targets.
+        value: ${{ jobs.probe.outputs.matrix }}
+      has-targets:
+        description: Whether at least one target still needs building.
+        value: ${{ jobs.probe.outputs.has-targets }}
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.probe.outputs.matrix }}
+      has-targets: ${{ steps.probe.outputs.has_targets }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Checkout znix CI tooling
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: zebradil/znix
+          ref: ${{ inputs.nix-infra-ref }}
+          path: .znix-ci
+          sparse-checkout: .github
+
+      # The updated lock must be in place before eval so we probe the post-update
+      # store paths, not the old ones.
+      - name: Download updated flake.lock
+        if: ${{ inputs.lock-artifact != '' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ inputs.lock-artifact }}
+
+      - name: Setup Nix
+        uses: ./.znix-ci/.github/actions/setup-nix
+        with:
+          extra-substituters: ${{ inputs.cache-pull-url }}
+          extra-trusted-public-keys: ${{ inputs.cache-public-key }}
+
+      - name: Filter matrix to uncached targets
+        id: probe
+        env:
+          MATRIX: ${{ inputs.matrix }}
+          CACHE_URL: ${{ inputs.cache-pull-url }}
+        run: .znix-ci/.github/scripts/probe-cache.sh
