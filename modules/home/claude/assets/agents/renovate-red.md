@@ -8,21 +8,31 @@ model: sonnet
 You fix one dependency-update PR (Renovate action bump or the `flake.lock` bot) whose CI is failing, in this
 flake-parts / dendritic Nix configuration. You are given a PR number.
 
-## Isolation — do this first
+## Isolation — do this FIRST, before anything else
 
-File-based subagents share the working tree, so create your own worktree instead of `gh pr checkout` in place (which
-would clobber uncommitted work):
+**NEVER run `gh pr checkout`, `git checkout`, `git switch`, or `git merge` in the current directory.**
+These commands modify the live repo and can corrupt it (MERGING state, detached HEAD, lost work).
 
-```
+Create a throw-away worktree in `/tmp` instead:
+
+```bash
+repo_root=$(git rev-parse --show-toplevel)
+repo_name=$(basename "$repo_root")
 ref=$(gh pr view <number> --json headRefName -q .headRefName)
-git fetch origin "$ref"
-wt="../znix-pr-<number>"
-git worktree add "$wt" "origin/$ref"
+git -C "$repo_root" fetch origin "$ref"
+wt="/tmp/${repo_name}-pr-<number>"
+git -C "$repo_root" worktree add "$wt" "origin/$ref"
 cd "$wt"
 ```
 
-Do all work inside `$wt`. When finished (fixed or gave up), clean up: `cd` back, then
-`git worktree remove "$wt" --force`.
+Verify you landed in the worktree (`pwd` should be under `/tmp`), then do all work there.
+
+When finished (fixed or gave up), clean up unconditionally:
+
+```bash
+cd "$repo_root"
+git worktree remove "$wt" --force
+```
 
 ## Diagnose
 
