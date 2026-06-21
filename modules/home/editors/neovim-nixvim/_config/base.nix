@@ -95,6 +95,76 @@
     dap.listeners.after.event_initialized["dapui_config"] = function() dapui.open() end
     dap.listeners.before.event_terminated["dapui_config"] = function() dapui.close() end
     dap.listeners.before.event_exited["dapui_config"] = function() dapui.close() end
+
+    -- ── UI toggles (AstroNvim-style <leader>u menu) ──────────────────
+    -- Built on Snacks.toggle: each :map() registers the keymap, wires
+    -- which-key, and shows a notification with the new state.
+    Snacks.toggle.option("spell", { name = "Spellcheck" }):map("<leader>us")
+    Snacks.toggle.option("wrap", { name = "Wrap" }):map("<leader>uw")
+    Snacks.toggle.option("relativenumber", { name = "Relative Number" }):map("<leader>uL")
+    Snacks.toggle.line_number():map("<leader>ul")
+    Snacks.toggle.diagnostics():map("<leader>ud")
+    Snacks.toggle.treesitter():map("<leader>uT")
+    Snacks.toggle.inlay_hints():map("<leader>uh")
+    Snacks.toggle.indent():map("<leader>ug")
+    Snacks.toggle.dim():map("<leader>uD")
+    Snacks.toggle.option("conceallevel", {
+      off = 0,
+      on = vim.o.conceallevel > 0 and vim.o.conceallevel or 2,
+      name = "Conceal",
+    }):map("<leader>uc")
+    Snacks.toggle.option("background", {
+      off = "light",
+      on = "dark",
+      name = "Dark Background",
+    }):map("<leader>ub")
+
+    -- Autoformat (conform): buffer-local flag overrides the global one.
+    Snacks.toggle({
+      name = "Autoformat (buffer)",
+      get = function()
+        if vim.b.disable_autoformat ~= nil then
+          return not vim.b.disable_autoformat
+        end
+        return not vim.g.disable_autoformat
+      end,
+      set = function(state) vim.b.disable_autoformat = not state end,
+    }):map("<leader>uf")
+    Snacks.toggle({
+      name = "Autoformat (global)",
+      get = function() return not vim.g.disable_autoformat end,
+      set = function(state)
+        vim.g.disable_autoformat = not state
+        vim.b.disable_autoformat = nil
+      end,
+    }):map("<leader>uF")
+
+    -- Autopairs (nvim-autopairs).
+    Snacks.toggle({
+      name = "Autopairs",
+      get = function() return not require("nvim-autopairs").state.disabled end,
+      set = function(state)
+        if state then
+          require("nvim-autopairs").enable()
+        else
+          require("nvim-autopairs").disable()
+        end
+      end,
+    }):map("<leader>ua")
+
+    -- Reference highlight (illuminate).
+    Snacks.toggle({
+      name = "Reference Highlight",
+      get = function() return vim.g.illuminate_enabled ~= false end,
+      set = function(state)
+        vim.g.illuminate_enabled = state
+        if state then
+          require("illuminate").resume()
+        else
+          require("illuminate").pause()
+        end
+      end,
+    }):map("<leader>ur")
   '';
 
   # ── Extra packages (formatters, linters, runtime deps) ──────────

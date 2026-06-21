@@ -178,10 +178,16 @@
           javascript = [ "oxfmt" ];
           rust = [ "rustfmt" ];
         };
-        format_on_save = {
-          timeout_ms = 3200;
-          lsp_fallback = true;
-        };
+        # Honor the <leader>uf / <leader>uF autoformat toggles. Buffer-local
+        # flag wins over the global one; either set disables format-on-save.
+        format_on_save.__raw = ''
+          function(bufnr)
+            if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then
+              return
+            end
+            return { timeout_ms = 3200, lsp_fallback = true }
+          end
+        '';
       };
     };
 

@@ -101,6 +101,11 @@
             icon = " ";
           }
           {
+            __unkeyed-1 = "<leader>u";
+            group = "UI Toggle";
+            icon = "󰒓 ";
+          }
+          {
             __unkeyed-1 = "<leader>y";
             group = "Yank";
             icon = "󰆏 ";
