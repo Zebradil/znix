@@ -66,7 +66,7 @@ in
             command = "claude";
             settings = baseSettings // {
               effortLevel = "medium";
-              # renovate-sweep: read + red-agent comment/push, merge stays gated
+              # renovate-sweep: read + red-agent fix/merge after CI passes
               permissions.allow = [
                 "Bash(gh pr list:*)"
                 "Bash(gh pr checks:*)"
@@ -78,6 +78,8 @@ in
                 "Bash(git add:*)"
                 "Bash(git commit:*)"
                 "Bash(git push:*)"
+                "Bash(gh pr review:*)"
+                "Bash(gh pr merge:*)"
                 "Bash(nix flake check)"
                 "Bash(nixos-rebuild build:*)"
                 "Bash(darwin-rebuild build:*)"

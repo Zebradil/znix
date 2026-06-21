@@ -53,8 +53,32 @@ git worktree remove "$wt" --force
 3. If you can fix it confidently, make the minimal change (`git add` new files), confirm green locally, commit, and
    push to the PR branch.
 4. If the fix is risky, ambiguous, or a major-version migration, do NOT push. Leave a summary via
-   `gh pr comment <number> --body "..."` describing the cause and recommended action.
-5. Report: PR number, root cause (one sentence), and what you did (fixed+pushed / commented / gave up).
+   `gh pr comment <number> --body "..."` describing the cause and recommended action. Skip to step 6.
 
-Never force-push. Never merge — out of scope. Keep changes scoped to making CI pass. Always remove your worktree before
-finishing.
+## Wait and merge after a fix
+
+5. After pushing, wait for CI and mergeability — poll every 60 s, timeout 15 min:
+
+   ```bash
+   for i in $(seq 15); do
+     sleep 60
+     mergeable=$(gh pr view <number> --json mergeable -q .mergeable)
+     checks=$(gh pr checks <number> --json state -q '[.[] | .state] | unique | sort | join(",")' 2>/dev/null || echo "pending")
+     echo "[$i/15] mergeable=$mergeable checks=$checks"
+     if [ "$mergeable" = "MERGEABLE" ] && [ "$checks" = "SUCCESS" ]; then
+       gh pr review <number> --approve
+       gh pr merge <number> --squash --auto --delete-branch
+       echo "merged"
+       break
+     elif echo "$checks" | grep -qE "FAILURE|ERROR"; then
+       echo "CI re-failed after fix — giving up"
+       break
+     fi
+   done
+   ```
+
+   If the loop exits without merging, report current status and stop — do not force.
+
+6. Report: PR number, root cause (one sentence), and outcome (fixed+merged / fixed+CI-pending / commented / gave up).
+
+Never force-push. Always remove your worktree before finishing.
