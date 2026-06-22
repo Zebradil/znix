@@ -125,7 +125,23 @@ jobs:
         if: ${{ inputs.check-flake }}
         # --no-build: evaluate checks only. The build job builds every check on its
         # matching runner, so building here too would be redundant work.
-        run: nix flake check --no-build
+        #
+        # First instantiate each check's derivation. A check like *-build is a
+        # system toplevel whose closure pulls in source paths created on the fly
+        # (e.g. home.file sources scoped via builtins.path). `nix flake check
+        # --no-build` evaluates a check's outPath for caching but never
+        # instantiates it, so under lazy-trees those source paths are known by
+        # hash yet never written to the store -> "path '...' is not valid".
+        # Evaluating .drvPath instantiates the derivation (no build), which
+        # materializes the source closure so the subsequent flake check passes.
+        run: |
+          system=$(nix eval --raw --impure --expr builtins.currentSystem)
+          checks=$(nix eval --json ".#checks.${system}" --apply builtins.attrNames | jq -r '.[]')
+          for check in $checks; do
+            echo "instantiating checks.${system}.${check}"
+            nix eval --raw ".#checks.${system}.${check}.drvPath" >/dev/null
+          done
+          nix flake check --no-build
 
       - name: Verify formatting
         if: ${{ inputs.check-formatting }}
