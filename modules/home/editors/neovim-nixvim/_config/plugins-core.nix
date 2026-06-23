@@ -32,6 +32,7 @@
           hcl
           helm
           html
+          http
           javascript
           json
           just

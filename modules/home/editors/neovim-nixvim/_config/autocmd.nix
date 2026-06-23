@@ -31,6 +31,27 @@ _: {
       '';
     }
     {
+      desc = "kulala REST client keymaps (http buffers)";
+      event = [ "FileType" ];
+      pattern = [ "http" ];
+      callback.__raw = ''
+        function(args)
+          local k = require("kulala")
+          local map = function(lhs, fn, desc)
+            vim.keymap.set("n", lhs, fn, { buffer = args.buf, desc = desc })
+          end
+          map("<Leader>rr", k.run, "REST: run request")
+          map("<Leader>ra", k.run_all, "REST: run all in file")
+          map("<Leader>rp", k.replay, "REST: replay last")
+          map("<Leader>rt", k.toggle_view, "REST: toggle body/headers")
+          map("<Leader>rc", k.copy, "REST: copy as curl")
+          map("<Leader>rq", k.close, "REST: close response")
+          map("]r", k.jump_next, "REST: next request")
+          map("[r", k.jump_prev, "REST: previous request")
+        end
+      '';
+    }
+    {
       desc = "Disable spell/numbers in terminal";
       event = [ "TermOpen" ];
       callback.__raw = ''
