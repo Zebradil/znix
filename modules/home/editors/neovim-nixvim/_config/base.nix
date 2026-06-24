@@ -176,6 +176,7 @@
     nixfmt
     oxfmt
     shfmt
+    kulala-fmt # .http / .rest formatter
 
     # Linters
     golangci-lint

@@ -178,6 +178,18 @@
           css = [ "oxfmt" ];
           javascript = [ "oxfmt" ];
           rust = [ "rustfmt" ];
+          http = [ "kulala-fmt" ];
+          rest = [ "kulala-fmt" ];
+        };
+        # kulala-fmt isn't a conform builtin; define it explicitly. Reads
+        # from stdin and prints the formatted buffer to stdout.
+        formatters.kulala-fmt = {
+          command = "kulala-fmt";
+          args = [
+            "format"
+            "--stdin"
+          ];
+          stdin = true;
         };
         # Honor the <leader>uf / <leader>uF autoformat toggles. Buffer-local
         # flag wins over the global one; either set disables format-on-save.
