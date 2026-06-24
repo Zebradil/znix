@@ -96,6 +96,11 @@
             icon = " ";
           }
           {
+            __unkeyed-1 = "<leader>r";
+            group = "REST";
+            icon = "󰆨 ";
+          }
+          {
             __unkeyed-1 = "<leader>t";
             group = "Test";
             icon = " ";
