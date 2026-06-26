@@ -10,6 +10,7 @@ _: {
       fontFamily =
         if isDarwin then "family='IosevkaTerm Nerd Font Mono'" else "family='IosevkaTerm Nerd Font'";
       fontSize = if isDarwin then 18.0 else 12.0;
+      tabMod = if isDarwin then "cmd" else "ctrl";
       themeDir = "${pkgs.kitty-themes}/share/kitty-themes/themes";
       assertTheme =
         name:
@@ -62,6 +63,12 @@ _: {
           builtins.genList (i: {
             name = "ctrl+a>${toString i}";
             value = "goto_tab ${toString i}";
+          }) 9
+        ))
+        // (builtins.listToAttrs (
+          builtins.genList (i: {
+            name = "${tabMod}+${toString (i + 1)}";
+            value = "goto_tab ${toString (i + 1)}";
           }) 9
         ));
       };
