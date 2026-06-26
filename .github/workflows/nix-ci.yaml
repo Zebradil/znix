@@ -187,19 +187,34 @@ jobs:
           cache-signing-key: ${{ inputs.push-to-cache && secrets.cache-signing-key || '' }}
 
       - name: Build target
-        run: nix build ".#${{ matrix.attr }}"
+        # --keep-going: don't stop at the first failed dependency. Building as
+        # much of the closure as possible means the successfully built paths can
+        # still be pushed to the cache below, so a single broken derivation does
+        # not force everything else to be rebuilt on the next run.
+        run: nix build --keep-going ".#${{ matrix.attr }}"
 
-      - name: Resolve store path
+      - name: Resolve built store paths
         id: store-path
+        # always(): run even when the build step failed so we can still publish
+        # whatever was built. Skip the work entirely when not pushing.
+        if: ${{ always() && inputs.push-to-cache }}
         run: |
+          # The final output may be invalid (build failed), so resolve the whole
+          # derivation closure including outputs and keep only the paths that
+          # actually exist in the store. nix path-info --derivation instantiates
+          # the .drv without building it.
+          drv=$(nix path-info --derivation ".#${{ matrix.attr }}")
           {
             echo 'path<<EOF'
-            nix path-info ".#${{ matrix.attr }}"
+            nix-store --query --requisites --include-outputs "$drv" \
+              | while IFS= read -r p; do
+                  nix path-info "$p" >/dev/null 2>&1 && printf '%s\n' "$p"
+                done
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
       - name: Publish built path
-        if: ${{ inputs.push-to-cache }}
+        if: ${{ always() && inputs.push-to-cache }}
         uses: ./.znix-ci/.github/actions/push-nix-cache
         with:
           store-paths: ${{ steps.store-path.outputs.path }}
