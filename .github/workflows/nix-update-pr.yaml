@@ -286,10 +286,19 @@ jobs:
             # still contribute their finished dependencies.
             drv=$(nix path-info --derivation ".#${target}" 2>/dev/null || true)
             [[ -z "$drv" ]] && continue
+            # Build-closure outputs minus the .drv files themselves (we publish
+            # built outputs, not derivations).
             nix-store --query --requisites --include-outputs "$drv" 2>/dev/null \
-              | while IFS= read -r p; do
-                  nix path-info "$p" >/dev/null 2>&1 && printf '%s\n' "$p"
-                done >> "$RUNNER_TEMP/post-update-paths.txt"
+              | { grep -v '\.drv$' || true; } | sort -u > "$RUNNER_TEMP/candidates.txt"
+            # Keep only paths valid in the store. --print-invalid lists the
+            # missing ones in a single call, so a partial build still
+            # contributes its finished outputs without spawning a process per
+            # path.
+            xargs -r nix-store --check-validity --print-invalid \
+              < "$RUNNER_TEMP/candidates.txt" 2>/dev/null \
+              | sort -u > "$RUNNER_TEMP/invalid.txt"
+            comm -23 "$RUNNER_TEMP/candidates.txt" "$RUNNER_TEMP/invalid.txt" \
+              >> "$RUNNER_TEMP/post-update-paths.txt"
           done < "$RUNNER_TEMP/diff-targets.txt"
           sort -u "$RUNNER_TEMP/post-update-paths.txt" -o "$RUNNER_TEMP/post-update-paths.txt"
           if [[ -s "$RUNNER_TEMP/post-update-paths.txt" ]]; then

@@ -207,14 +207,26 @@ jobs:
         run: |
           # The final output may be invalid (build failed), so resolve the whole
           # derivation closure including outputs and keep only the paths that
-          # actually exist in the store.
-          drv=$(nix path-info --derivation ".#${{ matrix.attr }}")
+          # actually exist in the store. nix path-info --derivation instantiates
+          # the .drv without building it.
+          drv=$(nix path-info --derivation ".#${{ matrix.attr }}" 2>/dev/null || true)
+          : > "$RUNNER_TEMP/candidates.txt" "$RUNNER_TEMP/invalid.txt"
+          if [[ -n "$drv" ]]; then
+            # Build-closure outputs minus the .drv files themselves (we publish
+            # built outputs, not derivations).
+            nix-store --query --requisites --include-outputs "$drv" \
+              | { grep -v '\.drv$' || true; } | sort -u > "$RUNNER_TEMP/candidates.txt"
+            # Keep only paths valid in the store. --print-invalid lists the
+            # missing ones in a single call, so a partial build still
+            # contributes its finished outputs without spawning a process per
+            # path.
+            xargs -r nix-store --check-validity --print-invalid \
+              < "$RUNNER_TEMP/candidates.txt" 2>/dev/null \
+              | sort -u > "$RUNNER_TEMP/invalid.txt"
+          fi
           {
             echo 'path<<EOF'
-            nix-store --query --requisites --include-outputs "$drv" \
-              | while IFS= read -r p; do
-                  nix path-info "$p" >/dev/null 2>&1 && printf '%s\n' "$p"
-                done
+            comm -23 "$RUNNER_TEMP/candidates.txt" "$RUNNER_TEMP/invalid.txt"
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
