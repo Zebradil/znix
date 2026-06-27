@@ -18,6 +18,7 @@ jobs:
       nix-infra-ref: ${{ github.sha }}
       discovery-types: |
         checks
+      attr-filter: '-build$|^checks\.x86_64-linux\.'
       runner-mapping: |
         x86_64-linux:ubuntu-latest
         aarch64-darwin:macos-15
