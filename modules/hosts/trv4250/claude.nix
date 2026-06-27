@@ -5,17 +5,6 @@ let
     command = "/usr/local/bin/aicodemetricsd hook claude --hook-input stdin";
   };
 
-  baseSettings = {
-    model = "opusplan";
-    editorMode = "vim";
-    verbose = true;
-    remoteControlAtStartup = true;
-    agentPushNotifEnabled = true;
-    "enabledPlugins" = {
-      "gopls-lsp@claude-plugins-official" = true;
-    };
-  };
-
   aicodemetricsdHooks = {
     PostToolUse = [
       {
@@ -39,10 +28,9 @@ let
       enable = true;
       caveman = true;
       inherit configDir command;
-      settings = baseSettings // {
+      settings = {
         hooks = aicodemetricsdHooks;
         effortLevel = "high";
-        permissions.defaultMode = "default";
       };
     };
 in
@@ -59,33 +47,7 @@ in
         caveman.enable = true;
 
         profiles = {
-          personal = {
-            enable = true;
-            caveman = true;
-            configDir = ".config/personal-claude";
-            command = "claude";
-            settings = baseSettings // {
-              effortLevel = "medium";
-              # renovate-sweep: read + red-agent fix/merge after CI passes
-              permissions.allow = [
-                "Bash(gh pr list:*)"
-                "Bash(gh pr checks:*)"
-                "Bash(gh pr view:*)"
-                "Bash(gh run view:*)"
-                "Bash(gh pr comment:*)"
-                "Bash(git fetch:*)"
-                "Bash(git worktree:*)"
-                "Bash(git add:*)"
-                "Bash(git commit:*)"
-                "Bash(git push:*)"
-                "Bash(gh pr review:*)"
-                "Bash(gh pr merge:*)"
-                "Bash(nix flake check)"
-                "Bash(nixos-rebuild build:*)"
-                "Bash(darwin-rebuild build:*)"
-              ];
-            };
-          };
+          personal = inputs.self.lib.claude.mkPersonalProfile { };
 
           company = mkCompanyProfile {
             configDir = ".config/trv-claude";

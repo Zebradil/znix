@@ -1,5 +1,25 @@
-_:
+{ lib, ... }:
 let
+  # Renovate-sweep permissions: read + red-agent fix/merge after CI passes.
+  # Shared across hosts via flake.lib.claude (see below).
+  renovatePermissions = [
+    "Bash(gh pr list:*)"
+    "Bash(gh pr checks:*)"
+    "Bash(gh pr view:*)"
+    "Bash(gh run view:*)"
+    "Bash(gh pr comment:*)"
+    "Bash(git fetch:*)"
+    "Bash(git worktree:*)"
+    "Bash(git add:*)"
+    "Bash(git commit:*)"
+    "Bash(git push:*)"
+    "Bash(gh pr review:*)"
+    "Bash(gh pr merge:*)"
+    "Bash(nix flake check)"
+    "Bash(nixos-rebuild build:*)"
+    "Bash(darwin-rebuild build:*)"
+  ];
+
   claudeOptionsModule =
     { lib, ... }:
     {
@@ -20,6 +40,24 @@ let
             Path to the user's PKB (personal knowledge base) repo on this host.
             When set, exported as KNOW_ROOT for shell sessions; the pkb-* helper
             scripts and the save-convo / save-note skills consume it.
+          '';
+        };
+
+        defaultSettings = lib.mkOption {
+          type = lib.types.attrs;
+          default = {
+            agentPushNotifEnabled = true;
+            editorMode = "vim";
+            enabledPlugins."gopls-lsp@claude-plugins-official" = true;
+            model = "opusplan";
+            permissions.defaultMode = "auto";
+            remoteControlAtStartup = true;
+            tui = "fullscreen";
+            verbose = true;
+          };
+          description = ''
+            settings.json defaults merged under every profile's settings.
+            Per-profile settings win (deep merge via lib.recursiveUpdate).
           '';
         };
 
@@ -87,6 +125,26 @@ let
     };
 in
 {
+  flake.lib.claude = {
+    inherit renovatePermissions;
+
+    # Shared `personal` profile skeleton. Hosts pass only their settings deltas;
+    # base settings come from znix.claude.defaultSettings.
+    mkPersonalProfile =
+      {
+        settings ? { },
+      }:
+      {
+        enable = true;
+        caveman = true;
+        configDir = ".config/personal-claude";
+        command = "claude";
+        settings = lib.recursiveUpdate {
+          permissions.allow = renovatePermissions;
+        } settings;
+      };
+  };
+
   flake.modules = {
     nixos.claude = claudeOptionsModule;
     darwin.claude = claudeOptionsModule;
@@ -110,7 +168,7 @@ in
             "${config.home.homeDirectory}/code/github.com/zebradil/know";
 
         mkWrapper =
-          name: profile:
+          _: profile:
           pkgs.writeShellScriptBin profile.command ''
             set -euo pipefail
             export CLAUDE_CONFIG_DIR="$HOME/${profile.configDir}"
@@ -135,14 +193,17 @@ in
             UserPromptSubmit = [ { hooks = [ (mkCavemanHook profile.configDir "caveman-mode-tracker.js") ]; } ];
           };
 
+        defaultSettings = osConfig.znix.claude.defaultSettings;
+
         mkSettingsFile =
           name: profile:
           let
-            base = profile.settings.hooks or { };
+            effective = lib.recursiveUpdate defaultSettings profile.settings;
+            base = effective.hooks or { };
             contributions = mkCavemanHooks profile;
             mergedHooks = base // lib.mapAttrs (k: v: (base.${k} or [ ]) ++ v) contributions;
             finalSettings =
-              (builtins.removeAttrs profile.settings [ "hooks" ])
+              (removeAttrs effective [ "hooks" ])
               // lib.optionalAttrs (mergedHooks != { }) { hooks = mergedHooks; }
               // {
                 statusLine = {
@@ -189,12 +250,8 @@ in
       in
       lib.mkMerge [
         {
-          home.packages = [
-            pkgs.claude-monitor
-          ]
-          ++ lib.optional (!lib.elem "claude" wrapperNames) pkgs.claude-code
-          ++ wrappers
-          ++ helperScripts;
+          home.packages =
+            lib.optional (!lib.elem "claude" wrapperNames) pkgs.claude-code ++ wrappers ++ helperScripts;
         }
 
         {
@@ -203,7 +260,7 @@ in
 
             file = lib.mkMerge (
               lib.mapAttrsToList (
-                name: profile:
+                _: profile:
                 {
                   "${profile.configDir}/CLAUDE.md".source = "${assetsRoot}/CLAUDE.md";
                   "${profile.configDir}/statusline-command.sh".source = "${assetsRoot}/statusline-command.sh";
