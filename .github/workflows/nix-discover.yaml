@@ -54,7 +54,7 @@ permissions:
 
 jobs:
   discover:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     outputs:
       matrix: ${{ steps.discover.outputs.matrix }}
       has-targets: ${{ steps.discover.outputs.has_targets }}
