@@ -136,11 +136,13 @@ jobs:
         # materializes the source closure so the subsequent flake check passes.
         run: |
           system=$(nix eval --raw --impure --expr builtins.currentSystem)
-          checks=$(nix eval --json ".#checks.${system}" --apply builtins.attrNames | jq -r '.[]')
-          for check in $checks; do
-            echo "instantiating checks.${system}.${check}"
-            nix eval --raw ".#checks.${system}.${check}.drvPath" >/dev/null
-          done
+          # Instantiate every check's derivation in a single eval. Forcing each
+          # .drvPath materializes the source closure (see comment above); doing it
+          # in one `nix eval` reuses the flake evaluation instead of cold-loading
+          # it once per check as a per-attr loop would.
+          echo "instantiating all checks.${system}.*"
+          nix eval --json ".#checks.${system}" \
+            --apply 'builtins.mapAttrs (_: c: c.drvPath)' >/dev/null
           nix flake check --no-build
 
       - name: Verify formatting
