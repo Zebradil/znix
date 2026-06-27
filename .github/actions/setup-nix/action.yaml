@@ -35,12 +35,41 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Prepare flake source store
+      # A local file-based binary cache that holds only flake input `*-source`
+      # paths. It is added as a fast extra substituter (below) and populated by a
+      # post-build-hook so the slow `copying path '...-source'` substitutions from
+      # the network cache are served from the GitHub Actions cache on later runs.
+      #
+      # The hook runs inside the Nix daemon, which does not inherit step env vars,
+      # so the store directory is baked into the script as a literal. It copies
+      # the `-source` members of each build's closure; flake source paths are
+      # content-addressed, so they need no signature to be substituted back.
+      shell: bash
+      run: |
+        store="$RUNNER_TEMP/source-cache"
+        mkdir -p "$store"
+        hook="$RUNNER_TEMP/copy-sources-hook.sh"
+        cat > "$hook" <<EOF
+        #!/usr/bin/env bash
+        set -euo pipefail
+        : "\${OUT_PATHS:=}"
+        [ -n "\$OUT_PATHS" ] || exit 0
+        srcs=\$(nix-store --query --requisites \$OUT_PATHS 2>/dev/null \\
+          | { grep -E -- '-source\$' || true; } | sort -u)
+        [ -n "\$srcs" ] || exit 0
+        nix copy --to "file://$store" \$srcs >/dev/null 2>&1 || true
+        EOF
+        chmod +x "$hook"
+
     - name: Install Nix
       uses: DeterminateSystems/determinate-nix-action@629b284231c2a82554b724e357e47fc6020833c8 # v3.21.2
       with:
         extra-conf: |
           download-buffer-size = 524288000
-          extra-substituters = ${{ inputs.extra-substituters }}
+          post-build-hook = ${{ runner.temp }}/copy-sources-hook.sh
+          extra-substituters = file://${{ runner.temp }}/source-cache ${{ inputs.extra-substituters }}
+          extra-trusted-substituters = file://${{ runner.temp }}/source-cache
           extra-trusted-public-keys = ${{ inputs.extra-trusted-public-keys }}
 
     - name: Cache Nix download artefacts
@@ -50,6 +79,17 @@ runs:
         key: nix-cache-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/flake.lock') }}
         restore-keys: |
           nix-cache-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Cache flake source store paths
+      # Restores the file store before the job's Nix work and saves it at post.
+      # Keyed on flake.lock; restore-keys lets a lock bump reuse the prior cache
+      # and only refill the changed inputs.
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/source-cache
+        key: nix-source-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/flake.lock') }}
+        restore-keys: |
+          nix-source-${{ runner.os }}-${{ runner.arch }}-
 
     - name: Configure Nix signing key
       if: ${{ inputs.cache-signing-key != '' && inputs.cache-signing-key != null }}
