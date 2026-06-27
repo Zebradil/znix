@@ -52,13 +52,14 @@ runs:
         hook="$RUNNER_TEMP/copy-sources-hook.sh"
         cat > "$hook" <<EOF
         #!/usr/bin/env bash
-        set -euo pipefail
-        : "\${OUT_PATHS:=}"
-        [ -n "\$OUT_PATHS" ] || exit 0
-        srcs=\$(nix-store --query --requisites \$OUT_PATHS 2>/dev/null \\
-          | { grep -E -- '-source\$' || true; } | sort -u)
-        [ -n "\$srcs" ] || exit 0
-        nix copy --to "file://$store" \$srcs >/dev/null 2>&1 || true
+        # Runs inside the Nix daemon with a minimal PATH, so point at the Nix
+        # profile explicitly. A non-zero exit fails the build, so this must never
+        # fail: always exit 0 regardless of what the copy does.
+        export PATH="/nix/var/nix/profiles/default/bin:\$PATH"
+        [ -n "\${OUT_PATHS:-}" ] || exit 0
+        srcs=\$(nix-store --query --requisites \$OUT_PATHS 2>/dev/null | grep -E -- '-source\$' | sort -u) || true
+        [ -n "\$srcs" ] && nix copy --to "file://$store" \$srcs >/dev/null 2>&1
+        exit 0
         EOF
         chmod +x "$hook"
 
