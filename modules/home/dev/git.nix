@@ -26,6 +26,7 @@ _: {
             ".direnv"
             ".envrc"
             ".vscode"
+            "__pycache__"
           ];
         };
 
