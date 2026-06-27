@@ -21,16 +21,16 @@ on:
       runner-mapping:
         description: >
           Newline-separated list of Nix system to GitHub Actions runner label mappings (e.g.
-          'x86_64-linux:ubuntu-latest\naarch64-darwin:macos-15').
+          'x86_64-linux:ubuntu-latest\naarch64-darwin:macos-26').
         type: string
         required: false
         default: |
           x86_64-linux:ubuntu-latest
-          aarch64-darwin:macos-15
+          aarch64-darwin:macos-26
       attr-filter:
         description: >
-          Optional regex to filter discovered attributes (applied to the `attr` field).
-          Leave empty to include all discovered targets.
+          Optional regex to filter discovered attributes (applied to the `attr` field). Leave empty to include all
+          discovered targets.
         type: string
         required: false
         default: ''

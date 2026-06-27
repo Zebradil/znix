@@ -21,7 +21,7 @@ jobs:
       attr-filter: '-build$|^checks\.x86_64-linux\.'
       runner-mapping: |
         x86_64-linux:ubuntu-latest
-        aarch64-darwin:macos-15
+        aarch64-darwin:macos-26
       cache-pull-url: https://znix.zebradil.dev
       cache-public-key: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
       push-to-cache: ${{ github.event.pull_request.head.repo.full_name == github.repository }}

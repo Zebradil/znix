@@ -53,7 +53,7 @@ on:
         required: false
         default: |
           x86_64-linux:ubuntu-latest
-          aarch64-darwin:macos-15
+          aarch64-darwin:macos-26
       attr-filter:
         description: Optional regex to filter discovered attributes.
         type: string

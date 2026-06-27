@@ -52,7 +52,7 @@ on:
         required: false
         default: |
           x86_64-linux:ubuntu-latest
-          aarch64-darwin:macos-15
+          aarch64-darwin:macos-26
       attr-filter:
         description: Optional regex to filter discovered attributes.
         type: string
@@ -157,7 +157,9 @@ jobs:
       cache-public-key: ${{ inputs.cache-public-key }}
       nix-infra-ref: ${{ inputs.nix-infra-ref }}
       # Download the post-update lock so we probe the new store paths, not the old ones.
-      lock-artifact: ${{ needs.update-flake.result == 'success' && needs.update-flake.outputs.has_changes == 'true' && 'flake-lock' || '' }}
+      lock-artifact:
+        ${{ needs.update-flake.result == 'success' && needs.update-flake.outputs.has_changes == 'true' && 'flake-lock'
+        || '' }}
 
   build:
     needs:
