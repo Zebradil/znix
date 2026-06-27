@@ -194,10 +194,15 @@ jobs:
           while IFS= read -r target; do
             [[ -z "$target" ]] && continue
             echo "::group::Building pre-update: $target"
-            nix build ".#${target}" --no-link
-            path=$(nix path-info ".#${target}")
-            old_paths["$target"]="$path"
-            echo "Pre-update store path: $path"
+            # --keep-going and tolerate failure so one broken target does not
+            # abort the loop; other targets still get built and diffed.
+            if nix build --keep-going ".#${target}" --no-link; then
+              path=$(nix path-info ".#${target}")
+              old_paths["$target"]="$path"
+              echo "Pre-update store path: $path"
+            else
+              echo "::warning::Pre-update build failed for ${target}; skipping its diff."
+            fi
             echo "::endgroup::"
           done < "$RUNNER_TEMP/diff-targets.txt"
 
@@ -232,7 +237,13 @@ jobs:
             fi
 
             echo "::group::Building post-update: $target"
-            nix build ".#${target}" --no-link
+            # --keep-going and tolerate failure so a single broken target does
+            # not abort the loop. Whatever built still gets pushed below.
+            if ! nix build --keep-going ".#${target}" --no-link; then
+              echo "::endgroup::"
+              echo "::warning::Post-update build failed for ${target}; skipping its diff."
+              continue
+            fi
             echo "::endgroup::"
 
             new_path=$(nix path-info ".#${target}")
@@ -263,16 +274,33 @@ jobs:
 
       - name: Collect post-update store paths
         id: post-paths
-        if: ${{ steps.check.outputs.has_changes == 'true' && env.CAN_DIFF == 'true' }}
+        # always(): collect even when a build step failed, so successfully built
+        # paths still get pushed and are not rebuilt on the next run.
+        if: ${{ always() && steps.check.outputs.has_changes == 'true' && env.CAN_DIFF == 'true' }}
         run: |
           : > "$RUNNER_TEMP/post-update-paths.txt"
           while IFS= read -r target; do
             [[ -z "$target" ]] && continue
-            path=$(nix path-info ".#${target}" 2>/dev/null || true)
-            if [[ -n "$path" ]]; then
-              printf '%s\n' "$path" >> "$RUNNER_TEMP/post-update-paths.txt"
-            fi
+            # Resolve the whole derivation closure (including outputs) and keep
+            # only paths that exist in the store, so partially built targets
+            # still contribute their finished dependencies.
+            drv=$(nix path-info --derivation ".#${target}" 2>/dev/null || true)
+            [[ -z "$drv" ]] && continue
+            # Build-closure outputs minus the .drv files themselves (we publish
+            # built outputs, not derivations).
+            nix-store --query --requisites --include-outputs "$drv" 2>/dev/null \
+              | { grep -v '\.drv$' || true; } | sort -u > "$RUNNER_TEMP/candidates.txt"
+            # Keep only paths valid in the store. --print-invalid lists the
+            # missing ones in a single call, so a partial build still
+            # contributes its finished outputs without spawning a process per
+            # path.
+            xargs -r nix-store --check-validity --print-invalid \
+              < "$RUNNER_TEMP/candidates.txt" 2>/dev/null \
+              | sort -u > "$RUNNER_TEMP/invalid.txt"
+            comm -23 "$RUNNER_TEMP/candidates.txt" "$RUNNER_TEMP/invalid.txt" \
+              >> "$RUNNER_TEMP/post-update-paths.txt"
           done < "$RUNNER_TEMP/diff-targets.txt"
+          sort -u "$RUNNER_TEMP/post-update-paths.txt" -o "$RUNNER_TEMP/post-update-paths.txt"
           if [[ -s "$RUNNER_TEMP/post-update-paths.txt" ]]; then
             {
               echo 'paths<<EOF'
@@ -285,7 +313,7 @@ jobs:
           fi
 
       - name: Push post-update builds to cache
-        if: ${{ steps.post-paths.outputs.has_paths == 'true' && env.CAN_PUSH_CACHE == 'true' }}
+        if: ${{ always() && steps.post-paths.outputs.has_paths == 'true' && env.CAN_PUSH_CACHE == 'true' }}
         uses: ./.znix-ci/.github/actions/push-nix-cache
         with:
           store-paths: ${{ steps.post-paths.outputs.paths }}

@@ -195,18 +195,43 @@ jobs:
           cache-signing-key: ${{ secrets.cache-signing-key }}
 
       - name: Build target
-        run: nix build ".#${{ matrix.attr }}"
+        # --keep-going: don't stop at the first failed dependency so the rest of
+        # the closure still gets built and can be pushed to the cache below.
+        run: nix build --keep-going ".#${{ matrix.attr }}"
 
-      - name: Resolve store path
+      - name: Resolve built store paths
         id: store-path
+        # always(): publish whatever was built even when the build step failed,
+        # so a single broken derivation does not force a full rebuild next run.
+        if: ${{ always() }}
         run: |
+          # The final output may be invalid (build failed), so resolve the whole
+          # derivation closure including outputs and keep only the paths that
+          # actually exist in the store. nix path-info --derivation instantiates
+          # the .drv without building it.
+          drv=$(nix path-info --derivation ".#${{ matrix.attr }}" 2>/dev/null || true)
+          : > "$RUNNER_TEMP/candidates.txt" "$RUNNER_TEMP/invalid.txt"
+          if [[ -n "$drv" ]]; then
+            # Build-closure outputs minus the .drv files themselves (we publish
+            # built outputs, not derivations).
+            nix-store --query --requisites --include-outputs "$drv" \
+              | { grep -v '\.drv$' || true; } | sort -u > "$RUNNER_TEMP/candidates.txt"
+            # Keep only paths valid in the store. --print-invalid lists the
+            # missing ones in a single call, so a partial build still
+            # contributes its finished outputs without spawning a process per
+            # path.
+            xargs -r nix-store --check-validity --print-invalid \
+              < "$RUNNER_TEMP/candidates.txt" 2>/dev/null \
+              | sort -u > "$RUNNER_TEMP/invalid.txt"
+          fi
           {
             echo 'path<<EOF'
-            nix path-info ".#${{ matrix.attr }}"
+            comm -23 "$RUNNER_TEMP/candidates.txt" "$RUNNER_TEMP/invalid.txt"
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
       - name: Publish built path
+        if: ${{ always() }}
         uses: ./.znix-ci/.github/actions/push-nix-cache
         with:
           store-paths: ${{ steps.store-path.outputs.path }}

@@ -187,19 +187,45 @@ jobs:
           cache-signing-key: ${{ inputs.push-to-cache && secrets.cache-signing-key || '' }}
 
       - name: Build target
-        run: nix build ".#${{ matrix.attr }}"
+        # --keep-going: don't stop at the first failed dependency. Building as
+        # much of the closure as possible means the successfully built paths can
+        # still be pushed to the cache below, so a single broken derivation does
+        # not force everything else to be rebuilt on the next run.
+        run: nix build --keep-going ".#${{ matrix.attr }}"
 
-      - name: Resolve store path
+      - name: Resolve built store paths
         id: store-path
+        # always(): run even when the build step failed so we can still publish
+        # whatever was built. Skip the work entirely when not pushing.
+        if: ${{ always() && inputs.push-to-cache }}
         run: |
+          # The final output may be invalid (build failed), so resolve the whole
+          # derivation closure including outputs and keep only the paths that
+          # actually exist in the store. nix path-info --derivation instantiates
+          # the .drv without building it.
+          drv=$(nix path-info --derivation ".#${{ matrix.attr }}" 2>/dev/null || true)
+          : > "$RUNNER_TEMP/candidates.txt" "$RUNNER_TEMP/invalid.txt"
+          if [[ -n "$drv" ]]; then
+            # Build-closure outputs minus the .drv files themselves (we publish
+            # built outputs, not derivations).
+            nix-store --query --requisites --include-outputs "$drv" \
+              | { grep -v '\.drv$' || true; } | sort -u > "$RUNNER_TEMP/candidates.txt"
+            # Keep only paths valid in the store. --print-invalid lists the
+            # missing ones in a single call, so a partial build still
+            # contributes its finished outputs without spawning a process per
+            # path.
+            xargs -r nix-store --check-validity --print-invalid \
+              < "$RUNNER_TEMP/candidates.txt" 2>/dev/null \
+              | sort -u > "$RUNNER_TEMP/invalid.txt"
+          fi
           {
             echo 'path<<EOF'
-            nix path-info ".#${{ matrix.attr }}"
+            comm -23 "$RUNNER_TEMP/candidates.txt" "$RUNNER_TEMP/invalid.txt"
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
       - name: Publish built path
-        if: ${{ inputs.push-to-cache }}
+        if: ${{ always() && inputs.push-to-cache }}
         uses: ./.znix-ci/.github/actions/push-nix-cache
         with:
           store-paths: ${{ steps.store-path.outputs.path }}
