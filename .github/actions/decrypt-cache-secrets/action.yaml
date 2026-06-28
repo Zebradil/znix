@@ -1,0 +1,102 @@
+name: Resolve cache secrets
+description: >
+  Resolve the binary-cache publishing secrets (signing key, S3 URL, AWS credentials) and expose
+  them for the push-nix-cache action. Two mutually-exclusive sources are supported:
+    1. sops mode  - decrypt a sops-encrypted file with an age private key (set `sops-age-key`).
+    2. direct mode - pass the secrets straight in (`signing-key`, `s3-url`, `aws-*`), e.g. from
+       individual GitHub Actions repo secrets, when a caller does not want to use sops.
+  When `sops-age-key` is set, sops mode wins and the direct inputs are ignored. When neither a
+  key nor any direct value is supplied, every output is empty and the caller's publish step
+  becomes a no-op.
+
+inputs:
+  sops-age-key:
+    description: age private key able to decrypt the sops file. Set to enable sops mode.
+    required: false
+    default: ''
+  sops-file:
+    description: Path to the sops-encrypted cache secrets file (relative to the repo checkout).
+    required: false
+    default: secrets/cache.yaml
+  signing-key:
+    description: >
+      Direct-mode Nix signing private key material (not a path). Written to a temp file and
+      exposed as `signing-key-file`. Ignored in sops mode.
+    required: false
+    default: ''
+  s3-url:
+    description: Direct-mode S3 URL for `nix copy --to`. Ignored in sops mode.
+    required: false
+    default: ''
+  aws-access-key-id:
+    description: Direct-mode AWS access key ID. Ignored in sops mode.
+    required: false
+    default: ''
+  aws-secret-access-key:
+    description: Direct-mode AWS secret access key. Ignored in sops mode.
+    required: false
+    default: ''
+
+outputs:
+  signing-key-file:
+    description: Path to the resolved signing key on disk, or empty.
+    value: ${{ steps.sops.outputs.signing-key-file || steps.direct.outputs.signing-key-file }}
+  s3-url:
+    description: S3 URL for `nix copy --to`, or empty.
+    value: ${{ steps.sops.outputs.s3-url || steps.direct.outputs.s3-url }}
+  aws-access-key-id:
+    description: AWS access key ID, or empty.
+    value: ${{ steps.sops.outputs.aws-access-key-id || steps.direct.outputs.aws-access-key-id }}
+  aws-secret-access-key:
+    description: AWS secret access key, or empty.
+    value: ${{ steps.sops.outputs.aws-secret-access-key || steps.direct.outputs.aws-secret-access-key }}
+
+runs:
+  using: composite
+  steps:
+    - name: Decrypt cache secrets (sops mode)
+      id: sops
+      if: ${{ inputs.sops-age-key != '' }}
+      shell: bash
+      env:
+        SOPS_AGE_KEY: ${{ inputs.sops-age-key }}
+        SOPS_FILE: ${{ inputs.sops-file }}
+        KEY_FILE: ${{ runner.temp }}/cache-priv-key.pem
+      run: |
+        # sops is not preinstalled on the runner; pull it from nixpkgs for the call.
+        nix shell nixpkgs#sops --command bash -euo pipefail <<'SOPS'
+        extract() { sops decrypt --extract "[\"$1\"]" "$SOPS_FILE"; }
+
+        ( umask 077; extract signing-key > "$KEY_FILE" )
+        echo "signing-key-file=$KEY_FILE" >> "$GITHUB_OUTPUT"
+
+        echo "s3-url=$(extract cache-s3-url)" >> "$GITHUB_OUTPUT"
+
+        akid="$(extract aws-access-key-id)"
+        asak="$(extract aws-secret-access-key)"
+        echo "::add-mask::$akid"
+        echo "::add-mask::$asak"
+        echo "aws-access-key-id=$akid" >> "$GITHUB_OUTPUT"
+        echo "aws-secret-access-key=$asak" >> "$GITHUB_OUTPUT"
+        SOPS
+
+    - name: Resolve cache secrets (direct mode)
+      id: direct
+      if: ${{ inputs.sops-age-key == '' }}
+      shell: bash
+      env:
+        SIGNING_KEY: ${{ inputs.signing-key }}
+        S3_URL: ${{ inputs.s3-url }}
+        AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+        KEY_FILE: ${{ runner.temp }}/cache-priv-key.pem
+      run: |
+        if [[ -n "$SIGNING_KEY" ]]; then
+          ( umask 077; printf '%s\n' "$SIGNING_KEY" > "$KEY_FILE" )
+          echo "signing-key-file=$KEY_FILE" >> "$GITHUB_OUTPUT"
+        fi
+        echo "s3-url=$S3_URL" >> "$GITHUB_OUTPUT"
+        if [[ -n "$AWS_ACCESS_KEY_ID" ]]; then echo "::add-mask::$AWS_ACCESS_KEY_ID"; fi
+        if [[ -n "$AWS_SECRET_ACCESS_KEY" ]]; then echo "::add-mask::$AWS_SECRET_ACCESS_KEY"; fi
+        echo "aws-access-key-id=$AWS_ACCESS_KEY_ID" >> "$GITHUB_OUTPUT"
+        echo "aws-secret-access-key=$AWS_SECRET_ACCESS_KEY" >> "$GITHUB_OUTPUT"

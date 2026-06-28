@@ -5,6 +5,9 @@ keys:
   # Hosts
   - hosts:
       - &tuxedo age1nqcqaf0e2jzj7w9pj3d3cdlf8havcmzdfth8gzvgm0drwlqrnveq8eu8j2
+  # CI (GitHub Actions); private key stored as the SOPS_AGE_KEY repo secret
+  - ci:
+      - &github-ci age1avy74tmpl5tws934r0rs9rxgcul2k3d942xmn4heh4t0xuf584msr7cewl
 
 creation_rules:
   - path_regex: secrets/users/zebradil\.ya?ml$
@@ -22,3 +25,8 @@ creation_rules:
       - age:
           - *tuxedo
           - *zebradil
+  - path_regex: secrets/cache\.ya?ml$
+    key_groups:
+      - age:
+          - *zebradil
+          - *github-ci

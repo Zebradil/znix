@@ -34,8 +34,5 @@ jobs:
       run-flake-update: ${{ github.event_name == 'workflow_dispatch' && inputs.run-flake-update }}
       auto-commit: ${{ github.event_name == 'workflow_dispatch' && inputs.run-flake-update }}
     secrets:
-      cache-signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
-      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
       ci-push-ssh-key: ${{ secrets.CI_PUSH_DEPLOY_KEY }}
-      cache-s3-url: ${{ secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}

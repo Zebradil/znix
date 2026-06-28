@@ -7,6 +7,13 @@ let
   # Shorthand (all systems):   pkgname = "github:NixOS/nixpkgs/<rev>";
   # Long form (per-system):    pkgname = { ref = "github:NixOS/nixpkgs/<rev>"; systems = [ "aarch64-darwin" ]; };
   pins = {
+    mise = {
+      # 2026.6.11 builds from source (not cached) and its new test
+      # oci::layer::tests::preserve_metadata_dir_layer_keeps_special_permission_bits
+      # fails: expects mode 0o4755 (setuid) but the Nix build sandbox strips the
+      # setuid bit, yielding 0o0755. Pin to 2026.6.0 (cached on all systems).
+      ref = "github:NixOS/nixpkgs/9ae611a455b90cf061d8f332b977e387bda8e1ca";
+    };
     nushell = {
       # Upgrade to 0.112.2 is not in nixpkgs-unstable yet
       ref = "github:NixOS/nixpkgs/e787d9e711e78599f0ad3ec517fcef8192efd47e";

@@ -26,10 +26,7 @@ jobs:
       cache-public-key: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
       push-to-cache: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     secrets:
-      cache-signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
-      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      cache-s3-url: ${{ secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
+      sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
 
   required-checks:
     name: required-checks
