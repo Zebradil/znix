@@ -19,9 +19,7 @@ name: Reusable Nix Update
 #         auto-commit: ${{ github.event_name != 'push' }}
 #         discovery-types: checks
 #       secrets:
-#         cache-signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
-#         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#         sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
 #         ci-push-ssh-key: ${{ secrets.CI_PUSH_DEPLOY_KEY }}
 
 on:
@@ -68,23 +66,37 @@ on:
         type: string
         required: false
         default: ''
+      cache-secrets-file:
+        description: Path to the sops-encrypted cache secrets file decrypted with `sops-age-key`.
+        type: string
+        required: false
+        default: secrets/cache.yaml
       nix-infra-ref:
         description: Git ref of zebradil/znix to use for CI actions and scripts.
         type: string
         required: false
         default: main
     secrets:
+      # Two ways to supply the cache-publishing credentials; pick one.
+      #   1. sops-age-key                  - decrypt them from the sops file (single secret).
+      #   2. cache-signing-key + aws-* + cache-s3-url - pass them directly (no sops needed).
+      # When sops-age-key is set it takes precedence and the direct secrets are ignored.
+      sops-age-key:
+        description: >
+          age private key that can decrypt the sops cache secrets file (signing key, S3 URL,
+          AWS credentials). Stored as the SOPS_AGE_KEY repo secret.
+        required: false
       cache-signing-key:
-        description: Nix binary cache signing private key.
-        required: false
-      aws-access-key-id:
-        description: AWS access key ID for S3 cache push.
-        required: false
-      aws-secret-access-key:
-        description: AWS secret access key for S3 cache push.
+        description: Direct-mode Nix signing private key material. Ignored when sops-age-key is set.
         required: false
       cache-s3-url:
-        description: S3 URL for `nix copy --to` (e.g. s3://my-bucket?region=eu-central-1).
+        description: Direct-mode S3 URL for `nix copy --to`. Ignored when sops-age-key is set.
+        required: false
+      aws-access-key-id:
+        description: Direct-mode AWS access key ID. Ignored when sops-age-key is set.
+        required: false
+      aws-secret-access-key:
+        description: Direct-mode AWS secret access key. Ignored when sops-age-key is set.
         required: false
       ci-push-ssh-key:
         description: SSH deploy key for committing the updated flake.lock back to the branch.
@@ -194,7 +206,18 @@ jobs:
         with:
           extra-substituters: ${{ inputs.cache-pull-url }}
           extra-trusted-public-keys: ${{ inputs.cache-public-key }}
-          cache-signing-key: ${{ secrets.cache-signing-key }}
+
+      - name: Decrypt cache secrets
+        id: cache-secrets
+        if: ${{ always() }}
+        uses: ./.znix-ci/.github/actions/decrypt-cache-secrets
+        with:
+          sops-age-key: ${{ secrets.sops-age-key }}
+          sops-file: ${{ inputs.cache-secrets-file }}
+          signing-key: ${{ secrets.cache-signing-key }}
+          s3-url: ${{ secrets.cache-s3-url }}
+          aws-access-key-id: ${{ secrets.aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
 
       - name: Build target
         # --keep-going: don't stop at the first failed dependency so the rest of
@@ -237,14 +260,14 @@ jobs:
         uses: ./.znix-ci/.github/actions/push-nix-cache
         with:
           store-paths: ${{ steps.store-path.outputs.path }}
-          signing-key-file: ${{ steps.setup.outputs.signing-key-file }}
-          s3-url: ${{ secrets.cache-s3-url }}
-          aws-access-key-id: ${{ secrets.aws-access-key-id }}
-          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+          signing-key-file: ${{ steps.cache-secrets.outputs.signing-key-file }}
+          s3-url: ${{ steps.cache-secrets.outputs.s3-url }}
+          aws-access-key-id: ${{ steps.cache-secrets.outputs.aws-access-key-id }}
+          aws-secret-access-key: ${{ steps.cache-secrets.outputs.aws-secret-access-key }}
 
       - name: Clean up signing key
-        if: ${{ always() && steps.setup.outputs.signing-key-file != '' }}
-        run: rm -f '${{ steps.setup.outputs.signing-key-file }}'
+        if: ${{ always() && steps.cache-secrets.outputs.signing-key-file != '' }}
+        run: rm -f '${{ steps.cache-secrets.outputs.signing-key-file }}'
 
   commit-flake-update:
     needs:

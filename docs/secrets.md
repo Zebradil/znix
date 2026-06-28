@@ -8,6 +8,8 @@ Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) using age
 
 - **User key** (`zebradil`): Personal age key for encrypting/decrypting all secrets
 - **Host keys**: Derived from each host's `/etc/ssh/ssh_host_ed25519_key`
+- **CI key** (`github-ci`): Dedicated age key used by GitHub Actions to decrypt `secrets/cache.yaml`.
+  The private key is stored as the `SOPS_AGE_KEY` repository secret. See [cache.md](cache.md).
 
 ## Deriving a Host Age Key
 
@@ -47,3 +49,4 @@ sops secrets/hosts/tuxedo/ssh_host_ed25519.key
 | `secrets/users/zebradil.yaml` | `password`, `u2f_keys/*` |
 | `secrets/hosts/common.yaml` | `wireless` (PSK) |
 | `secrets/hosts/tuxedo/ssh_host_ed25519.key` | Host SSH private key |
+| `secrets/cache.yaml` | `cache-s3-url`, `signing-key`, `aws-access-key-id`, `aws-secret-access-key` (see [cache.md](cache.md)) |

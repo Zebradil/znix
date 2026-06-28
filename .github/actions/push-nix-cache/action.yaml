@@ -32,41 +32,18 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Prepare store path list
-      id: store-path-list
-      shell: bash
-      run: |
-        mkdir -p "$RUNNER_TEMP"
-        store_path_file="$RUNNER_TEMP/nix-store-paths.txt"
-        printf "%s\n" "${{ inputs.store-paths }}" | sed '/^[[:space:]]*$/d' > "$store_path_file"
-        if [[ ! -s "$store_path_file" ]]; then
-          echo "No store paths to publish."
-          echo "has_paths=false" >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-        echo "has_paths=true" >> "$GITHUB_OUTPUT"
-        echo "store_path_file=$store_path_file" >> "$GITHUB_OUTPUT"
-
-    - name: Sign store paths
-      if: ${{ steps.store-path-list.outputs.has_paths == 'true' && inputs.signing-key-file != '' }}
-      shell: bash
-      run: |
-        store_paths=()
-        while IFS= read -r p; do store_paths+=("$p"); done < '${{ steps.store-path-list.outputs.store_path_file }}'
-        nix store sign --key-file '${{ inputs.signing-key-file }}' --recursive "${store_paths[@]}"
-
-    - name: Push to S3 binary cache
-      if: ${{ steps.store-path-list.outputs.has_paths == 'true' && inputs.s3-url != '' && inputs.aws-access-key-id != '' && inputs.aws-secret-access-key != '' }}
+    - name: Sign and push store paths
       shell: bash
       env:
+        STORE_PATHS: ${{ inputs.store-paths }}
+        CACHE_SIGNING_KEY_FILE: ${{ inputs.signing-key-file }}
+        CACHE_S3_URL: ${{ inputs.s3-url }}
         AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
       run: |
-        store_paths=()
-        while IFS= read -r p; do store_paths+=("$p"); done < '${{ steps.store-path-list.outputs.store_path_file }}'
-        nix copy --to '${{ inputs.s3-url }}' "${store_paths[@]}"
-
-    - name: Skip remote push when credentials are missing
-      if: ${{ steps.store-path-list.outputs.has_paths == 'true' && inputs.s3-url != '' && (inputs.aws-access-key-id == '' || inputs.aws-secret-access-key == '') }}
-      shell: bash
-      run: echo "::warning::Remote cache push skipped — AWS credentials are not set."
+        mkdir -p "$RUNNER_TEMP"
+        store_path_file="$RUNNER_TEMP/nix-store-paths.txt"
+        printf '%s\n' "$STORE_PATHS" | sed '/^[[:space:]]*$/d' > "$store_path_file"
+        # Shared resolve -> sign -> push core, also used by `nix run .#cache-push`.
+        bash "$GITHUB_ACTION_PATH/../../scripts/populate-nix-cache.sh" \
+          --paths-file "$store_path_file"
