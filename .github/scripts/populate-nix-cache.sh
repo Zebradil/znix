@@ -41,11 +41,14 @@ else
   if [[ ${#attrs[@]} -eq 0 ]]; then
     system="$(nix eval --raw --impure --expr builtins.currentSystem)"
     echo "No attrs given; resolving every checks.${system}.* output."
-    mapfile -t names < <(
+    # Plain read loop (not mapfile) so the script also runs under the bash 3.2
+    # that ships with macOS, which CI uses to invoke it directly.
+    while IFS= read -r n; do
+      [[ -n "$n" ]] && attrs+=("checks.${system}.${n}")
+    done < <(
       nix eval --raw ".#checks.${system}" \
         --apply 'cs: builtins.concatStringsSep "\n" (builtins.attrNames cs)'
     )
-    for n in "${names[@]}"; do attrs+=("checks.${system}.${n}"); done
   fi
   candidates="$workdir/candidates.txt"
   : > "$candidates"
@@ -76,7 +79,10 @@ if [[ ! -s "$paths" ]]; then
   exit 0
 fi
 
-mapfile -t store_paths < "$paths"
+store_paths=()
+while IFS= read -r p; do
+  [[ -n "$p" ]] && store_paths+=("$p")
+done < "$paths"
 echo "Resolved ${#store_paths[@]} store path(s)."
 
 if [[ -n "${CACHE_SIGNING_KEY_FILE:-}" ]]; then

@@ -5,8 +5,11 @@ description: >
   Each step is skipped when its required inputs are empty.
 
 inputs:
-  store-paths:
-    description: Newline-separated Nix store paths to publish (e.g. output of `nix path-info`).
+  store-paths-file:
+    description: >
+      Path to a file containing newline-separated Nix store paths to publish. A file (not the
+      inline list) is used so large closures don't overflow the process environment / argument
+      limits.
     required: true
   signing-key-file:
     description: >
@@ -35,15 +38,12 @@ runs:
     - name: Sign and push store paths
       shell: bash
       env:
-        STORE_PATHS: ${{ inputs.store-paths }}
+        STORE_PATHS_FILE: ${{ inputs.store-paths-file }}
         CACHE_SIGNING_KEY_FILE: ${{ inputs.signing-key-file }}
         CACHE_S3_URL: ${{ inputs.s3-url }}
         AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
       run: |
-        mkdir -p "$RUNNER_TEMP"
-        store_path_file="$RUNNER_TEMP/nix-store-paths.txt"
-        printf '%s\n' "$STORE_PATHS" | sed '/^[[:space:]]*$/d' > "$store_path_file"
         # Shared resolve -> sign -> push core, also used by `nix run .#cache-push`.
         bash "$GITHUB_ACTION_PATH/../../scripts/populate-nix-cache.sh" \
-          --paths-file "$store_path_file"
+          --paths-file "$STORE_PATHS_FILE"

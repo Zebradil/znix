@@ -249,17 +249,18 @@ jobs:
               < "$RUNNER_TEMP/candidates.txt" 2>/dev/null \
               | sort -u > "$RUNNER_TEMP/invalid.txt"
           fi
-          {
-            echo 'path<<EOF'
-            comm -23 "$RUNNER_TEMP/candidates.txt" "$RUNNER_TEMP/invalid.txt"
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
+          # Write the valid paths to a file and export only its path. Large
+          # closures (1000s of paths) would otherwise overflow the step env /
+          # argument limits when passed inline to the publish action.
+          comm -23 "$RUNNER_TEMP/candidates.txt" "$RUNNER_TEMP/invalid.txt" \
+            > "$RUNNER_TEMP/store-paths.txt"
+          echo "path-file=$RUNNER_TEMP/store-paths.txt" >> "$GITHUB_OUTPUT"
 
       - name: Publish built path
         if: ${{ always() }}
         uses: ./.znix-ci/.github/actions/push-nix-cache
         with:
-          store-paths: ${{ steps.store-path.outputs.path }}
+          store-paths-file: ${{ steps.store-path.outputs.path-file }}
           signing-key-file: ${{ steps.cache-secrets.outputs.signing-key-file }}
           s3-url: ${{ steps.cache-secrets.outputs.s3-url }}
           aws-access-key-id: ${{ steps.cache-secrets.outputs.aws-access-key-id }}
