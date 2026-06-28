@@ -32,6 +32,15 @@
 
         programs.firefox = {
           enable = true;
+          # Pin the legacy profile dir (~/.mozilla/firefox). Since
+          # home.stateVersion >= 25.05, home-manager defaults configPath to the
+          # XDG dir (~/.config/mozilla/firefox), but the nixpkgs Firefox wrapper
+          # sets MOZ_LEGACY_PROFILES=1, which both forces the ~/.mozilla dir AND
+          # disables Firefox's per-install "dedicated profile" feature so the
+          # declarative named `default` profile below is actually honored. Going
+          # XDG would require unsetting that flag, which makes Firefox ignore this
+          # profile and auto-create a fresh per-install profile on every update.
+          configPath = ".mozilla/firefox";
           nativeMessagingHosts = with pkgs; [
             tridactyl-native
           ];
