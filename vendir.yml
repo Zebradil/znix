@@ -22,3 +22,31 @@ directories:
           # Category-level READMEs are docs, not skills.
           - skills/**/README.md
         newRootPath: skills
+
+  - path: vendor/caveman
+    contents:
+      # caveman agent skill set + hooks/plugins from JuliusBrussee/caveman.
+      # Consumed by modules/home/{claude,opencode}/caveman.nix via
+      # inputs.self + "/vendor/caveman/...". Only the subtrees those modules
+      # read are vendored. Update with `vendir sync`; synced files are
+      # committed, so every update is a reviewable diff.
+      - path: .
+        git:
+          url: https://github.com/JuliusBrussee/caveman
+          ref: origin/main
+        includePaths:
+          - src/hooks/**
+          - src/plugins/**
+          - src/rules/**
+          - skills/**
+          - commands/**
+          - agents/**
+        excludePaths:
+          # Self-installers (`curl … | bash`, fetch hooks from GitHub at
+          # runtime). The claude module symlinks all of src/hooks into the
+          # profile, so these would land there inert but misleading. The nix
+          # config never runs them — only the .js hooks + caveman-statusline.sh.
+          - src/hooks/install.*
+          - src/hooks/uninstall.*
+          - src/hooks/checksums.sha256
+          - src/hooks/README.md

@@ -1,9 +1,10 @@
 # Vendored AI Skills
 
-External agent skills (currently [mattpocock/skills](https://github.com/mattpocock/skills))
-are vendored into the repo with [vendir](https://carvel.dev/vendir/) rather than
-pulled as a flake input. The synced files are committed, so every upstream update
-lands as a reviewable diff instead of an opaque lock bump.
+External agent skills ([mattpocock/skills](https://github.com/mattpocock/skills),
+[JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman)) are vendored
+into the repo with [vendir](https://carvel.dev/vendir/) rather than pulled as
+flake inputs. The synced files are committed, so every upstream update lands as a
+reviewable diff instead of an opaque lock bump.
 
 ## Layout
 
@@ -14,6 +15,10 @@ vendor/
   mattpocock-skills/
     engineering/<skill>/
     productivity/<skill>/
+  caveman/                 not just skills — also hooks/plugins/rules/commands
+    src/{hooks,plugins,rules}/
+    skills/<skill>/
+    commands/ agents/
 ```
 
 ## How it wires in
@@ -28,13 +33,22 @@ honouring per-profile `excludeAssets.skills`.
 No `.nix` change is needed to add or drop a skill from an already-vendored
 source — `vendir sync` rewrites the tree and the modules pick it up.
 
+`caveman` is consumed differently: `modules/home/{claude,opencode}/caveman.nix`
+reference `inputs.self + "/vendor/caveman/..."` directly (hooks, the opencode
+plugin, the activation ruleset and skills), not via `extraSkillRoots`.
+
 ## Updating
 
 ```bash
-nix develop                # vendir is in the dev shell
-vendir sync                # re-resolves ref, rewrites files + vendir.lock.yml
+nix develop                            # vendir is in the dev shell
+vendir sync                            # re-resolves every source
+vendir sync --directory vendor/caveman # or bump a single source
 git add vendor vendir.lock.yml
 ```
+
+`vendir sync` (no flag) re-resolves *all* sources, so a bare sync bumps every
+pinned SHA. Use `--directory vendor/<name>` to update one source in isolation
+and keep the others pinned.
 
 Review the resulting diff before committing — these are prompts that steer agent
 behaviour, so changes are worth reading. New files must be staged before Nix

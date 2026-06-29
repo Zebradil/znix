@@ -7,11 +7,6 @@ let
     };
 in
 {
-  flake-file.inputs.caveman = {
-    url = "github:JuliusBrussee/caveman";
-    flake = false;
-  };
-
   flake.modules = {
     nixos.claude-caveman = cavemanOptionsModule;
     darwin.claude-caveman = cavemanOptionsModule;
@@ -29,7 +24,7 @@ in
         allProfiles = osConfig.znix.claude.profiles or { };
         enabled = lib.filterAttrs (_: p: p.enable && cavemanCfg.enable && p.caveman) allProfiles;
 
-        cavemanSrc = inputs.caveman;
+        cavemanSrc = inputs.self + "/vendor/caveman";
         znixStatusline = "${osConfig.znix.claude.assetsRoot}/statusline-command.sh";
 
         mkDirFiles =

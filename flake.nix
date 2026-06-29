@@ -8,10 +8,6 @@
       url = "github:MalpenZibo/ashell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    caveman = {
-      url = "github:JuliusBrussee/caveman";
-      flake = false;
-    };
     determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/3";
     disko = {
       url = "github:nix-community/disko";

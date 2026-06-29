@@ -8,4 +8,12 @@ directories:
       - v1.0.1-11-g448d0ad
     path: .
   path: vendor/mattpocock-skills
+- contents:
+  - git:
+      commitTitle: Update README.md
+      sha: 25d22f864ad68cc447a4cb93aefde918aa4aec9f
+      tags:
+      - v1.9.0-1-g25d22f8
+    path: .
+  path: vendor/caveman
 kind: LockConfig
