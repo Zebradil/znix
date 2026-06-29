@@ -61,5 +61,6 @@ hosts/              Thin host compositions
 users/              User definitions + home-manager wiring
 secrets/            SOPS-encrypted secrets
 assets/bin/         Custom scripts
+vendor/             Vendir-managed external sources (see docs/vendored-skills.md)
 docs/               Documentation
 ```

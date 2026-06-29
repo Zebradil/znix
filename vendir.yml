@@ -1,0 +1,24 @@
+apiVersion: vendir.k14s.io/v1alpha1
+kind: Config
+directories:
+  - path: vendor/mattpocock-skills
+    contents:
+      # Engineering + productivity skill sets from mattpocock/skills.
+      # newRootPath strips the leading "skills/" so the tree lands as
+      # vendor/mattpocock-skills/{engineering,productivity}/<skill>/.
+      # Update with `vendir sync` (re-resolves ref, rewrites vendir.lock.yml);
+      # the synced files are committed, so every update is a reviewable diff.
+      - path: .
+        git:
+          url: https://github.com/mattpocock/skills
+          ref: origin/main
+        includePaths:
+          - skills/engineering/**
+          - skills/productivity/**
+        excludePaths:
+          # Meta-installer that git-clones skills into ~/.claude — conflicts
+          # with this declarative, read-only-symlink setup.
+          - skills/engineering/setup-matt-pocock-skills/**
+          # Category-level READMEs are docs, not skills.
+          - skills/**/README.md
+        newRootPath: skills

@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ lib, inputs, ... }:
 let
   # Renovate-sweep permissions: read + red-agent fix/merge after CI passes.
   # Shared across hosts via flake.lib.claude (see below).
@@ -30,6 +30,19 @@ let
           description = ''
             Root path of the shared Claude asset tree (CLAUDE.md, skills/, agents/, commands/).
             Override to point at a flake input for an out-of-repo source.
+          '';
+        };
+
+        extraSkillRoots = lib.mkOption {
+          type = lib.types.listOf lib.types.path;
+          default = [
+            (inputs.self + "/vendor/mattpocock-skills/engineering")
+            (inputs.self + "/vendor/mattpocock-skills/productivity")
+          ];
+          description = ''
+            Extra directories whose immediate children are skill bundles, merged
+            into each profile's skills/ alongside assetsRoot/skills. Defaults to
+            the vendir-managed mattpocock/skills tree (see vendir.yml).
           '';
         };
 
@@ -161,6 +174,7 @@ in
         profiles = osConfig.znix.claude.profiles or { };
         enabled = lib.filterAttrs (_: p: p.enable) profiles;
         assetsRoot = osConfig.znix.claude.assetsRoot;
+        extraSkillRoots = osConfig.znix.claude.extraSkillRoots or [ ];
         knowRoot =
           if osConfig.znix.claude.knowRoot != null then
             osConfig.znix.claude.knowRoot
@@ -235,6 +249,27 @@ in
               }
             ) filtered;
 
+        # Symlink skill bundles from extraSkillRoots into the profile's skills/,
+        # honouring the same exclude list as the skills category.
+        mkExtraSkillFiles =
+          profile:
+          let
+            excluded = profile.excludeAssets.skills;
+            stem = n: lib.removeSuffix ".md" n;
+            mkRoot =
+              root:
+              if !builtins.pathExists root then
+                { }
+              else
+                lib.mapAttrs' (
+                  entryName: _type:
+                  lib.nameValuePair "${profile.configDir}/skills/${entryName}" {
+                    source = "${root}/${entryName}";
+                  }
+                ) (lib.filterAttrs (n: _: !lib.elem (stem n) excluded) (builtins.readDir root));
+          in
+          lib.foldl' (acc: root: acc // mkRoot root) { } extraSkillRoots;
+
         # Package every file in scripts/ as a standalone executable on PATH.
         helperScripts =
           let
@@ -266,6 +301,7 @@ in
                   "${profile.configDir}/statusline-command.sh".source = "${assetsRoot}/statusline-command.sh";
                 }
                 // mkCategoryFiles profile "skills"
+                // mkExtraSkillFiles profile
                 // mkCategoryFiles profile "agents"
                 // mkCategoryFiles profile "commands"
               ) enabled

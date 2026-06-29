@@ -11,6 +11,7 @@
           sops
           ssh-to-age
           nixfmt
+          vendir
         ];
       };
     };

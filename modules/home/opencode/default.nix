@@ -15,6 +15,7 @@ _: {
       ocEnable = personal != null && personal.enable;
       cavemanOn = (osConfig.znix.claude.caveman.enable or false) && personal != null && personal.caveman;
       assetsRoot = osConfig.znix.claude.assetsRoot;
+      extraSkillRoots = osConfig.znix.claude.extraSkillRoots or [ ];
 
       # Strip Claude-only frontmatter opencode rejects: `tools: [array]` and a
       # bare `model: haiku` (opencode wants `provider/model`). Mirrors caveman's
@@ -66,6 +67,7 @@ _: {
       (lib.mkIf ocEnable {
         home.file = lib.mkMerge [
           (mkSymlinkEntries ".config/opencode/skills" "${assetsRoot}/skills")
+          (lib.mkMerge (map (mkSymlinkEntries ".config/opencode/skills") extraSkillRoots))
           (mkTransformedMds ".config/opencode/agents" "${assetsRoot}/agents")
           (mkTransformedMds ".config/opencode/commands" "${assetsRoot}/commands")
           # Global instructions. When caveman is on, caveman.nix composes AGENTS.md

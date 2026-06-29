@@ -1,0 +1,11 @@
+apiVersion: vendir.k14s.io/v1alpha1
+directories:
+- contents:
+  - git:
+      commitTitle: Merge branch 'main' of https://github.com/mattpocock/skills...
+      sha: 448d0adee7cb797db5a2ad278e9e8d6c874e12af
+      tags:
+      - v1.0.1-11-g448d0ad
+    path: .
+  path: vendor/mattpocock-skills
+kind: LockConfig
