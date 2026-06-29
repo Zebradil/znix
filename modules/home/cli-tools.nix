@@ -83,6 +83,13 @@ _: {
         golangci-lint
         gopls
 
+        kcl
+        (kcl-language-server.overrideAttrs (old: {
+          meta = old.meta // {
+            platforms = old.meta.platforms ++ [ "aarch64-darwin" ];
+          };
+        }))
+
         nil
         nixd
         nixfmt
