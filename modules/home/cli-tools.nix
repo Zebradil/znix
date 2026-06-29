@@ -75,6 +75,8 @@ _: {
         ytt
 
         # Languages
+        cue
+
         go
         go-tools
         gofumpt
