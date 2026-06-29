@@ -40,7 +40,13 @@ _: {
               format = "ssh";
               key = config.sshPublicKey;
               signByDefault = true;
-              signer = "${lib.getExe' pkgs._1password-gui "op-ssh-sign"}";
+              # On darwin _1password-gui ships op-ssh-sign inside the .app
+              # bundle, not in $out/bin, so getExe' produces a dead path.
+              signer =
+                if isDarwin then
+                  "${pkgs._1password-gui}/Applications/1Password.app/Contents/MacOS/op-ssh-sign"
+                else
+                  "${lib.getExe' pkgs._1password-gui "op-ssh-sign"}";
             };
             settings."gpg.ssh".allowedSignersFile = toString allowedSignersFile;
           };
