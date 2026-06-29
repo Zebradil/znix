@@ -26,10 +26,12 @@ let
       options.znix.claude = {
         assetsRoot = lib.mkOption {
           type = lib.types.path;
-          default = ./assets;
+          default = inputs.self + "/ai";
           description = ''
-            Root path of the shared Claude asset tree (CLAUDE.md, skills/, agents/, commands/).
-            Override to point at a flake input for an out-of-repo source.
+            Root path of the shared, tool-agnostic AI agent asset tree
+            (AGENTS.md, skills/, agents/, commands/). Lives at the repo root
+            (ai/), not under any single tool's module. Override to point at a
+            flake input for an out-of-repo source.
           '';
         };
 
@@ -297,7 +299,7 @@ in
               lib.mapAttrsToList (
                 _: profile:
                 {
-                  "${profile.configDir}/CLAUDE.md".source = "${assetsRoot}/CLAUDE.md";
+                  "${profile.configDir}/CLAUDE.md".source = "${assetsRoot}/AGENTS.md";
                   "${profile.configDir}/statusline-command.sh".source = "${assetsRoot}/statusline-command.sh";
                 }
                 // mkCategoryFiles profile "skills"

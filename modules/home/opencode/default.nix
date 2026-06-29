@@ -73,7 +73,7 @@ _: {
           # Global instructions. When caveman is on, caveman.nix composes AGENTS.md
           # (instructions + ruleset) instead, so guard against a double definition.
           (lib.optionalAttrs (!cavemanOn) {
-            ".config/opencode/AGENTS.md".source = "${assetsRoot}/CLAUDE.md";
+            ".config/opencode/AGENTS.md".source = "${assetsRoot}/AGENTS.md";
           })
         ];
 

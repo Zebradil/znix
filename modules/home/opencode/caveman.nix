@@ -40,7 +40,7 @@
 
       # Compose global instructions + the always-on caveman ruleset so both load.
       agentsMd = pkgs.writeText "opencode-AGENTS.md" (
-        builtins.readFile "${assetsRoot}/CLAUDE.md"
+        builtins.readFile "${assetsRoot}/AGENTS.md"
         + "\n\n<!-- caveman-begin -->\n"
         + builtins.readFile "${cavemanSrc}/src/rules/caveman-activate.md"
         + "\n<!-- caveman-end -->\n"

@@ -9,6 +9,17 @@ This is a unified Nix configuration using the **dendritic pattern** with flake-p
 - Hosts in `hosts/` are thin compositions that pull all modules from the appropriate namespace
 - Users in `users/` wire system-level config + home-manager
 
+### Shared AI agent assets (`ai/`)
+
+The tool-agnostic agent asset tree lives at the repo root in `ai/`
+(`AGENTS.md`, `skills/`, `agents/`, `commands/`, `statusline-command.sh`) — it is
+**not** owned by any single tool's module. Both the Claude and opencode home
+modules consume it via the `znix.claude.assetsRoot` option, which defaults to
+`inputs.self + "/ai"`. `AGENTS.md` is the global instructions file: the Claude
+module symlinks it to each profile's `CLAUDE.md`; opencode reads it as `AGENTS.md`.
+Vendored skills wire in separately via `znix.claude.extraSkillRoots` (see
+`docs/vendored-skills.md`).
+
 ## Key Patterns
 
 ### Adding a module
