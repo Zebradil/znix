@@ -6,19 +6,7 @@ let
   #
   # Shorthand (all systems):   pkgname = "github:NixOS/nixpkgs/<rev>";
   # Long form (per-system):    pkgname = { ref = "github:NixOS/nixpkgs/<rev>"; systems = [ "aarch64-darwin" ]; };
-  pins = {
-    nushell = {
-      # Upgrade to 0.112.2 is not in nixpkgs-unstable yet
-      ref = "github:NixOS/nixpkgs/e787d9e711e78599f0ad3ec517fcef8192efd47e";
-      systems = [ "aarch64-darwin" ];
-    };
-    google-cloud-sdk = {
-      # 570.0.0 bumped bundled-python to 3.14.5, breaking auto-patchelf:
-      # libpython3.14.so.1.0 unresolvable via $ORIGIN, and tcl/tk 9.0 not in nixpkgs.
-      # Pin to 565.0.0 (bundled-python 3.13.11) until upstream fixes components.nix.
-      ref = "github:NixOS/nixpkgs/be8205a2a0bab0384deca31042b9b940fbcf24aa";
-    };
-  };
+  pins = { };
   # ===========================================================
 
   normalize =
