@@ -53,7 +53,6 @@
     };
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     nixpkgs-pin-google-cloud-sdk.url = "github:NixOS/nixpkgs/be8205a2a0bab0384deca31042b9b940fbcf24aa";
-    nixpkgs-pin-mise.url = "github:NixOS/nixpkgs/9ae611a455b90cf061d8f332b977e387bda8e1ca";
     nixpkgs-pin-nushell.url = "github:NixOS/nixpkgs/e787d9e711e78599f0ad3ec517fcef8192efd47e";
     nixpkgs-tuxedo.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     nixvim = {
