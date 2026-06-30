@@ -50,3 +50,28 @@ directories:
           - src/hooks/uninstall.*
           - src/hooks/checksums.sha256
           - src/hooks/README.md
+
+  - path: vendor/ponytail
+    contents:
+      # ponytail "lazy senior dev" mode from DietrichGebert/ponytail. Mirrors the
+      # caveman wiring (modules/home/{claude,opencode}/ponytail.nix) but targets
+      # code minimisation instead of prose. The opencode plugin resolves its
+      # siblings via realpath-relative requires (../../hooks, ../../skills,
+      # ../command), so the whole subtree below must stay intact and co-located.
+      # Update with `vendir sync`; synced files are committed (reviewable diff).
+      - path: .
+        git:
+          url: https://github.com/DietrichGebert/ponytail
+          ref: origin/main
+        includePaths:
+          - hooks/**
+          - skills/**
+          - commands/**
+          - .opencode/**
+        excludePaths:
+          # Windows-only statusline; this config is darwin/nixos.
+          - hooks/*.ps1
+          # Host hook-registration manifests — the nix module writes the Claude
+          # hook config itself, so these would land inert but misleading.
+          - hooks/claude-codex-hooks.json
+          - hooks/copilot-hooks.json

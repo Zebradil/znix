@@ -16,7 +16,6 @@ in
         lib,
         osConfig,
         pkgs,
-        config,
         ...
       }:
       let
@@ -25,8 +24,9 @@ in
         enabled = lib.filterAttrs (_: p: p.enable && cavemanCfg.enable && p.caveman) allProfiles;
 
         cavemanSrc = inputs.self + "/vendor/caveman";
-        znixStatusline = "${osConfig.znix.claude.assetsRoot}/statusline-command.sh";
 
+        # The composed statusline (znix base + caveman/ponytail badges) lives in
+        # modules/home/claude/statusline.nix so no single addon owns the file.
         mkDirFiles =
           profile: srcDir: destDir:
           lib.mapAttrs' (
@@ -35,20 +35,6 @@ in
               source = "${srcDir}/${entryName}";
             }
           ) (builtins.readDir srcDir);
-
-        mkComposedStatusline =
-          profile:
-          pkgs.writeShellScript "claude-${profile.command}-statusline-with-caveman" ''
-            set -uo pipefail
-            input=$(cat)
-            znix_out=$(printf '%s' "$input" | bash ${znixStatusline})
-            caveman_out=$(printf '%s' "$input" | bash "$HOME/${profile.configDir}/hooks/caveman-statusline.sh" || true)
-            if [ -n "$caveman_out" ]; then
-              printf '%s %s' "$znix_out" "$caveman_out"
-            else
-              printf '%s' "$znix_out"
-            fi
-          '';
       in
       lib.mkIf (cavemanCfg.enable && enabled != { }) {
         home.packages = [ pkgs.nodejs ];
@@ -59,9 +45,6 @@ in
             (mkDirFiles profile "${cavemanSrc}/src/hooks" "hooks")
             // (mkDirFiles profile "${cavemanSrc}/skills" "skills")
             // (mkDirFiles profile "${cavemanSrc}/commands" "commands")
-            // {
-              "${profile.configDir}/statusline-command.sh".source = lib.mkForce (mkComposedStatusline profile);
-            }
           ) enabled
         );
       };

@@ -16,4 +16,12 @@ directories:
       - v1.9.0-1-g25d22f8
     path: .
   path: vendor/caveman
+- contents:
+  - git:
+      commitTitle: 'fix: copilot-plugin test checks all 6 command files (#393)...'
+      sha: 85cc1d993527a4f11094095aa0745116b6d23999
+      tags:
+      - v4.8.4-1-g85cc1d9
+    path: .
+  path: vendor/ponytail
 kind: LockConfig

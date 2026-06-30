@@ -27,6 +27,7 @@ let
     {
       enable = true;
       caveman = true;
+      ponytail = true;
       inherit configDir command;
       settings = {
         hooks = aicodemetricsdHooks;
@@ -41,10 +42,12 @@ in
       imports = [
         inputs.self.modules.darwin.claude
         inputs.self.modules.darwin.claude-caveman
+        inputs.self.modules.darwin.claude-ponytail
       ];
 
       znix.claude = {
         caveman.enable = true;
+        ponytail.enable = true;
 
         profiles = {
           personal = inputs.self.lib.claude.mkPersonalProfile { };

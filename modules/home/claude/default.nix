@@ -111,6 +111,8 @@ let
 
                   caveman = lib.mkEnableOption "caveman hooks/skills/commands for this profile";
 
+                  ponytail = lib.mkEnableOption "ponytail hooks/skills/commands for this profile";
+
                   excludeAssets = lib.mkOption {
                     default = { };
                     description = "Per-category asset names (without .md) to omit for this profile";
@@ -152,6 +154,7 @@ in
       {
         enable = true;
         caveman = true;
+        ponytail = true;
         configDir = ".config/personal-claude";
         command = "claude";
         settings = lib.recursiveUpdate {
@@ -195,8 +198,9 @@ in
           '';
 
         cavemanEnabled = osConfig.znix.claude.caveman.enable or false;
+        ponytailEnabled = osConfig.znix.claude.ponytail.enable or false;
 
-        mkCavemanHook = configDir: script: {
+        mkNodeHook = configDir: script: {
           type = "command";
           command = ''${pkgs.nodejs}/bin/node "$HOME/${configDir}/hooks/${script}"'';
           timeout = 5;
@@ -205,8 +209,16 @@ in
         mkCavemanHooks =
           profile:
           lib.optionalAttrs (profile.caveman && cavemanEnabled) {
-            SessionStart = [ { hooks = [ (mkCavemanHook profile.configDir "caveman-activate.js") ]; } ];
-            UserPromptSubmit = [ { hooks = [ (mkCavemanHook profile.configDir "caveman-mode-tracker.js") ]; } ];
+            SessionStart = [ { hooks = [ (mkNodeHook profile.configDir "caveman-activate.js") ]; } ];
+            UserPromptSubmit = [ { hooks = [ (mkNodeHook profile.configDir "caveman-mode-tracker.js") ]; } ];
+          };
+
+        mkPonytailHooks =
+          profile:
+          lib.optionalAttrs (profile.ponytail && ponytailEnabled) {
+            SessionStart = [ { hooks = [ (mkNodeHook profile.configDir "ponytail-activate.js") ]; } ];
+            UserPromptSubmit = [ { hooks = [ (mkNodeHook profile.configDir "ponytail-mode-tracker.js") ]; } ];
+            SubagentStart = [ { hooks = [ (mkNodeHook profile.configDir "ponytail-subagent.js") ]; } ];
           };
 
         defaultSettings = osConfig.znix.claude.defaultSettings;
@@ -216,8 +228,15 @@ in
           let
             effective = lib.recursiveUpdate defaultSettings profile.settings;
             base = effective.hooks or { };
-            contributions = mkCavemanHooks profile;
-            mergedHooks = base // lib.mapAttrs (k: v: (base.${k} or [ ]) ++ v) contributions;
+            # Each addon contributes per-event hook lists; fold them onto the
+            # base settings, concatenating where events overlap (e.g. both
+            # caveman and ponytail register SessionStart).
+            contributions = [
+              (mkCavemanHooks profile)
+              (mkPonytailHooks profile)
+            ];
+            addContribution = acc: c: acc // lib.mapAttrs (k: v: (acc.${k} or [ ]) ++ v) c;
+            mergedHooks = lib.foldl' addContribution base contributions;
             finalSettings =
               (removeAttrs effective [ "hooks" ])
               // lib.optionalAttrs (mergedHooks != { }) { hooks = mergedHooks; }

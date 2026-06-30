@@ -37,6 +37,16 @@ source — `vendir sync` rewrites the tree and the modules pick it up.
 reference `inputs.self + "/vendor/caveman/..."` directly (hooks, the opencode
 plugin, the activation ruleset and skills), not via `extraSkillRoots`.
 
+`ponytail` (DietrichGebert/ponytail) mirrors that wiring in
+`modules/home/{claude,opencode}/ponytail.nix`, gated on `znix.claude.ponytail`.
+It targets minimal-code behaviour (orthogonal to caveman's terse prose), so both
+can run at once. Its Claude hooks register `SessionStart`, `UserPromptSubmit` and
+`SubagentStart` (see `mkPonytailHooks` in `claude/default.nix`), and the per-addon
+statusline badges are stacked by `modules/home/claude/statusline.nix` rather than
+by either addon. The opencode plugin (`.opencode/plugins/ponytail.mjs`) resolves
+its siblings via realpath-relative requires, so the whole `vendor/ponytail`
+subtree is vendored intact and only the `.mjs` is symlinked.
+
 ## Updating
 
 ```bash

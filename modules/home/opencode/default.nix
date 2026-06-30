@@ -14,6 +14,8 @@ _: {
       # to ~/.config/personal-claude, so the assets are wired explicitly here.
       ocEnable = personal != null && personal.enable;
       cavemanOn = (osConfig.znix.claude.caveman.enable or false) && personal != null && personal.caveman;
+      ponytailOn =
+        (osConfig.znix.claude.ponytail.enable or false) && personal != null && personal.ponytail;
       assetsRoot = osConfig.znix.claude.assetsRoot;
       extraSkillRoots = osConfig.znix.claude.extraSkillRoots or [ ];
 
@@ -47,7 +49,9 @@ _: {
 
       ocSettings = {
         "$schema" = "https://opencode.ai/config.json";
-        plugin = lib.optional cavemanOn "./plugins/caveman/plugin.js";
+        plugin =
+          lib.optional cavemanOn "./plugins/caveman/plugin.js"
+          ++ lib.optional ponytailOn "./plugins/ponytail/ponytail.mjs";
       };
       ocSettingsFile = pkgs.writeText "opencode.json" (builtins.toJSON ocSettings);
     in
