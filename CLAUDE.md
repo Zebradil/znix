@@ -61,3 +61,20 @@ Managed with sops-nix. See `docs/secrets.md`. Never commit unencrypted secrets.
 ## Package pins
 
 Temporarily override broken packages via the `pins` map in `modules/flake/overlays.nix`. See `docs/package-pins.md`.
+
+## Project constraints
+
+### Claude Code profiles & marketplace independence
+
+This repo runs three Claude Code profiles: `personal`, plus the company
+`trv-claude` / `trv-claude-key` on host `trv4250` (see
+`modules/hosts/trv4250/claude.nix`). The company profiles **cannot use the
+official `claude-plugins-official` marketplace** — they are restricted to an
+internal marketplace with a limited plugin set.
+
+So any Claude Code feature that depends on a marketplace must be provided in a
+**marketplace-independent** way, or it silently won't work on the company
+profiles. The LSP wiring follows this: a local `znix-lsp@skills-dir` plugin
+(no marketplace) rendered from `znix.lsp.servers`. Prefer uniform,
+marketplace-independent mechanisms, and provision all agent tool binaries via
+Nix store paths (no tool-side auto-install).
