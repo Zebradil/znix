@@ -63,7 +63,9 @@ let
           default = {
             agentPushNotifEnabled = true;
             editorMode = "vim";
-            enabledPlugins."gopls-lsp@claude-plugins-official" = true;
+            # LSP tool is opt-in even on 2.x; servers wired via the local
+            # znix-lsp @skills-dir plugin (see znix.lsp.servers), not a marketplace.
+            env.ENABLE_LSP_TOOL = "1";
             model = "opusplan";
             permissions.defaultMode = "auto";
             remoteControlAtStartup = true;
@@ -164,8 +166,16 @@ in
   };
 
   flake.modules = {
-    nixos.claude = claudeOptionsModule;
-    darwin.claude = claudeOptionsModule;
+    # znix.lsp.servers feeds both the Claude plugin and opencode renderers, so
+    # pull it in wherever claude is imported.
+    nixos.claude.imports = [
+      claudeOptionsModule
+      inputs.self.modules.nixos.lsp
+    ];
+    darwin.claude.imports = [
+      claudeOptionsModule
+      inputs.self.modules.darwin.lsp
+    ];
 
     homeManager.claude =
       {
@@ -180,6 +190,25 @@ in
         enabled = lib.filterAttrs (_: p: p.enable) profiles;
         assetsRoot = osConfig.znix.claude.assetsRoot;
         extraSkillRoots = osConfig.znix.claude.extraSkillRoots or [ ];
+
+        # Local LSP plugin, loaded in-place as `znix-lsp@skills-dir` (no
+        # marketplace, so it works on company profiles too). See znix.lsp.servers.
+        lspServers = osConfig.znix.lsp.servers or { };
+        mkClaudeLsp =
+          srv:
+          {
+            command = srv.command;
+            extensionToLanguage = srv.extensions;
+          }
+          // lib.optionalAttrs (srv.args != [ ]) { inherit (srv) args; }
+          // lib.optionalAttrs (srv.settings != { }) { inherit (srv) settings; };
+        lspPluginJson = pkgs.writeText "znix-lsp-plugin.json" (
+          builtins.toJSON {
+            name = "znix-lsp";
+            version = "0.0.0";
+            lspServers = lib.mapAttrs (_: mkClaudeLsp) lspServers;
+          }
+        );
         knowRoot =
           if osConfig.znix.claude.knowRoot != null then
             osConfig.znix.claude.knowRoot
@@ -317,10 +346,15 @@ in
             file = lib.mkMerge (
               lib.mapAttrsToList (
                 _: profile:
-                {
-                  "${profile.configDir}/CLAUDE.md".source = "${assetsRoot}/AGENTS.md";
-                  "${profile.configDir}/statusline-command.sh".source = "${assetsRoot}/statusline-command.sh";
-                }
+                (
+                  {
+                    "${profile.configDir}/CLAUDE.md".source = "${assetsRoot}/AGENTS.md";
+                    "${profile.configDir}/statusline-command.sh".source = "${assetsRoot}/statusline-command.sh";
+                  }
+                  // lib.optionalAttrs (lspServers != { }) {
+                    "${profile.configDir}/skills/znix-lsp/.claude-plugin/plugin.json".source = lspPluginJson;
+                  }
+                )
                 // mkCategoryFiles profile "skills"
                 // mkExtraSkillFiles profile
                 // mkCategoryFiles profile "agents"

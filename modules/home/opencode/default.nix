@@ -47,17 +47,33 @@ _: {
           ) (lib.filterAttrs (n: _: lib.hasSuffix ".md" n) (builtins.readDir srcDir))
         );
 
+      # Same server map as the Claude plugin, rendered into opencode's native
+      # `lsp` schema (command is an array, extensions a flat list). See
+      # znix.lsp.servers. Store-path commands + OPENCODE_DISABLE_LSP_DOWNLOAD
+      # keep opencode from fetching servers on its own.
+      lspServers = osConfig.znix.lsp.servers or { };
+      mkOcLsp =
+        srv:
+        {
+          command = [ srv.command ] ++ srv.args;
+          extensions = builtins.attrNames srv.extensions;
+        }
+        // lib.optionalAttrs (srv.settings != { }) { initialization = srv.settings; };
+
       ocSettings = {
         "$schema" = "https://opencode.ai/config.json";
         plugin =
           lib.optional cavemanOn "./plugins/caveman/plugin.js"
           ++ lib.optional ponytailOn "./plugins/ponytail/ponytail.mjs";
-      };
+      }
+      // lib.optionalAttrs (lspServers != { }) { lsp = lib.mapAttrs (_: mkOcLsp) lspServers; };
       ocSettingsFile = pkgs.writeText "opencode.json" (builtins.toJSON ocSettings);
     in
     lib.mkMerge [
       {
         home.packages = [ pkgs.opencode ];
+        # Servers come from Nix (store-path commands); never auto-download.
+        home.sessionVariables.OPENCODE_DISABLE_LSP_DOWNLOAD = "true";
       }
 
       (lib.mkIf (osConfig.znix.impermanence.enable or false) {
