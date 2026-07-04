@@ -15,6 +15,9 @@ directories:
         includePaths:
           - skills/engineering/**
           - skills/productivity/**
+        excludePaths:
+          # Category-level READMEs are docs, not skills.
+          - skills/*/README.md
         newRootPath: skills
 
   - path: vendor/caveman
@@ -43,6 +46,7 @@ directories:
           - src/hooks/install.*
           - src/hooks/uninstall.*
           - src/hooks/checksums.sha256
+          - src/hooks/README.md
 
   - path: vendor/ponytail
     contents:
