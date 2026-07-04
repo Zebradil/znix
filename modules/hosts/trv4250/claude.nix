@@ -1,27 +1,5 @@
 { inputs, ... }:
 let
-  aicodemetricsdHook = {
-    type = "command";
-    command = "/usr/local/bin/aicodemetricsd hook claude --hook-input stdin";
-  };
-
-  aicodemetricsdHooks = {
-    PostToolUse = [
-      {
-        matcher = "Write|Edit|MultiEdit";
-        hooks = [ aicodemetricsdHook ];
-      }
-    ];
-    PreToolUse = [
-      {
-        matcher = "Write|Edit|MultiEdit";
-        hooks = [ aicodemetricsdHook ];
-      }
-    ];
-    PreCompact = [ { hooks = [ aicodemetricsdHook ]; } ];
-    SessionEnd = [ { hooks = [ aicodemetricsdHook ]; } ];
-  };
-
   mkCompanyProfile =
     { configDir, command }:
     {
@@ -29,10 +7,6 @@ let
       caveman = true;
       ponytail = true;
       inherit configDir command;
-      settings = {
-        hooks = aicodemetricsdHooks;
-        effortLevel = "high";
-      };
     };
 in
 {
