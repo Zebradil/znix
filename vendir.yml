@@ -15,12 +15,6 @@ directories:
         includePaths:
           - skills/engineering/**
           - skills/productivity/**
-        excludePaths:
-          # Meta-installer that git-clones skills into ~/.claude — conflicts
-          # with this declarative, read-only-symlink setup.
-          - skills/engineering/setup-matt-pocock-skills/**
-          # Category-level READMEs are docs, not skills.
-          - skills/**/README.md
         newRootPath: skills
 
   - path: vendor/caveman
@@ -49,7 +43,6 @@ directories:
           - src/hooks/install.*
           - src/hooks/uninstall.*
           - src/hooks/checksums.sha256
-          - src/hooks/README.md
 
   - path: vendor/ponytail
     contents:

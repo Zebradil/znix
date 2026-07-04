@@ -2,26 +2,26 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: Merge branch 'main' of https://github.com/mattpocock/skills...
-      sha: 448d0adee7cb797db5a2ad278e9e8d6c874e12af
+      commitTitle: 'Merge pull request #436 from mattpocock/wayfinder-assign-to-claim...'
+      sha: 272f99b22574f50e4266791c86b9302682970e23
       tags:
-      - v1.0.1-11-g448d0ad
+      - v1.0.1-97-g272f99b
     path: .
   path: vendor/mattpocock-skills
 - contents:
   - git:
-      commitTitle: Update README.md
-      sha: 25d22f864ad68cc447a4cb93aefde918aa4aec9f
+      commitTitle: 'chore: sync SKILL.md copies [skip ci]'
+      sha: 0d95a81d35a9f2d123a5e9430d1cfc43d55f1bb0
       tags:
-      - v1.9.0-1-g25d22f8
+      - v1.9.1
     path: .
   path: vendor/caveman
 - contents:
   - git:
-      commitTitle: 'fix: copilot-plugin test checks all 6 command files (#393)...'
-      sha: 85cc1d993527a4f11094095aa0745116b6d23999
+      commitTitle: 'fix: don''t crash uninstall on malformed settings.json (#481)...'
+      sha: 40e50d9e03242aa5dd53ac771950f9127362b25f
       tags:
-      - v4.8.4-1-g85cc1d9
+      - v4.8.4-9-g40e50d9
     path: .
   path: vendor/ponytail
 kind: LockConfig
