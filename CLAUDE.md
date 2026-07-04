@@ -78,3 +78,20 @@ profiles. The LSP wiring follows this: a local `znix-lsp@skills-dir` plugin
 (no marketplace) rendered from `znix.lsp.servers`. Prefer uniform,
 marketplace-independent mechanisms, and provision all agent tool binaries via
 Nix store paths (no tool-side auto-install).
+
+## Agent skills
+
+### Issue tracker
+
+Issues tracked in GitHub Issues (`gh` CLI). External PRs are also a triage
+surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`,
+`ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` at repo root. See
+`docs/agents/domain.md`.
