@@ -80,6 +80,10 @@ _: {
         # Languages
         cue
 
+        jsonnet
+
+        pkl
+
         go
         go-tools
         gofumpt

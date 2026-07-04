@@ -24,6 +24,7 @@
         [
           bash
           css
+          cue
           dockerfile
           go
           gomod
@@ -35,13 +36,16 @@
           http
           javascript
           json
+          jsonnet
           just
+          kcl
           lua
           make
           markdown
           markdown_inline
           nix
           nu
+          pkl
           python
           rust
           starlark
@@ -120,6 +124,14 @@
           ];
         };
         cssls.enable = true;
+        cue.enable = true;
+        jsonnet_ls.enable = true;
+        kcl = {
+          enable = true;
+          # kcl-language-server (overridden for aarch64-darwin) comes from cli-tools.
+          # Setting null stops nixvim pulling the un-overridden pkg that lacks darwin.
+          package = null;
+        };
         emmet_language_server.enable = true;
         html.enable = true;
         marksman.enable = true;
@@ -166,6 +178,10 @@
             "goimports"
           ];
           nix = [ "nixfmt" ];
+          cue = [ "cue_fmt" ];
+          jsonnet = [ "jsonnetfmt" ];
+          kcl = [ "kcl" ];
+          pkl = [ "pkl" ];
           terraform = [ "terraform_fmt" ];
           tf = [ "terraform_fmt" ];
           sh = [ "shfmt" ];
@@ -283,6 +299,23 @@
         };
         signature.enabled = true;
       };
+    };
+  };
+
+  # KCL uses the `.k` extension; neovim doesn't detect it out of the box.
+  filetype.extension.k = "kcl";
+
+  # pkl LSP isn't in nvim-lspconfig; wire the native lsp server directly.
+  lsp.servers.pkl = {
+    enable = true;
+    package = pkgs.pkl-lsp;
+    config = {
+      cmd = [ "pkl-lsp" ];
+      filetypes = [ "pkl" ];
+      root_markers = [
+        "PklProject"
+        ".git"
+      ];
     };
   };
 }
