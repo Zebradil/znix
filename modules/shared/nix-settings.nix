@@ -16,7 +16,10 @@ let
     ];
     warn-dirty = false;
     extra-substituters = [ "https://znix.zebradil.dev" ];
-    extra-trusted-public-keys = [ "znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=" ];
+    extra-trusted-public-keys = [
+      "znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw="
+      "fluffy-nix-cache-01-1:i+jKT07GaI6rxKCct/m+NnHQyinTXc0V67WnHMrhjps="
+    ];
   };
 
   nixosModule =
