@@ -71,6 +71,9 @@
       };
 
       services.udev.extraRules = ''
+        # Let Vial WebHID access Vial keyboards from browser.
+        KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{serial}=="*vial:f64c2b3c*", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl"
+
         # Keep the WD19TB USB hub functions awake. The kernel quirks set
         # autosuspend delay to 0, but the hubs can still end up with
         # power/control=auto and flap under this platform's USB4 stack.
