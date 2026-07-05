@@ -9,6 +9,18 @@ _: {
       };
 
       programs.hyprland.enable = true;
+      xdg.portal = {
+        enable = true;
+        extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
+        config.hyprland = {
+          default = [
+            "hyprland"
+            "gtk"
+          ];
+          "org.freedesktop.portal.Settings" = [ "gtk" ];
+          "org.freedesktop.portal.Inhibit" = [ "gtk" ];
+        };
+      };
       security.pam.services.hyprlock = { };
       # Optional, hint electron apps to use wayland:
       environment.sessionVariables.NIXOS_OZONE_WL = "1";

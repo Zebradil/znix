@@ -130,6 +130,19 @@ in
     # extraCss = css;
   };
 
+  systemd.user.services.anyrun-daemon = {
+    Unit = {
+      Description = "Anyrun daemon";
+      After = [ "hyprland-session.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.anyrun}/bin/anyrun daemon";
+      Restart = "on-failure";
+      RestartSec = 5;
+    };
+    Install.WantedBy = [ "hyprland-session.target" ];
+  };
+
   home.packages = [
     wifi-picker
     perf-picker
