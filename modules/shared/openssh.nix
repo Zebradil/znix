@@ -2,11 +2,11 @@ _: {
   flake.modules.nixos.openssh =
     {
       lib,
-      osConfig,
+      config,
       ...
     }:
     let
-      hasOptinPersistence = osConfig.znix.impermanence.enable ? "/persist";
+      hasOptinPersistence = config.znix.impermanence.enable or false;
     in
     {
       services.openssh = {
