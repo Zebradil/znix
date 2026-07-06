@@ -175,6 +175,40 @@ if lib::check_commands fzf git; then
   }
 fi
 
+# SSH through a reusable proxy pod in the k8s cluster (sometimes a better route
+# to a host). The pod self-expires after 30min with no active connection.
+kssh() {
+  if [[ -z "$1" ]]; then
+    echo "Usage: kssh <ssh-host> [ssh-args...]"
+    return 1
+  fi
+  lib::check_commands kubectl || return 1
+
+  local ns="${KSSH_NAMESPACE:-default}"
+  local pod="${KSSH_POD_NAME:-ssh-proxy-$USER}"
+  local phase
+  phase="$(kubectl -n "$ns" get pod "$pod" -o jsonpath='{.status.phase}' 2>/dev/null)"
+
+  if [[ "$phase" != "Running" ]]; then
+    # Clear a stale pod (Completed/Failed/Pending) before recreating.
+    [[ -n "$phase" ]] && kubectl -n "$ns" delete pod "$pod" --now >/dev/null 2>&1
+    log::info "Starting ssh proxy pod $pod"
+    # Idle loop: exit after 30min with no live nc (i.e. no ssh session).
+    kubectl -n "$ns" run "$pod" --image=alpine --restart=Never -- \
+      sh -c 'idle=0; while [ $idle -lt 1800 ]; do if pgrep nc >/dev/null; then idle=0; else idle=$((idle+30)); fi; sleep 30; done' \
+      >/dev/null || return 1
+    kubectl -n "$ns" wait --for=condition=Ready "pod/$pod" --timeout=60s >/dev/null || return 1
+  else
+    log::debug "Reusing ssh proxy pod $pod"
+  fi
+
+  ssh -o ProxyCommand="kubectl -n $ns exec -i $pod -- nc %h %p" "$@"
+}
+
+kssh-clean() {
+  kubectl -n "${KSSH_NAMESPACE:-default}" delete pod "${KSSH_POD_NAME:-ssh-proxy-$USER}" --now
+}
+
 # Deprecated aliases
 #alias gmerge='( read branch && git pull && git merge origin/$branch -m "Merge $branch → $(git symbolic-ref --short -q HEAD)" && git push ) <<<'
 #alias gship='( read branch && gmerge $branch && git push origin :$branch ) <<<'
