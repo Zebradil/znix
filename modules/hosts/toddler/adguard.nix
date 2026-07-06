@@ -3,11 +3,17 @@ _: {
   # declarative, read-only config. Host-scoped (single consumer) rather than a
   # fleet-wide module.
   flake.modules.nixos.toddler-adguard = {
+    # `openFirewall` only opens the admin UI port (:80) — by design it does NOT
+    # open the DNS resolver port. Open :53 (tcp + udp) ourselves so LAN clients
+    # can actually reach the resolver.
+    networking.firewall.allowedTCPPorts = [ 53 ];
+    networking.firewall.allowedUDPPorts = [ 53 ];
+
     services.adguardhome = {
       enable = true;
       # Config is owned by Nix; the web UI is effectively read-only.
       mutableSettings = false;
-      # Open the DNS (:53) and admin (:80) ports derived from settings.
+      # Opens only the admin UI port (:80). DNS (:53) opened above.
       openFirewall = true;
       host = "0.0.0.0";
       port = 80;
