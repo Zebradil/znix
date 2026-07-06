@@ -260,9 +260,6 @@ elif [[ "${1:-}" == "--pick" || $# -eq 0 ]]; then
   stdin_lib="$(dirname "$(command -v anyrun)")/../lib/libstdin.so"
   chosen=$(printf '%s\n' "${options[@]}" | anyrun --plugins "$stdin_lib" --show-results-immediately true)
   [[ -z $chosen ]] && exit 0
-  # anyrun weirdly duplicates the chosen string
-  chosen="${chosen:0:$((${#chosen} / 2))}"
-  chosen="${chosen#\* }"
   apply_preset "$chosen"
   save_state "$chosen" "manual"
 elif [[ "${1:-}" == "--reconcile" ]]; then

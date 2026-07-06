@@ -98,12 +98,8 @@ let
         | sed -nE 's/^([* ]{2}[a-z-]+):$/\1/p' \
         | anyrun --plugins "${stdinLib}" --show-results-immediately true)
       [[ -z "$chosen" ]] && exit 0
-      # anyrun weirdly duplicates the chosen string
-      chosen="''${chosen:0:$((''${#chosen} / 2))}"
-      chosen="''${chosen#  }"
-      profile="''${chosen#\* }"
-      powerprofilesctl set "$profile"
-      notify-send "Performance" "Profile: $profile"
+      powerprofilesctl set "$chosen"
+      notify-send "Performance" "Profile: $chosen"
     '';
   };
 in
