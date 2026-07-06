@@ -3,7 +3,6 @@ _: {
     {
       config,
       lib,
-      osConfig,
       ...
     }:
     let
@@ -17,7 +16,7 @@ _: {
           ];
         };
       };
-      impermanence = lib.mkIf (osConfig.znix.impermanence.enable or false) {
+      impermanence = lib.mkIf (config.znix.impermanence.enable or false) {
         programs.ssh.extraConfig = ''
           UserKnownHostsFile /persist${config.home.homeDirectory}/.ssh/known_hosts
         '';

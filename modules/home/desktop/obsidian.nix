@@ -2,7 +2,7 @@ _: {
   flake.modules.homeManager.obsidian =
     {
       lib,
-      osConfig,
+      config,
       pkgs,
       ...
     }:
@@ -12,7 +12,7 @@ _: {
           obsidian
         ];
       };
-      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
+      impermanence = lib.mkIf config.znix.impermanence.enable {
         home.persistence."/persist".directories = [ ".config/obsidian" ];
       };
     in

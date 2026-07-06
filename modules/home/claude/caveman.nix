@@ -10,17 +10,20 @@ in
   flake.modules = {
     nixos.claude-caveman = cavemanOptionsModule;
     darwin.claude-caveman = cavemanOptionsModule;
+    # Home scope needs the option declared too, so home profiles can set
+    # znix.claude.caveman.enable directly (no osConfig). Swept like claude-options.
+    homeManager.claude-caveman-options = cavemanOptionsModule;
 
     homeManager.claude-caveman =
       {
         lib,
-        osConfig,
+        config,
         pkgs,
         ...
       }:
       let
-        cavemanCfg = osConfig.znix.claude.caveman or { enable = false; };
-        allProfiles = osConfig.znix.claude.profiles or { };
+        cavemanCfg = config.znix.claude.caveman or { enable = false; };
+        allProfiles = config.znix.claude.profiles or { };
         enabled = lib.filterAttrs (_: p: p.enable && cavemanCfg.enable && p.caveman) allProfiles;
 
         cavemanSrc = inputs.self + "/vendor/caveman";

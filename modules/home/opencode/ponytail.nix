@@ -3,15 +3,14 @@
   flake.modules.homeManager.opencode-ponytail =
     {
       lib,
-      osConfig,
+      config,
       pkgs,
       ...
     }:
     let
-      profiles = osConfig.znix.claude.profiles or { };
+      profiles = config.znix.claude.profiles or { };
       personal = profiles.personal or null;
-      ponytailOn =
-        (osConfig.znix.claude.ponytail.enable or false) && personal != null && personal.ponytail;
+      ponytailOn = (config.znix.claude.ponytail.enable or false) && personal != null && personal.ponytail;
       ponytailSrc = inputs.self + "/vendor/ponytail";
     in
     # The plugin path in opencode.json (./plugins/ponytail/ponytail.mjs) is wired

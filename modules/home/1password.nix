@@ -4,7 +4,6 @@ _: {
       pkgs,
       lib,
       config,
-      osConfig,
       isDarwin,
       ...
     }:
@@ -61,7 +60,7 @@ _: {
         wayland.windowManager.hyprland.settings.exec-once = [ "${lib.getExe onePasswordStartup}" ];
       };
 
-      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
+      impermanence = lib.mkIf config.znix.impermanence.enable {
         home.persistence."/persist".directories = [ ".config/1Password" ];
       };
 

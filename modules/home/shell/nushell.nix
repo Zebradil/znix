@@ -1,6 +1,6 @@
 _: {
   flake.modules.homeManager.nushell =
-    { lib, osConfig, ... }:
+    { lib, config, ... }:
     let
       base = {
         programs.nushell = {
@@ -49,7 +49,7 @@ _: {
       };
 
       # SQLite history db lives in ~/.config/nushell/history.sqlite3
-      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
+      impermanence = lib.mkIf config.znix.impermanence.enable {
         home.persistence."/persist".directories = [ ".config/nushell" ];
       };
     in

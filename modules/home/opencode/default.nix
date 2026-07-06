@@ -2,22 +2,21 @@ _: {
   flake.modules.homeManager.opencode =
     {
       lib,
-      osConfig,
+      config,
       pkgs,
       ...
     }:
     let
-      profiles = osConfig.znix.claude.profiles or { };
+      profiles = config.znix.claude.profiles or { };
       personal = profiles.personal or null;
       # Mirror the `personal` Claude profile into opencode's single global
       # config dir. opencode's auto-compat only scans ~/.claude, but znix writes
       # to ~/.config/personal-claude, so the assets are wired explicitly here.
       ocEnable = personal != null && personal.enable;
-      cavemanOn = (osConfig.znix.claude.caveman.enable or false) && personal != null && personal.caveman;
-      ponytailOn =
-        (osConfig.znix.claude.ponytail.enable or false) && personal != null && personal.ponytail;
-      assetsRoot = osConfig.znix.claude.assetsRoot;
-      extraSkillRoots = osConfig.znix.claude.extraSkillRoots or [ ];
+      cavemanOn = (config.znix.claude.caveman.enable or false) && personal != null && personal.caveman;
+      ponytailOn = (config.znix.claude.ponytail.enable or false) && personal != null && personal.ponytail;
+      assetsRoot = config.znix.claude.assetsRoot;
+      extraSkillRoots = config.znix.claude.extraSkillRoots or [ ];
 
       # Strip Claude-only frontmatter opencode rejects: `tools: [array]` and a
       # bare `model: haiku` (opencode wants `provider/model`). Mirrors caveman's
@@ -51,7 +50,7 @@ _: {
       # `lsp` schema (command is an array, extensions a flat list). See
       # znix.lsp.servers. Store-path commands + OPENCODE_DISABLE_LSP_DOWNLOAD
       # keep opencode from fetching servers on its own.
-      lspServers = osConfig.znix.lsp.servers or { };
+      lspServers = config.znix.lsp.servers or { };
       mkOcLsp =
         srv:
         {
@@ -76,7 +75,7 @@ _: {
         home.sessionVariables.OPENCODE_DISABLE_LSP_DOWNLOAD = "true";
       }
 
-      (lib.mkIf (osConfig.znix.impermanence.enable or false) {
+      (lib.mkIf (config.znix.impermanence.enable or false) {
         home.persistence."/persist".directories = [
           ".config/opencode"
           ".local/share/opencode"

@@ -16,6 +16,9 @@ in
         # videoEditing
       ];
 
+      # Integrated home: sweep every home module (minus the Linux GUI apps) plus
+      # this user's standalone profile. The same profile backs the standalone
+      # homeConfigurations."glashevich@trv4250".
       home-manager.useGlobalPkgs = true;
       home-manager.users."${username}" = {
         imports =
@@ -27,13 +30,8 @@ in
             ]
           ))
           ++ [
-            ./_home.nix
+            self.modules.generic.home-glashevich
           ];
-        home = {
-          username = "${username}";
-          homeDirectory = "/Users/${username}";
-          stateVersion = "26.05";
-        };
       };
 
       users.users."${username}" = {

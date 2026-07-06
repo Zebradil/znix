@@ -2,7 +2,7 @@ _: {
   flake.modules.homeManager.zoom =
     {
       lib,
-      osConfig,
+      config,
       pkgs,
       ...
     }:
@@ -12,7 +12,7 @@ _: {
           zoom-us
         ];
       };
-      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
+      impermanence = lib.mkIf config.znix.impermanence.enable {
         home.persistence."/persist".directories = [ ".config/zoomus" ];
       };
     in

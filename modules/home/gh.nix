@@ -2,7 +2,7 @@ _: {
   flake.modules.homeManager.gh =
     {
       lib,
-      osConfig,
+      config,
       pkgs,
       ...
     }:
@@ -10,7 +10,7 @@ _: {
       base = {
         home.packages = [ pkgs.gh ];
       };
-      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
+      impermanence = lib.mkIf config.znix.impermanence.enable {
         home.persistence."/persist".directories = [ ".config/gh" ];
       };
     in

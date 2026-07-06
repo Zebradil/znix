@@ -10,16 +10,19 @@ in
   flake.modules = {
     nixos.claude-ponytail = ponytailOptionsModule;
     darwin.claude-ponytail = ponytailOptionsModule;
+    # Home scope needs the option declared too, so home profiles can set
+    # znix.claude.ponytail.enable directly (no osConfig). Swept like claude-options.
+    homeManager.claude-ponytail-options = ponytailOptionsModule;
 
     homeManager.claude-ponytail =
       {
         lib,
-        osConfig,
+        config,
         ...
       }:
       let
-        ponytailCfg = osConfig.znix.claude.ponytail or { enable = false; };
-        allProfiles = osConfig.znix.claude.profiles or { };
+        ponytailCfg = config.znix.claude.ponytail or { enable = false; };
+        allProfiles = config.znix.claude.profiles or { };
         enabled = lib.filterAttrs (_: p: p.enable && ponytailCfg.enable && p.ponytail) allProfiles;
 
         ponytailSrc = inputs.self + "/vendor/ponytail";

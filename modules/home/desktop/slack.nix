@@ -6,7 +6,7 @@ _: {
         slack
       ];
 
-      # home.persistence."/persist" = lib.mkIf osConfig.znix.impermanence.enable {
+      # home.persistence."/persist" = lib.mkIf config.znix.impermanence.enable {
       #   directories = [ ".config/Slack" ];
       # };
     };

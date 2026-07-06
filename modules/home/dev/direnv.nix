@@ -5,7 +5,7 @@ let
 in
 _: {
   flake.modules.homeManager.direnv =
-    { lib, osConfig, ... }:
+    { lib, config, ... }:
     let
       base = {
         programs.direnv = {
@@ -19,7 +19,7 @@ _: {
           };
         };
       };
-      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
+      impermanence = lib.mkIf config.znix.impermanence.enable {
         home.persistence."/persist".directories = [ ".local/share/direnv" ];
       };
     in

@@ -9,13 +9,12 @@
   flake.modules.homeManager.claude-statusline =
     {
       lib,
-      osConfig,
-      pkgs,
       config,
+      pkgs,
       ...
     }:
     let
-      claudeCfg = osConfig.znix.claude or { };
+      claudeCfg = config.znix.claude or { };
       profiles = claudeCfg.profiles or { };
       enabled = lib.filterAttrs (_: p: p.enable) profiles;
       znixStatusline = "${claudeCfg.assetsRoot}/statusline-command.sh";

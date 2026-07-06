@@ -2,7 +2,7 @@ _: {
   flake.modules.homeManager.orca-slicer =
     {
       lib,
-      osConfig,
+      config,
       pkgs,
       isDarwin,
       ...
@@ -14,7 +14,7 @@ _: {
             orca-slicer
           ];
         };
-        impermanence = lib.mkIf (osConfig.znix.impermanence.enable or false) {
+        impermanence = lib.mkIf (config.znix.impermanence.enable or false) {
           home.persistence."/persist".directories = [ ".config/OrcaSlicer" ];
         };
       in

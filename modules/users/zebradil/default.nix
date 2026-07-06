@@ -38,26 +38,12 @@
       sops.defaultSopsFile = ../../../secrets/users/zebradil.yaml;
       sops.secrets.password.neededForUsers = true;
 
+      # Integrated home: sweep every home module plus this user's standalone
+      # profile (identity, persistence, claude/impermanence values). The same
+      # profile backs the standalone homeConfigurations."zebradil@tuxedo".
       home-manager.useGlobalPkgs = true;
       home-manager.users.zebradil = {
-        imports = (builtins.attrValues self.modules.homeManager) ++ [ ./_home.nix ];
-        home = {
-          username = "zebradil";
-          homeDirectory = "/home/zebradil";
-          stateVersion = "26.05";
-
-          persistence."/persist" = lib.mkIf config.znix.impermanence.enable {
-            directories = [
-              ".local/share/nix" # trusted settings and repl history
-              "code" # code projects
-
-              "Documents"
-              "Downloads"
-              "Pictures"
-              "Videos"
-            ];
-          };
-        };
+        imports = (builtins.attrValues self.modules.homeManager) ++ [ self.modules.generic.home-zebradil ];
       };
 
       sops.secrets."u2f_keys/${config.networking.hostName}" = lib.mkIf config.znix.fido.enable {

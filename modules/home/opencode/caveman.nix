@@ -3,15 +3,15 @@
   flake.modules.homeManager.opencode-caveman =
     {
       lib,
-      osConfig,
+      config,
       pkgs,
       ...
     }:
     let
-      profiles = osConfig.znix.claude.profiles or { };
+      profiles = config.znix.claude.profiles or { };
       personal = profiles.personal or null;
-      cavemanOn = (osConfig.znix.claude.caveman.enable or false) && personal != null && personal.caveman;
-      assetsRoot = osConfig.znix.claude.assetsRoot;
+      cavemanOn = (config.znix.claude.caveman.enable or false) && personal != null && personal.caveman;
+      assetsRoot = config.znix.claude.assetsRoot;
       cavemanSrc = inputs.self + "/vendor/caveman";
 
       pluginDir = ".config/opencode/plugins/caveman";

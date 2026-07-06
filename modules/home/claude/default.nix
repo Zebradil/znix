@@ -185,20 +185,19 @@ in
     homeManager.claude =
       {
         lib,
-        osConfig,
-        pkgs,
         config,
+        pkgs,
         ...
       }:
       let
-        profiles = osConfig.znix.claude.profiles or { };
+        profiles = config.znix.claude.profiles or { };
         enabled = lib.filterAttrs (_: p: p.enable) profiles;
-        assetsRoot = osConfig.znix.claude.assetsRoot;
-        extraSkillRoots = osConfig.znix.claude.extraSkillRoots or [ ];
+        assetsRoot = config.znix.claude.assetsRoot;
+        extraSkillRoots = config.znix.claude.extraSkillRoots or [ ];
 
         # Local LSP plugin, loaded in-place as `znix-lsp@skills-dir` (no
         # marketplace, so it works on company profiles too). See znix.lsp.servers.
-        lspServers = osConfig.znix.lsp.servers or { };
+        lspServers = config.znix.lsp.servers or { };
         mkClaudeLsp =
           srv:
           {
@@ -215,8 +214,8 @@ in
           }
         );
         knowRoot =
-          if osConfig.znix.claude.knowRoot != null then
-            osConfig.znix.claude.knowRoot
+          if config.znix.claude.knowRoot != null then
+            config.znix.claude.knowRoot
           else
             "${config.home.homeDirectory}/code/github.com/zebradil/know";
 
@@ -231,8 +230,8 @@ in
             exec ${pkgs.claude-code}/bin/claude "$@"
           '';
 
-        cavemanEnabled = osConfig.znix.claude.caveman.enable or false;
-        ponytailEnabled = osConfig.znix.claude.ponytail.enable or false;
+        cavemanEnabled = config.znix.claude.caveman.enable or false;
+        ponytailEnabled = config.znix.claude.ponytail.enable or false;
 
         mkNodeHook = configDir: script: {
           type = "command";
@@ -255,7 +254,7 @@ in
             SubagentStart = [ { hooks = [ (mkNodeHook profile.configDir "ponytail-subagent.js") ]; } ];
           };
 
-        defaultSettings = osConfig.znix.claude.defaultSettings;
+        defaultSettings = config.znix.claude.defaultSettings;
 
         mkSettingsFile =
           name: profile:
@@ -380,7 +379,7 @@ in
                 }
               ) enabled
             );
-            persistence."/persist" = lib.mkIf (osConfig.znix.impermanence.enable or false) {
+            persistence."/persist" = lib.mkIf (config.znix.impermanence.enable or false) {
               directories = lib.mapAttrsToList (_: profile: profile.configDir) enabled;
             };
           };

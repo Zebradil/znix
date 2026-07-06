@@ -2,7 +2,7 @@ _: {
   flake.modules.homeManager.telegram =
     {
       lib,
-      osConfig,
+      config,
       pkgs,
       ...
     }:
@@ -12,7 +12,7 @@ _: {
           telegram-desktop
         ];
       };
-      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
+      impermanence = lib.mkIf config.znix.impermanence.enable {
         home.persistence."/persist".directories = [ ".local/share/TelegramDesktop" ];
       };
     in

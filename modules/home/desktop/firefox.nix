@@ -11,7 +11,7 @@
     {
       pkgs,
       lib,
-      osConfig,
+      config,
       ...
     }:
     let
@@ -245,7 +245,7 @@
         };
 
       };
-      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
+      impermanence = lib.mkIf config.znix.impermanence.enable {
         home.persistence."/persist".directories = [ ".mozilla/firefox" ];
       };
     in

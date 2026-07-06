@@ -4,7 +4,6 @@ _: {
       pkgs,
       lib,
       config,
-      osConfig,
       ...
     }:
     let
@@ -71,7 +70,7 @@ _: {
         home.file.".zsh/zshrc".source = config.znix.mkRepoLink "modules/home/shell/zsh/zshrc";
       };
 
-      impermanence = lib.mkIf osConfig.znix.impermanence.enable {
+      impermanence = lib.mkIf config.znix.impermanence.enable {
         home.persistence."/persist".directories = [ ".local/state/zsh" ];
       };
 

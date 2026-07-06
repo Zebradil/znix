@@ -11,7 +11,7 @@
     {
       pkgs,
       lib,
-      osConfig,
+      config,
       ...
     }:
     {
@@ -23,7 +23,7 @@
           home.packages = [ pkgs.tree-sitter ];
         }
         { programs.nixvim.nixpkgs.useGlobalPackages = true; }
-        (lib.mkIf osConfig.znix.impermanence.enable {
+        (lib.mkIf config.znix.impermanence.enable {
           home.persistence."/persist".directories = [ ".config/github-copilot" ];
         })
       ];
