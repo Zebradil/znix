@@ -14,4 +14,11 @@
     nixpkgs = inputs.nixpkgs-tuxedo;
   };
   flake.nixosSystemMap.tuxedo = "x86_64-linux";
+
+  # Standalone home for zebradil@tuxedo. Must use the same pinned nixpkgs as the
+  # system (Hyprland compositor↔config interface is version-coupled).
+  flake.homeConfigurations = inputs.self.lib.mkHomeManager "x86_64-linux" "zebradil@tuxedo" {
+    profile = inputs.self.modules.generic.home-zebradil;
+    nixpkgs = inputs.nixpkgs-tuxedo;
+  };
 }

@@ -11,6 +11,15 @@
     default = { };
   };
 
+  # Declare homeConfigurations as a merging option so each host's
+  # flake-parts.nix can contribute its own <user>@<host> key. flake-parts
+  # leaves it in the non-merging freeform bucket otherwise, and two hosts
+  # defining it collide ("Define the value only once").
+  options.flake.homeConfigurations = lib.mkOption {
+    type = lib.types.attrsOf lib.types.unspecified;
+    default = { };
+  };
+
   config.flake.lib = {
 
     # `nixpkgs` lets a host pin its own nixpkgs input (e.g. tuxedo stays on a
@@ -38,15 +47,37 @@
       };
     };
 
-    mkHomeManager = system: name: {
-      ${name} = inputs.home-manager.lib.homeManagerConfiguration {
-        pkgs = inputs.nixpkgs.legacyPackages.${system};
-        modules = [
-          inputs.self.modules.homeManager.${name}
-          { nixpkgs.config.allowUnfree = true; }
-        ];
+    # Standalone home-manager entrypoint (home-manager switch --flake .#<key>).
+    # Unlike integrated home (useGlobalPkgs borrows the system's pkgs), this
+    # builds its own pkgs, so it must replicate BOTH host-divergence knobs:
+    #   - `nixpkgs`: the host's own input (tuxedo pins nixpkgs-tuxedo for GDM).
+    #   - self.overlays.default: tree-sitter grammars + package pins.
+    # Omitting either would resolve files to different store paths than the
+    # system switch. `standalone = true` flips the HM impermanence import.
+    mkHomeManager =
+      system: key:
+      {
+        profile,
+        nixpkgs ? inputs.nixpkgs,
+        isDarwin ? false,
+        excludeModules ? [ ],
+      }:
+      {
+        ${key} = inputs.home-manager.lib.homeManagerConfiguration {
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [ inputs.self.overlays.default ];
+            config.allowUnfree = true;
+          };
+          extraSpecialArgs = {
+            inherit inputs isDarwin;
+            standalone = true;
+          };
+          modules = (builtins.attrValues (removeAttrs inputs.self.modules.homeManager excludeModules)) ++ [
+            profile
+          ];
+        };
       };
-    };
 
   };
 }

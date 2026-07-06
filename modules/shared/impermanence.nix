@@ -51,8 +51,13 @@
   #
   # Where home.persistence comes from, by mode:
   #   - integrated NixOS (standalone=false, !isDarwin): injected via the NixOS
-  #     impermanence module's sharedModules — do NOT import it here (double-decl).
-  #   - standalone Linux (standalone=true): import the real HM impermanence module.
+  #     impermanence module's sharedModules — do NOT declare it here (double-decl).
+  #   - standalone (standalone=true, either OS): stub the option. Current
+  #     impermanence has NO standalone-HM support — its home-manager.nix is a
+  #     validation-only shim, and all bind-mounting lives in nixos.nix reading
+  #     home-manager.users.*. So home persistence is owned entirely by the SYSTEM
+  #     switch; standalone `home-manager switch` only re-links store files and
+  #     must absorb the swept modules' home.persistence writes inertly.
   #   - Darwin (any mode): no impermanence exists; stub the option so reads don't error.
   flake.modules.homeManager.impermanence =
     {
@@ -63,14 +68,12 @@
     }:
     {
       options.znix.impermanence.enable = lib.mkEnableOption "opt-in home persistence";
-      imports =
-        lib.optional isDarwin {
-          options.home.persistence = lib.mkOption {
-            type = lib.types.anything;
-            default = { };
-          };
-        }
-        ++ lib.optional (standalone && !isDarwin) inputs.impermanence.homeManagerModules.impermanence;
+      imports = lib.optional (isDarwin || standalone) {
+        options.home.persistence = lib.mkOption {
+          type = lib.types.anything;
+          default = { };
+        };
+      };
     };
 
   # Declare darwin.impermanence stub module, which just provides the option path for the home module.

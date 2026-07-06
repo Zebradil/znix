@@ -26,7 +26,6 @@
       touch-id
       home-manager
       glashevich
-      trv4250-claude
       trv4250-shell
     ];
 

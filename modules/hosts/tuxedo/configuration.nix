@@ -28,7 +28,6 @@
         openssh
         sops
         tailscale
-        tuxedo-claude
         tuxedo-disko
         tuxedo-hardware
         wireless
