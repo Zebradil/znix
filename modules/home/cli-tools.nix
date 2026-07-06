@@ -77,6 +77,11 @@ _: {
         yt-dlp
         ytt
 
+        # Notshoot
+        doggo
+        ldns # provides drill
+        bind # provides dig, host and nslookup
+
         # Languages
         cue
 
