@@ -43,13 +43,13 @@ let
           # Always apply cache settings: on Determinate NixOS, nix.settings routes
           # to /etc/nix/nix.custom.conf which is included by Determinate Nixd.
           settings = {
-            inherit (nixSettings) extra-substituters extra-trusted-public-keys;
+            inherit (nixSettings) extra-substituters extra-trusted-public-keys warn-dirty;
           };
         }
         (lib.mkIf (!usingDeterminate) {
           enable = true;
           settings = {
-            inherit (nixSettings) experimental-features warn-dirty;
+            inherit (nixSettings) experimental-features;
             auto-optimise-store = lib.mkDefault true;
             flake-registry = "";
             trusted-users = [

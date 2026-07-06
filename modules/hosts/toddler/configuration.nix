@@ -14,6 +14,11 @@
     networking.hostName = "toddler";
     system.stateVersion = "25.11";
 
+    # No ZFS on this appliance; adopt the 26.11 default explicitly to silence the
+    # forceImportRoot deprecation warning (the zfs module is pulled in by the
+    # sd-image profile even though no zfs pool is used).
+    boot.zfs.forceImportRoot = false;
+
     # Wired eth0, DHCP; IP pinned to 192.168.0.20 by a router reservation for
     # MAC b8:27:eb:87:9a:96. WiFi intentionally unused.
     networking.interfaces.eth0.useDHCP = true;
