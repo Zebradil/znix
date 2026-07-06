@@ -24,5 +24,9 @@ in
         shell = pkgs.zsh;
       };
       programs.zsh.enable = true;
+
+      # home-manager CLI for the standalone `home-manager switch` (zebradil gets
+      # it via its account; darwin has no per-user packages, so system-wide).
+      environment.systemPackages = [ pkgs.home-manager ];
     };
 }

@@ -1,14 +1,14 @@
 { self, ... }:
 {
-  # Standalone-home profile for zebradil@tuxedo. Consumed two ways:
-  #   - integrated: imported into home-manager.users.zebradil (see default.nix)
-  #   - standalone: imported by homeConfigurations."zebradil@tuxedo" (Phase 3)
-  # Registered under `generic` (NOT homeManager): the integrated
-  # `attrValues homeManager` sweep only reads the homeManager class, so a
-  # generic module never leaks into another user's config. `generic` is the one
-  # class flake-parts leaves unstamped (no `_class`), so it still imports
-  # cleanly into a homeManager evaluation — a bespoke class would be rejected
-  # for a class mismatch.
+  # Home profile for zebradil@tuxedo — identity, persistence set, and
+  # claude/impermanence values. Consumed by homeConfigurations."zebradil@tuxedo"
+  # (mkHomeManager); the tuxedo system also reads its home.persistence to build
+  # the system-side bind mounts (see users/zebradil/default.nix).
+  # Registered under `generic` (NOT homeManager): the mkHomeManager
+  # `attrValues homeManager` sweep only reads the homeManager class, so a generic
+  # module never leaks into another user's config. `generic` is the one class
+  # flake-parts leaves unstamped (no `_class`), so it still imports cleanly into a
+  # homeManager evaluation — a bespoke class would be rejected for a class mismatch.
   #
   # ponytail: user↔host is 1:1 today; split a host overlay when a user spans hosts.
   flake.modules.generic.home-zebradil =

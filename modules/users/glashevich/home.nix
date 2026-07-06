@@ -10,9 +10,8 @@ let
     };
 in
 {
-  # Standalone-home profile for glashevich@trv4250. Consumed two ways:
-  #   - integrated: imported into home-manager.users.glashevich (see default.nix)
-  #   - standalone: imported by homeConfigurations."glashevich@trv4250" (Phase 3)
+  # Home profile for glashevich@trv4250. Consumed by
+  # homeConfigurations."glashevich@trv4250" (mkHomeManager).
   # `generic` class, not homeManager — see zebradil/home.nix for why.
   # Darwin has no impermanence, so znix.impermanence.enable stays at its default.
   #
