@@ -42,6 +42,20 @@ persistence) moves to home scope.
   every commit. The only residual skew is temporal (between the two switch commands
   after `nix flake update`) and matters only for the version-coupled
   compositor↔config interface (Hyprland).
-- **Impermanence splits**: system persists system dirs; home imports the
-  home-manager impermanence module and persists home dirs behind a home-scope
-  `znix.impermanence.enable`.
+- **Impermanence is system-owned, not split** (revised — the original plan to
+  import a home-manager impermanence module in standalone does not work).
+  Current `impermanence` dropped standalone-home-manager support: its
+  `home-manager.nix` is a validation-only shim, and *all* bind-mounting lives in
+  its NixOS module, which reads `home-manager.users.*.home.persistence`. So the
+  **system switch owns every persistence bind-mount** (system dirs *and* home
+  dirs); standalone `home-manager switch` only re-links store-backed files and
+  performs no mounts. Consequence: the impermanent host must keep evaluating a
+  home config on the system side (the integrated `home-manager.users.<user>`)
+  for persistence to be set up, so a full "system = account only" cutover
+  (Phase 5) is **not** achievable for that host without moving the per-tool
+  persist-dir declarations from home modules to a system-side
+  `environment.persistence."/persist".users.<name>` list. Until that decision is
+  made, the home-scope impermanence module stubs `home.persistence` in
+  standalone so the swept modules' writes are absorbed inertly. This does not
+  affect the fast-iteration goal: user-tool config is store-backed symlinks that
+  `home-manager switch` re-links without any bind-mount.
