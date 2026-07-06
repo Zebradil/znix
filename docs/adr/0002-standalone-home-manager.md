@@ -46,16 +46,19 @@ persistence) moves to home scope.
   import a home-manager impermanence module in standalone does not work).
   Current `impermanence` dropped standalone-home-manager support: its
   `home-manager.nix` is a validation-only shim, and *all* bind-mounting lives in
-  its NixOS module, which reads `home-manager.users.*.home.persistence`. So the
-  **system switch owns every persistence bind-mount** (system dirs *and* home
-  dirs); standalone `home-manager switch` only re-links store-backed files and
-  performs no mounts. Consequence: the impermanent host must keep evaluating a
-  home config on the system side (the integrated `home-manager.users.<user>`)
-  for persistence to be set up, so a full "system = account only" cutover
-  (Phase 5) is **not** achievable for that host without moving the per-tool
-  persist-dir declarations from home modules to a system-side
-  `environment.persistence."/persist".users.<name>` list. Until that decision is
-  made, the home-scope impermanence module stubs `home.persistence` in
-  standalone so the swept modules' writes are absorbed inertly. This does not
-  affect the fast-iteration goal: user-tool config is store-backed symlinks that
+  its NixOS module. So the **system switch owns every persistence bind-mount**
+  (system dirs *and* home dirs); standalone `home-manager switch` only re-links
+  store-backed files and performs no mounts. This does not affect the
+  fast-iteration goal: user-tool config is store-backed symlinks that
   `home-manager switch` re-links without any bind-mount.
+- **The system still owns home persistence without evaluating home for
+  activation.** `environment.persistence."/persist".users.<name>.directories` is
+  sourced from `self.homeConfigurations."<user>@<host>".config.home.persistence`
+  — the standalone home config's aggregated persist set (each tool's home module
+  still declares its own dirs; the home-scope impermanence stub is a minimal
+  mergeable schema so those writes concatenate). Reading that string list forces
+  home *option* evaluation only, never a home *build*, so `nixos-rebuild` builds
+  no home closure and a `home-manager switch` needs no `nixos-rebuild`. The
+  system switch is required only when the *set* of persisted directories changes.
+  This keeps a single source of truth (the tool modules) while the mounts are
+  declared and executed entirely on the NixOS side.

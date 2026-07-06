@@ -46,10 +46,21 @@ nix flake check
 nix build .#darwinConfigurations.trv4250.system
 nix build .#nixosConfigurations.tuxedo.config.system.build.toplevel
 
-# Apply
-darwin-rebuild switch --flake .#trv4250    # macOS
-nixos-rebuild switch --flake .#tuxedo      # NixOS
+# Apply — TWO switches per host: system (account + persistence) then home.
+# On a fresh machine the system switch MUST run first: it creates
+# /persist/$HOME, chowns it, and sets programs.fuse.userAllowOther, which the
+# home persistence bind-mounts depend on.
+darwin-rebuild switch --flake .#trv4250            # macOS system
+home-manager switch --flake .#glashevich@trv4250   # macOS home
+
+nixos-rebuild switch --flake .#tuxedo              # NixOS system
+home-manager switch --flake .#zebradil@tuxedo      # NixOS home
 ```
+
+Home is deployed standalone (see `docs/adr/0002-standalone-home-manager.md`):
+edit user-tool config and re-run only the `home-manager switch` — no
+`nixos-rebuild`. A system switch is needed only when the *set* of persisted
+directories changes.
 
 ## Directory Overview
 
