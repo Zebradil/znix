@@ -168,6 +168,7 @@ apply_preset() {
     notify-send "Display" "Mirror"
     ;;
   *)
+    echo "Unsupported argument: $1" >&2
     echo "Usage: monitor-switch {single|external-only|extended|mirror|--pick|--reconcile}" >&2
     exit 1
     ;;
