@@ -43,6 +43,18 @@
         ];
       };
       determinateNixd.garbageCollector.strategy = "automatic";
+      # Linux builder so this aarch64-darwin host can *build* aarch64-linux
+      # (not just substitute) — e.g.
+      # `nix build .#nixosConfigurations.toddler...sdImage`.
+      #
+      # We use Determinate's NixOS-VM-based builder rather than its native
+      # (Virtualization.framework) builder: the native one is entitlement-gated
+      # per FlakeHub account and ours isn't granted, so it leaves
+      # `external-builders = []` at runtime. The VM builder needs no entitlement
+      # and on Apple Silicon runs aarch64-linux at native speed via apple-virt.
+      # (Also distinct from vanilla nix-darwin `nix.linux-builder`, which fights
+      # Determinate — this is Determinate's own integrated option.)
+      nixosVmBasedLinuxBuilder.enable = true;
     };
 
     programs.zsh.enable = true;
