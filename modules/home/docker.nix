@@ -16,7 +16,12 @@ _: {
           { virtualisation.docker.enable = true; }
           (lib.mkIf config.znix.docker.binfmt.enable {
             boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
-            boot.binfmt.registrations."aarch64-linux".fixBinary = true;
+            # Static emulator + fix-binary (F flag): the kernel preloads a
+            # self-contained qemu, so emulation works where /nix/store isn't
+            # mounted (docker containers) AND inside the nix build sandbox.
+            # A bare fixBinary=true preloads only the dynamic binfmt-P wrapper,
+            # which re-execs qemu from /nix/store — ENOENT in both cases.
+            boot.binfmt.preferStaticEmulators = true;
           })
         ]
       );
