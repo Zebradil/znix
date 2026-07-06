@@ -30,3 +30,7 @@ creation_rules:
       - age:
           - *zebradil
           - *github-ci
+  - path_regex: secrets/.*\.ya?ml$
+    key_groups:
+      - age:
+          - *zebradil
