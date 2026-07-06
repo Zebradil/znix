@@ -177,6 +177,11 @@ in
       inputs.self.modules.darwin.lsp
     ];
 
+    # Home scope needs the same schema so standalone home configs (no osConfig)
+    # can set/read znix.claude.* directly. Registered as its own swept module so
+    # every home config gets it, mirroring homeManager.lsp.
+    homeManager.claude-options = claudeOptionsModule;
+
     homeManager.claude =
       {
         lib,

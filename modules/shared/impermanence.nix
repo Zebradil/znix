@@ -42,18 +42,35 @@
       };
     };
 
-  # Declare home.persistence stub option only on Darwin.
-  # Using isDarwin (passed via extraSpecialArgs) instead of pkgs.stdenv.isDarwin avoids
-  # infinite recursion caused by accessing pkgs inside the options declaration phase.
-  # On NixOS the real home.persistence option is provided by the impermanence module
-  # (auto-added to home-manager.sharedModules by inputs.impermanence.nixosModules.impermanence).
+  # Home-scope impermanence. Declares its own znix.impermanence.enable so home
+  # modules can gate home.persistence on a HOME decision (config.znix...) instead
+  # of peeking at the system via osConfig — which standalone home configs cannot do.
+  #
+  # Using isDarwin (passed via extraSpecialArgs) instead of pkgs.stdenv.isDarwin
+  # avoids infinite recursion from accessing pkgs during option declaration.
+  #
+  # Where home.persistence comes from, by mode:
+  #   - integrated NixOS (standalone=false, !isDarwin): injected via the NixOS
+  #     impermanence module's sharedModules — do NOT import it here (double-decl).
+  #   - standalone Linux (standalone=true): import the real HM impermanence module.
+  #   - Darwin (any mode): no impermanence exists; stub the option so reads don't error.
   flake.modules.homeManager.impermanence =
-    { lib, isDarwin, ... }:
-    lib.optionalAttrs isDarwin {
-      options.home.persistence = lib.mkOption {
-        type = lib.types.anything;
-        default = { };
-      };
+    {
+      lib,
+      isDarwin,
+      standalone,
+      ...
+    }:
+    {
+      options.znix.impermanence.enable = lib.mkEnableOption "opt-in home persistence";
+      imports =
+        lib.optional isDarwin {
+          options.home.persistence = lib.mkOption {
+            type = lib.types.anything;
+            default = { };
+          };
+        }
+        ++ lib.optional (standalone && !isDarwin) inputs.impermanence.homeManagerModules.impermanence;
     };
 
   # Declare darwin.impermanence stub module, which just provides the option path for the home module.

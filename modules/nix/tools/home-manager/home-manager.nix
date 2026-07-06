@@ -10,6 +10,10 @@
     home-manager.extraSpecialArgs = {
       inherit inputs;
       isDarwin = false;
+      # Integrated mode: home.persistence comes from the NixOS impermanence
+      # module's sharedModules injection, so home modules must NOT import the
+      # HM impermanence module themselves. Standalone flips this (see mkHomeManager).
+      standalone = false;
     };
   };
   flake.modules.darwin.home-manager = {
@@ -17,6 +21,7 @@
     home-manager.extraSpecialArgs = {
       inherit inputs;
       isDarwin = true;
+      standalone = false;
     };
   };
 }

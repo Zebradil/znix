@@ -127,4 +127,7 @@ in
 {
   flake.modules.nixos.lsp = lspModule;
   flake.modules.darwin.lsp = lspModule;
+  # Home scope needs the schema too, so standalone home configs (no osConfig)
+  # can read znix.lsp.servers directly. Same module, different scope.
+  flake.modules.homeManager.lsp = lspModule;
 }
