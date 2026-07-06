@@ -68,10 +68,29 @@
     }:
     {
       options.znix.impermanence.enable = lib.mkEnableOption "opt-in home persistence";
+      # Minimal home.persistence schema for standalone (both OSes). Current
+      # impermanence does no bind-mounting in home (system owns it), so this only
+      # needs to ACCEPT and MERGE the swept modules' writes — list-typed fields so
+      # multiple modules concatenate cleanly (types.anything would conflict on
+      # merge). The aggregated directories list is read system-side to build
+      # environment.persistence."/persist".users.<name> (see users/zebradil).
       imports = lib.optional (isDarwin || standalone) {
         options.home.persistence = lib.mkOption {
-          type = lib.types.anything;
           default = { };
+          type = lib.types.attrsOf (
+            lib.types.submodule {
+              options = {
+                directories = lib.mkOption {
+                  type = lib.types.listOf lib.types.str;
+                  default = [ ];
+                };
+                files = lib.mkOption {
+                  type = lib.types.listOf lib.types.str;
+                  default = [ ];
+                };
+              };
+            }
+          );
         };
       };
     };

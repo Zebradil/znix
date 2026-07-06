@@ -38,12 +38,18 @@
       sops.defaultSopsFile = ../../../secrets/users/zebradil.yaml;
       sops.secrets.password.neededForUsers = true;
 
-      # Integrated home: sweep every home module plus this user's standalone
-      # profile (identity, persistence, claude/impermanence values). The same
-      # profile backs the standalone homeConfigurations."zebradil@tuxedo".
-      home-manager.useGlobalPkgs = true;
-      home-manager.users.zebradil = {
-        imports = (builtins.attrValues self.modules.homeManager) ++ [ self.modules.generic.home-zebradil ];
+      # Home persistence is system-owned. Current impermanence does ALL home
+      # bind-mounting in its NixOS module (its home-manager.nix is validation-only);
+      # so the mounts must be declared system-side. Rather than hand-copy the dir
+      # list (partly COMPUTED — claude persists each profile's configDir, opencode
+      # several dirs — so a hand list silently drifts), source it from the single
+      # source of truth: the standalone home config's aggregated home.persistence.
+      # Reading a string list forces home OPTION eval only, never a home build, so
+      # the fast home-switch loop is unaffected; nixos-rebuild is needed only when
+      # the persisted-dir SET changes (rare).
+      environment.persistence."/persist".users.zebradil = lib.mkIf config.znix.impermanence.enable {
+        directories =
+          self.homeConfigurations."zebradil@tuxedo".config.home.persistence."/persist".directories;
       };
 
       sops.secrets."u2f_keys/${config.networking.hostName}" = lib.mkIf config.znix.fido.enable {
