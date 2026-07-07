@@ -13,5 +13,14 @@
     # useWritableLinks override is needed — a plain toplevel reference.
     aarch64-linux.toddler-build =
       inputs.self.nixosConfigurations.toddler.config.system.build.toplevel;
+
+    # Standalone home entrypoints (`home-manager switch .#<key>`) build their
+    # own pkgs, so their closures differ from the integrated home inside the
+    # system toplevels above and must be built/pushed separately. Named
+    # `*-build` so the darwin one clears the CI attr-filter (`-build$`).
+    aarch64-darwin.glashevich-trv4250-home-build =
+      inputs.self.homeConfigurations."glashevich@trv4250".activationPackage;
+    x86_64-linux.zebradil-tuxedo-home-build =
+      inputs.self.homeConfigurations."zebradil@tuxedo".activationPackage;
   };
 }
