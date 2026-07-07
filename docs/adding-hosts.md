@@ -39,3 +39,8 @@
    - Add creation rules for the host's secrets
 
 6. **Lock and check**: `nix flake lock && nix flake check`
+
+7. **Register for remote deploy** (if the host is deployed over SSH): add an entry
+   to `deployMeta` in `modules/flake/colmena.nix` (`targetHost`, `targetUser`,
+   `tags`). Then `colmena apply --on <hostname>`. See
+   [ADR-0003](adr/0003-colmena-deploy.md).

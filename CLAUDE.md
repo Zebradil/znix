@@ -52,7 +52,12 @@ nix develop                        # Dev shell
 nix fmt                            # Format with nixfmt-tree
 darwin-rebuild switch --flake .    # Apply on macOS
 nixos-rebuild switch --flake .     # Apply on NixOS
+colmena apply --on <host>          # Deploy to remote host(s) over SSH
+colmena apply --on @<tag>          # Deploy all hosts with a tag
 ```
+
+Remote deploys use colmena (`nix develop` provides the CLI). Hosts are registered
+in `modules/flake/colmena.nix`. See `docs/adr/0003-colmena-deploy.md`.
 
 ## Secrets
 

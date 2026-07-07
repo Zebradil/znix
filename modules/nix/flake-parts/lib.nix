@@ -20,6 +20,14 @@
     default = { };
   };
 
+  # host -> system map. Each host's flake-parts.nix contributes one key; it
+  # stays in flake-parts' freeform bucket and can't be *read* (only written)
+  # until declared as a merging option — the colmena hive reads it.
+  options.flake.nixosSystemMap = lib.mkOption {
+    type = lib.types.attrsOf lib.types.str;
+    default = { };
+  };
+
   config.flake.lib = {
 
     # `nixpkgs` lets a host pin its own nixpkgs input (e.g. tuxedo stays on a

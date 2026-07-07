@@ -1,10 +1,13 @@
 { inputs, ... }:
 {
   perSystem =
-    { pkgs, ... }:
+    { pkgs, system, ... }:
     {
       devShells.default = pkgs.mkShell {
-        packages = with pkgs; [
+        packages = [
+          inputs.colmena.packages.${system}.colmena # fleet deploy: `colmena apply --on <host>`
+        ]
+        ++ (with pkgs; [
           actionlint
           age
           shellcheck
@@ -12,7 +15,7 @@
           ssh-to-age
           nixfmt
           vendir
-        ];
+        ]);
       };
     };
 }
