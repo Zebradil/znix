@@ -22,6 +22,7 @@ jobs:
       cache-public-key: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
       diff-targets: |
         checks.x86_64-linux.tuxedo-build
+        checks.aarch64-linux.toddler-build
         checks.aarch64-darwin.trv4250-build
       auto-merge: true
       branch-name: automation/flake-update
