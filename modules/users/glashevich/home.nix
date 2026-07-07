@@ -1,11 +1,21 @@
 { self, ... }:
 let
+  # GitHub PRs authored & merged since the last standup. {{since}} is replaced
+  # (as YYYY-MM-DD) by the /standup skill.
+  ghPrsSource = {
+    name = "GitHub PRs";
+    cmd = "gh search prs --author=@me --merged --updated '>={{since}}' --json title,url,repository --jq '.[] | \"- \\(.title) — \\(.repository.nameWithOwner)\"'";
+  };
+
   mkCompanyProfile =
     { configDir, command }:
     {
       enable = true;
       caveman = true;
       ponytail = true;
+      worklog = true;
+      worklogName = "trv"; # both company profiles share one worklog
+      worklogSources = [ ghPrsSource ];
       inherit configDir command;
     };
 in
@@ -30,9 +40,13 @@ in
       znix.claude = {
         caveman.enable = true;
         ponytail.enable = true;
+        worklog.enable = true;
 
         profiles = {
-          personal = self.lib.claude.mkPersonalProfile { };
+          personal = self.lib.claude.mkPersonalProfile { } // {
+            worklog = true;
+            worklogSources = [ ghPrsSource ];
+          };
 
           company = mkCompanyProfile {
             configDir = ".config/trv-claude";

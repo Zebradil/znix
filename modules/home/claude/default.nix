@@ -115,6 +115,42 @@ let
 
                   ponytail = lib.mkEnableOption "ponytail hooks/skills/commands for this profile";
 
+                  worklog = lib.mkEnableOption "worklog Stop hook for this profile";
+
+                  worklogName = lib.mkOption {
+                    type = lib.types.str;
+                    default = name;
+                    description = ''
+                      Label written into worklog records and used as the worklog
+                      subdir. Collapse related profiles to a shared name (e.g. set
+                      both company profiles to "trv") so they share one worklog.
+                    '';
+                  };
+
+                  worklogSources = lib.mkOption {
+                    default = [ ];
+                    description = ''
+                      Extra standup data sources (besides the worklog itself) the
+                      /standup skill fetches for this profile. Each cmd is a shell
+                      command emitting raw data; `{{since}}` is replaced with the
+                      last-standup timestamp.
+                    '';
+                    type = lib.types.listOf (
+                      lib.types.submodule {
+                        options = {
+                          name = lib.mkOption {
+                            type = lib.types.str;
+                            description = "Section label in the standup report";
+                          };
+                          cmd = lib.mkOption {
+                            type = lib.types.str;
+                            description = "Shell command emitting raw data; {{since}} → last-standup timestamp";
+                          };
+                        };
+                      }
+                    );
+                  };
+
                   excludeAssets = lib.mkOption {
                     default = { };
                     description = "Per-category asset names (without .md) to omit for this profile";
@@ -232,6 +268,7 @@ in
 
         cavemanEnabled = config.znix.claude.caveman.enable or false;
         ponytailEnabled = config.znix.claude.ponytail.enable or false;
+        worklogEnabled = config.znix.claude.worklog.enable or false;
 
         mkNodeHook = configDir: script: {
           type = "command";
@@ -254,6 +291,24 @@ in
             SubagentStart = [ { hooks = [ (mkNodeHook profile.configDir "ponytail-subagent.js") ]; } ];
           };
 
+        # worklog needs argv (the sources.json path), so it can't use the
+        # zero-arg mkNodeHook helper — build the command inline.
+        mkWorklogHooks =
+          profile:
+          lib.optionalAttrs (profile.worklog && worklogEnabled) {
+            Stop = [
+              {
+                hooks = [
+                  {
+                    type = "command";
+                    command = ''${pkgs.nodejs}/bin/node "$HOME/${profile.configDir}/hooks/worklog-record.js" "$HOME/${profile.configDir}/worklog-sources.json"'';
+                    timeout = 5;
+                  }
+                ];
+              }
+            ];
+          };
+
         defaultSettings = config.znix.claude.defaultSettings;
 
         mkSettingsFile =
@@ -267,6 +322,7 @@ in
             contributions = [
               (mkCavemanHooks profile)
               (mkPonytailHooks profile)
+              (mkWorklogHooks profile)
             ];
             addContribution = acc: c: acc // lib.mapAttrs (k: v: (acc.${k} or [ ]) ++ v) c;
             mergedHooks = lib.foldl' addContribution base contributions;
