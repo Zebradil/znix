@@ -23,6 +23,7 @@
 
         persistence."/persist" = lib.mkIf config.znix.impermanence.enable {
           directories = [
+            ".config/sops/age" # personal age key for sops CLI
             ".local/share/nix" # trusted settings and repl history
             "code" # code projects
 
