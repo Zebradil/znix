@@ -46,10 +46,6 @@ _: {
         krew
         kubectl
         kubernetes-helm
-        # oci::layer::tests::preserve_metadata_dir_layer_keeps_special_permission_bits fails on Darwin
-        (mise.overrideAttrs (_: {
-          doCheck = false;
-        }))
         moreutils
         myks
         ncdu
