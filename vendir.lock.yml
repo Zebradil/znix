@@ -2,10 +2,10 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'Merge pull request #436 from mattpocock/wayfinder-assign-to-claim...'
-      sha: 272f99b22574f50e4266791c86b9302682970e23
+      commitTitle: 'Merge pull request #469 from mattpocock/to-issues/wide-refactor-expand-contract...'
+      sha: 8515a080a74dbcf5019a1a78efc24b5fcafb36b8
       tags:
-      - v1.0.1-97-g272f99b
+      - v1.0.1-126-g8515a08
     path: .
   path: vendor/mattpocock-skills
 - contents:
@@ -18,10 +18,11 @@ directories:
   path: vendor/caveman
 - contents:
   - git:
-      commitTitle: 'fix: don''t crash uninstall on malformed settings.json (#481)...'
-      sha: 40e50d9e03242aa5dd53ac771950f9127362b25f
+      commitTitle: 'feat: hide the pi status bar indicator while keeping ponytail
+        active (#324) (#544)...'
+      sha: 1b2760d384c44e573a9d8c7a729fac616e5c3a76
       tags:
-      - v4.8.4-9-g40e50d9
+      - v4.8.4-18-g1b2760d
     path: .
   path: vendor/ponytail
 kind: LockConfig
