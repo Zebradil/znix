@@ -1,32 +1,24 @@
 ---
-description: Triage every open dependency-update PR and route each to the cheap (green) or capable (red) agent.
+description: Triage every open dependency-update bot PR, auto-merge the green ones, and route red ones to the fix agent.
 model: haiku
-allowed-tools: Bash(gh pr list:*), Bash(gh pr checks:*), Bash(gh pr view:*)
+allowed-tools: Bash(gh-renovate-triage:*), Task
 ---
 
-Process every open dependency-update pull request in this repository. Two bots open them here:
-`app/renovate` (GitHub Actions bumps) and `app/zebradil` (flake.lock updates). Cover both.
+Run the triage script, then hand every red PR to the fix agent.
 
-1. List them, merging both authors:
-   `gh pr list --author "app/renovate" --state open --json number,title,headRefName`
-   `gh pr list --author "app/zebradil" --state open --json number,title,headRefName`
+1. `gh-renovate-triage`
 
-2. For EACH PR, determine route using two cheap checks:
+   It lists every open bot PR (author `is_bot`, filtered to an allowlist), classifies each, and **already
+   approves + merges the green ones itself** (strategy: `merge --auto`, falling back to a plain squash then an
+   admin merge, surfacing any raw `gh` error). It prints four sections: GREEN (with per-PR outcome), RED, SKIPPED,
+   and UNKNOWN BOTS. Do NOT re-check or re-merge greens — the script owns that path.
 
-   a. Merge status: `gh pr view <number> --json mergeable -q .mergeable`
-      - `CONFLICTING` → red (needs rebase/fix regardless of CI)
-      - `UNKNOWN` → skip (GitHub hasn't computed it yet)
-      - `MERGEABLE` → proceed to CI check
+2. For each PR number under **RED**, dispatch a `renovate-red` subagent (Task tool), passing the PR number. They
+   run in isolated worktrees and queue rather than all running at once.
 
-   b. CI status (only if MERGEABLE): `gh pr checks <number>`
-      - All checks passed → green
-      - Any check failed → red
-      - Any check pending/running → skip
+3. When the subagents finish, print one summary table: PR number | route (green/red/skipped) | outcome — combining
+   the script's GREEN/SKIPPED lines with each red agent's reported result. Surface the UNKNOWN BOTS list verbatim so
+   the user can decide whether to add any to the allowlist (baked into `gh-renovate-triage`).
 
-3. Dispatch green PRs first and in parallel where possible — they are fast and independent. Dispatch red PRs as
-   separate subagents; each creates its own git worktree. Note: subagents queue rather than all running at once.
-
-4. When all subagents finish, print a summary table: PR number | title | route (green/red/skipped) | outcome.
-
-Do NOT read PR diffs yourself or reason about dependency complexity in this session — keep your own work to listing and
-the green/red check so the cheap path stays cheap. The model choice is delegated to the agents.
+Do not read PR diffs or reason about dependency complexity yourself — the script handles greens and the red agents
+handle fixes. Keep this session to running the script and dispatching.

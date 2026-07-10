@@ -1,6 +1,7 @@
 ---
 name: renovate-red
 description: Investigates and fixes a single dependency-update PR with failing CI in this Nix flake repo. Works in an isolated git worktree, diagnoses, and pushes a fix if possible.
+mode: subagent
 tools: Read, Write, Edit, Bash
 model: sonnet
 ---
@@ -57,28 +58,27 @@ git worktree remove "$wt" --force
 
 ## Wait and merge after a fix
 
-5. After pushing, wait for CI and mergeability — poll every 60 s, timeout 15 min:
+5. After pushing, wait for CI to finish, then hand the merge to the shared triage script — it owns the
+   approve + merge logic (auto-merge with plain/admin fallbacks, raw-error surfacing). Poll every 60 s, timeout
+   15 min:
 
    ```bash
    for i in $(seq 15); do
      sleep 60
-     mergeable=$(gh pr view <number> --json mergeable -q .mergeable)
-     checks=$(gh pr checks <number> --json state -q '[.[] | .state] | unique | sort | join(",")' 2>/dev/null || echo "pending")
-     echo "[$i/15] mergeable=$mergeable checks=$checks"
-     if [ "$mergeable" = "MERGEABLE" ] && [ "$checks" = "SUCCESS" ]; then
-       gh pr review <number> --approve
-       gh pr merge <number> --squash --auto --delete-branch
-       echo "merged"
-       break
-     elif echo "$checks" | grep -qE "FAILURE|ERROR"; then
-       echo "CI re-failed after fix — giving up"
-       break
+     out=$(gh-renovate-triage <number>)   # single-PR mode: classify + green-merge; exit 0 iff merged
+     rc=$?
+     echo "[$i/15] $out"
+     if [ "$rc" -eq 0 ]; then break; fi                 # merged
+     if grep -q "ci-failure\|conflicting" <<<"$out"; then
+       echo "CI re-failed / conflicts after fix — giving up"; break
      fi
+     # otherwise still pending (or needs-human) — keep polling
    done
    ```
 
-   If the loop exits without merging, report current status and stop — do not force.
+   If the loop exits without merging, report the last status and stop — do not force.
 
-6. Report: PR number, root cause (one sentence), and outcome (fixed+merged / fixed+CI-pending / commented / gave up).
+6. Report: PR number, root cause (one sentence), and outcome (fixed+merged / fixed+CI-pending / needs-human /
+   commented / gave up).
 
 Never force-push. Always remove your worktree before finishing.

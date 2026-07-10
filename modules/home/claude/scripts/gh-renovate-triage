@@ -1,0 +1,166 @@
+#!/usr/bin/env bash
+# gh-renovate-triage — triage dependency-update bot PRs, auto-merge the green ones.
+# Requires: gh (GitHub CLI), jq
+#
+# Usage:
+#   gh-renovate-triage [--dry-run] [--allow app/foo,app/bar] [PR...]
+#
+#   no PR args  full sweep: every open bot PR in the current repo
+#   PR...       operate on just those PR numbers (single-PR mode; used by the
+#               renovate-red agent after it pushes a fix)
+#   --dry-run   classify only; never approve or merge
+#   --allow     extend the allowlist for this run (comma-separated logins)
+#
+# Classification (per PR):
+#   red   — mergeable CONFLICTING, or any check failed
+#   skip  — mergeable UNKNOWN, or any check still pending
+#   green — otherwise (BLOCKED-only-needs-approval counts as green: we approve)
+#
+# Green action (strategy B): approve, then `merge --squash --auto`; fall back to
+# a plain squash merge if auto-merge is disabled on the repo, then to `--admin`
+# if you own the repo. Raw gh errors are surfaced; nothing ever prompts.
+#
+# Exit code in single-PR mode: 0 if the PR ended MERGED, non-zero otherwise.
+
+set -uo pipefail
+
+for tool in gh jq; do
+  command -v "$tool" >/dev/null 2>&1 || {
+    echo "ERROR: '$tool' not installed (nix shell nixpkgs#$tool)." >&2
+    exit 1
+  }
+done
+
+# Baked-in allowlist. Edit here (this is Nix config) to add a bot permanently;
+# use --allow for a one-off. Anything is_bot but not listed is reported, not run.
+allow=(app/renovate app/zebradil app/dependabot app/renovatebot-tools)
+
+dry_run=false
+pr_args=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dry-run) dry_run=true; shift ;;
+    --allow) IFS=',' read -r -a extra <<<"$2"; allow+=("${extra[@]}"); shift 2 ;;
+    --allow=*) IFS=',' read -r -a extra <<<"${1#*=}"; allow+=("${extra[@]}"); shift ;;
+    -*) echo "ERROR: unknown flag $1" >&2; exit 1 ;;
+    *) pr_args+=("$1"); shift ;;
+  esac
+done
+
+is_allowed() {
+  local login="$1" a
+  for a in "${allow[@]}"; do [ "$a" = "$login" ] && return 0; done
+  return 1
+}
+
+is_admin=false
+[ "$(gh repo view --json viewerPermission -q .viewerPermission 2>/dev/null)" = "ADMIN" ] && is_admin=true
+
+# route <pr-json> -> "green" | "red <reason>" | "skip <reason>"
+route() {
+  jq -r '
+    def failing:
+      ([.statusCheckRollup[]? |
+        if .__typename=="CheckRun"
+        then ((.conclusion // "") | IN("FAILURE","TIMED_OUT","CANCELLED","STARTUP_FAILURE","ACTION_REQUIRED"))
+        elif .__typename=="StatusContext" then (.state | IN("FAILURE","ERROR"))
+        else false end] | any);
+    def pending:
+      ([.statusCheckRollup[]? |
+        if .__typename=="CheckRun" then (.status != "COMPLETED")
+        elif .__typename=="StatusContext" then (.state | IN("PENDING","EXPECTED"))
+        else false end] | any);
+    if .mergeable=="CONFLICTING" then "red conflicting"
+    elif failing then "red ci-failure"
+    elif .mergeable=="UNKNOWN" then "skip mergeable-unknown"
+    elif pending then "skip ci-pending"
+    else "green" end'
+}
+
+# merge_green <pr> -> prints result, returns 0 only if the PR ends MERGED
+merge_green() {
+  local n="$1" out
+  gh pr review "$n" --approve >/dev/null 2>&1 || true  # bot-authored; ignore "already approved"
+
+  if ! out=$(gh pr merge "$n" --squash --auto --delete-branch 2>&1); then
+    if grep -qi "auto.merge" <<<"$out"; then
+      out=$(gh pr merge "$n" --squash --delete-branch 2>&1) || true
+    fi
+    if grep -qiE "protected|blocked|required|not mergeable|review" <<<"$out" && [ "$is_admin" = true ]; then
+      out=$(gh pr merge "$n" --squash --delete-branch --admin 2>&1) || true
+    fi
+  fi
+
+  local st ms
+  st=$(gh pr view "$n" --json state,mergeStateStatus 2>/dev/null)
+  ms=$(jq -r '.mergeStateStatus' <<<"$st")
+  case "$(jq -r '.state' <<<"$st")" in
+    MERGED) echo "merged"; return 0 ;;
+    *) if [ "$ms" = "BLOCKED" ]; then
+         echo "needs-human (approved; still BLOCKED — likely human review required)"
+       else
+         echo "not merged: ${out:-mergeStateStatus=$ms}"
+       fi
+       return 1 ;;
+  esac
+}
+
+# Collect target PRs: explicit args, or every allowlisted bot PR.
+declare -a greens reds skips
+unknown_bots=""
+
+if [ ${#pr_args[@]} -gt 0 ]; then
+  targets=$(printf '%s\n' "${pr_args[@]}")
+else
+  list=$(gh pr list --state open --limit 100 --json number,title,author) || {
+    echo "ERROR: gh pr list failed" >&2; exit 1
+  }
+  # Split allowlisted bots (process) from unknown bots (report only).
+  targets=""
+  while IFS=$'\t' read -r num login; do
+    [ -z "$num" ] && continue
+    if is_allowed "$login"; then
+      targets+="$num"$'\n'
+    else
+      unknown_bots+="  #$num ($login)"$'\n'
+    fi
+  done < <(jq -r '.[] | select(.author.is_bot) | "\(.number)\t\(.author.login)"' <<<"$list")
+fi
+
+for n in $targets; do
+  [ -z "$n" ] && continue
+  pj=$(gh pr view "$n" --json number,title,state,mergeable,mergeStateStatus,statusCheckRollup 2>/dev/null) || {
+    reds+=("$n	(view failed)"); continue
+  }
+  title=$(jq -r '.title' <<<"$pj")
+  r=$(route <<<"$pj")
+  case "$r" in
+    green)
+      if $dry_run; then
+        greens+=("$n	$title	would-merge")
+      else
+        greens+=("$n	$title	$(merge_green "$n")")
+      fi ;;
+    red\ *)   reds+=("$n	$title	${r#red }") ;;
+    skip\ *)  skips+=("$n	$title	${r#skip }") ;;
+  esac
+done
+
+section() {
+  local title="$1"; shift
+  printf '\n== %s ==\n' "$title"
+  if [ "$#" -eq 0 ]; then echo "  (none)"; else printf '  #%s\n' "$@"; fi
+}
+
+section "GREEN" "${greens[@]}"
+section "RED (dispatch renovate-red)" "${reds[@]}"
+section "SKIPPED" "${skips[@]}"
+printf '\n== UNKNOWN BOTS (assess, then add to allowlist) ==\n'
+[ -n "$unknown_bots" ] && printf '%s' "$unknown_bots" || echo "  (none)"
+
+# Single-PR mode: exit reflects whether that PR merged.
+if [ ${#pr_args[@]} -eq 1 ]; then
+  printf '%s\n' "${greens[@]}" | grep -q "^${pr_args[0]}	.*	merged$"
+  exit $?
+fi
+exit 0
