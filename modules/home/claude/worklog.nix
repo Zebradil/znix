@@ -29,6 +29,13 @@ in
         worklogBase = "${config.home.homeDirectory}/.local/state/znix/worklog";
         worklogDir = profile: "${worklogBase}/${profile.worklogName}";
 
+        # Deterministic half of the /standup and /weekly skills. A static markdown
+        # skill can't interpolate a node store path the way the Stop hook does, so
+        # bake it into a wrapper the skill invokes as $CLAUDE_CONFIG_DIR/hooks/worklog-prep.
+        worklogPrep = pkgs.writeShellScriptBin "worklog-prep" ''
+          exec ${pkgs.nodejs}/bin/node ${./worklog/worklog-prep.js} "$@"
+        '';
+
         # Single source of truth read by BOTH the Stop hook (for the output dir +
         # profile label) and the /standup skill (for the source fetch commands).
         sourcesJson =
@@ -45,6 +52,7 @@ in
         home.file = lib.mkMerge (
           lib.mapAttrsToList (name: profile: {
             "${profile.configDir}/hooks/worklog-record.js".source = ./worklog/worklog-record.js;
+            "${profile.configDir}/hooks/worklog-prep".source = "${worklogPrep}/bin/worklog-prep";
             "${profile.configDir}/worklog-sources.json".source = sourcesJson name profile;
           }) enabled
         );
