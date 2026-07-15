@@ -100,10 +100,11 @@ EOF
   fi
 )
 
-# Derive a channel:ts destination from a Slack permalink.
-# Usage: z:slack:dest <slack-permalink>
-# Outputs: channel:ts (e.g. C08KQJATB2S:1779295990.798829)
-# Slack encodes both channel and timestamp in the permalink:
+# Derive a channel or channel:ts destination from a Slack archives URL.
+# Usage: z:slack:dest <slack-url>
+# Outputs: channel (e.g. C080WHN8287) or channel:ts (e.g. C08KQJATB2S:1779295990.798829)
+# Accepts either a bare channel URL (https://*.slack.com/archives/<channel>)
+# or a message permalink, which additionally encodes a timestamp:
 #   https://*.slack.com/archives/<channel>/p<ts-without-dot>[?thread_ts=<parent-ts>&…]
 # For reply permalinks the path ts is the reply's own ts; thread_ts= carries the parent's.
 function z:slack:dest() (
@@ -111,13 +112,18 @@ function z:slack:dest() (
 
   local url=${1:?url missing}
 
-  if [[ ! $url =~ 'slack\.com/archives/[^/]+/p[0-9]{16}([?#]|$)' ]]; then
-    log::warn "Not a Slack archives permalink: $url"
+  if [[ ! $url =~ 'slack\.com/archives/[^/?#]+' ]]; then
+    log::warn "Not a Slack archives URL: $url"
     return 1
   fi
 
   local channel=${url##*/archives/}
-  channel=${channel%%/*}
+  channel=${channel%%[/?#]*}
+
+  if [[ ! $url =~ "/archives/${channel}/p[0-9]{16}([?#]|\$)" ]]; then
+    printf '%s\n' "$channel"
+    return 0
+  fi
 
   local raw_ts=${url##*/p}
   raw_ts=${raw_ts%%[?#]*}
