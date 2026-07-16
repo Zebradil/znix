@@ -270,6 +270,19 @@
             "show_documentation"
             "hide_documentation"
           ];
+          # blink's default preset falls back to other mappings (not neovim's
+          # builtin <C-n>), so plain <C-n> stopped triggering completion. Map it
+          # to show the menu — the buffer source below gives words-in-buffer.
+          "<C-n>" = [
+            "show"
+            "select_next"
+            "fallback"
+          ];
+          "<C-p>" = [
+            "show"
+            "select_prev"
+            "fallback"
+          ];
           "<C-e>" = [ "hide" ];
           "<C-b>" = [
             "scroll_documentation_up"
