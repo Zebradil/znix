@@ -8,7 +8,6 @@ function z:rancher:kubeconfig:init() {
     local kubeconfig_file="$configs_dir/$cluster_name.yaml"
     log::info "  - $cluster_name ($cluster_id)"
     rancher cluster kubeconfig "$cluster_id" \
-      | yq 'del(.current-context) | .contexts[0].name |= "rancher-" + .' >"$kubeconfig_file"
+      | yq 'del(.current-context) | .contexts[0].name |= "r-" + .' >"$kubeconfig_file"
   done < <(rancher cluster ls --format 'rancher-{{.Name}} {{.ID}}')
 }
-
