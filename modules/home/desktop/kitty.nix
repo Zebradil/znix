@@ -58,6 +58,7 @@ _: {
           "ctrl+a>z" = "toggle_layout stack";
           "ctrl+a>space" = "next_layout";
           "ctrl+a>s" = "launch --allow-remote-control kitty +kitten broadcast";
+          "ctrl+Tab" = "focus_to_last_used_tab";
         }
         // (builtins.listToAttrs (
           builtins.genList (i: {
