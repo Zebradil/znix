@@ -418,10 +418,11 @@ function z:gke:np:drain-delete() (
       local -a nodes_preview=("${(@f)$(z:gke:np:nodes $np 2>/dev/null)}")
       ((${#nodes_preview[@]} == 1)) && [[ -z ${nodes_preview[1]} ]] && nodes_preview=()
       local node_count=${#nodes_preview[@]}
+      slack_text="${ZNIX_SLACK_USER_HANDLE:+${ZNIX_SLACK_USER_HANDLE} }:progress-bubble:"
       if ((node_count == 0)); then
-        slack_text="${ZNIX_SLACK_USER_HANDLE:+${ZNIX_SLACK_USER_HANDLE} }:progress-bubble: Deleting empty node pool \`${np}\` in \`${cluster_name}\` cluster."
+        slack_text="${slack_text} Deleting empty node pool \`${np}\` in \`${cluster_name}\` cluster."
       else
-        slack_text="${ZNIX_SLACK_USER_HANDLE:+${ZNIX_SLACK_USER_HANDLE} }:progress-bubble: Draining and deleting node pool \`${np}\` in \`${cluster_name}\` cluster (${node_count} node(s))."
+        slack_text="${slack_text} Draining and deleting node pool \`${np}\` in \`${cluster_name}\` cluster (${node_count} node(s))."
       fi
       slack_ts=$(z:slack:post "$slack_token" "$notify_channel" "$slack_text") || slack_ts=""
     fi
