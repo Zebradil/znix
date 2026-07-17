@@ -22,8 +22,9 @@ if lib::check_commands tailscale; then
   # Re-generates kubeconfigs for all Kubernetes clusters available via Tailscale
   function z:tailscale:kubeconfig:init() (
     local configs_dir=~/.kube/tailscale.clusters
+    local prefix=tailscale
     local clusters
-    clusters=$(tailscale status | rg '\bts-op-([^\s]+)' --replace='tailscale-$1' --only-matching)
+    clusters=$(tailscale status | rg '\bts-op-([^\s]+)' --replace="$prefix-\$1" --only-matching)
     if [[ -z $clusters ]]; then
       log::warn "No Tailscale Kubernetes clusters found"
       return 0
@@ -32,13 +33,12 @@ if lib::check_commands tailscale; then
     mkdir -p "$configs_dir"
     log::info "Generating kubeconfig for Tailscale clusters:"
     while read -r cluster_name; do
-      if [[ -z $cluster_name ]]; then
-        continue
-      fi
+      [[ -z $cluster_name ]] && continue
       log::info "  - $cluster_name"
       export KUBECONFIG="$configs_dir/$cluster_name.yaml"
-      tailscale configure kubeconfig "$cluster_name"
-      yq -i 'del(.current-context) | .contexts[0].name = "'"$cluster_name"'"' "$KUBECONFIG"
+      tailscale configure kubeconfig "$cluster_name" || continue
+      yq -i 'del(.current-context) | .contexts[0].name = "ts-'"${cluster_name#$prefix-*}"'"' "$KUBECONFIG"
+      return 0
     done <<<"$clusters"
   )
 fi
