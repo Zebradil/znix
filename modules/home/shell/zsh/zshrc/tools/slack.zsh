@@ -32,11 +32,12 @@ function z:slack:post() (
 
   # Pass the bearer header via --config stdin so the token never lands in argv.
   local response
-  response=$(curl --silent --show-error --max-time 10 \
-    -X POST https://slack.com/api/chat.postMessage \
-    -H "Content-Type: application/json; charset=utf-8" \
-    -d "$body" \
-    --config - <<EOF
+  response=$(
+    curl --silent --show-error --max-time 10 \
+      -X POST https://slack.com/api/chat.postMessage \
+      -H "Content-Type: application/json; charset=utf-8" \
+      -d "$body" \
+      --config - <<EOF
 header = "Authorization: Bearer $token"
 EOF
   ) || {
@@ -44,12 +45,12 @@ EOF
     return 1
   }
 
-  if [[ $(jq -r '.ok' <<< "$response") != "true" ]]; then
-    log::warn "Slack API error: $(jq -r '.error // "unknown"' <<< "$response")"
+  if [[ $(jq -r '.ok' <<<"$response") != "true" ]]; then
+    log::warn "Slack API error: $(jq -r '.error // "unknown"' <<<"$response")"
     return 1
   fi
 
-  jq -r '.ts' <<< "$response"
+  jq -r '.ts' <<<"$response"
 )
 
 # Update an existing Slack message.
@@ -82,11 +83,12 @@ function z:slack:update() (
     '{channel: $channel, ts: $ts, text: $text}')
 
   local response
-  response=$(curl --silent --show-error --max-time 10 \
-    -X POST https://slack.com/api/chat.update \
-    -H "Content-Type: application/json; charset=utf-8" \
-    -d "$body" \
-    --config - <<EOF
+  response=$(
+    curl --silent --show-error --max-time 10 \
+      -X POST https://slack.com/api/chat.update \
+      -H "Content-Type: application/json; charset=utf-8" \
+      -d "$body" \
+      --config - <<EOF
 header = "Authorization: Bearer $token"
 EOF
   ) || {
@@ -94,8 +96,8 @@ EOF
     return 1
   }
 
-  if [[ $(jq -r '.ok' <<< "$response") != "true" ]]; then
-    log::warn "Slack API error: $(jq -r '.error // "unknown"' <<< "$response")"
+  if [[ $(jq -r '.ok' <<<"$response") != "true" ]]; then
+    log::warn "Slack API error: $(jq -r '.error // "unknown"' <<<"$response")"
     return 1
   fi
 )
