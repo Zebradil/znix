@@ -38,7 +38,6 @@ if lib::check_commands tailscale; then
       export KUBECONFIG="$configs_dir/$cluster_name.yaml"
       tailscale configure kubeconfig "$cluster_name" || continue
       yq -i 'del(.current-context) | .contexts[0].name = "ts-'"${cluster_name#$prefix-*}"'"' "$KUBECONFIG"
-      return 0
     done <<<"$clusters"
   )
 fi
