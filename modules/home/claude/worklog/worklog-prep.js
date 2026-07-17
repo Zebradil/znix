@@ -109,15 +109,18 @@ function tsCompact(d) {
 function fetchSources(cfg, sinceDate) {
   return (cfg.sources || []).map((s) => {
     const cmd = s.cmd.split("{{since}}").join(sinceDate);
+    // instruction (if set) tells the skill how to render this source; passed
+    // through untouched so a source carries its own consumption hint.
+    const meta = s.instruction ? { instruction: s.instruction } : {};
     try {
       const output = execSync(cmd, {
         encoding: "utf8",
         timeout: 60000,
         stdio: ["ignore", "pipe", "pipe"],
       });
-      return { name: s.name, output: output.trimEnd() };
+      return { name: s.name, output: output.trimEnd(), ...meta };
     } catch (e) {
-      return { name: s.name, output: null, error: String(e.message || e) };
+      return { name: s.name, output: null, error: String(e.message || e), ...meta };
     }
   });
 }

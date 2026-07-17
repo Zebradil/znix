@@ -1,6 +1,6 @@
 ---
 name: standup
-description: Generate a standup report of everything you did since the last standup, from the worklog (auto-recorded per session) plus per-profile sources (GitHub PRs, Jira). Trigger on "/standup", "standup report", "what did I do since last standup", "what have I been working on".
+description: Generate a standup report of everything you did since the last standup, from the worklog (auto-recorded per session) plus per-profile sources (GitHub PRs implemented/reviewed, automated-PR counts, commits, Jira). Trigger on "/standup", "standup report", "what did I do since last standup", "what have I been working on".
 allowed-tools: Bash, Read, Write
 ---
 
@@ -54,6 +54,9 @@ recent day first. For each day:
 
 Then a section per source with its items, **deduped against the worklog** — a
 merged PR and the session that produced it are the same work, mention it once.
+Each source may carry an `instruction` describing how to render it — **follow
+it** (e.g. a source may already be a count you report as-is rather than
+enumerate). Absent → list items, deduped.
 
 Keep it standup-length: what got done, grouped, skimmable. Not a transcript.
 

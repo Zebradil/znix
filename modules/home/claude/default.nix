@@ -146,6 +146,11 @@ let
                             type = lib.types.str;
                             description = "Shell command emitting raw data; {{since}} → last-standup timestamp";
                           };
+                          instruction = lib.mkOption {
+                            type = lib.types.nullOr lib.types.str;
+                            default = null;
+                            description = "How the /standup skill should render this source's raw output.";
+                          };
                         };
                       }
                     );

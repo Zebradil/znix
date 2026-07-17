@@ -44,7 +44,10 @@ in
             builtins.toJSON {
               profile = profile.worklogName;
               worklog_dir = worklogDir profile;
-              sources = map (s: { inherit (s) name cmd; }) profile.worklogSources;
+              sources = map (
+                s:
+                { inherit (s) name cmd; } // lib.optionalAttrs (s.instruction != null) { inherit (s) instruction; }
+              ) profile.worklogSources;
             }
           );
       in
