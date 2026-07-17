@@ -156,3 +156,21 @@ function z:slack:use() {
   fi
   log::info "ZNIX_SLACK_CHANNEL=$ZNIX_SLACK_CHANNEL"
 }
+
+# Post a message to Slack as your user, resolving the token from 1Password.
+# Usage: z:slackit <#channel|channel-id|channel:thread_ts|slack-permalink> <text>
+# Reads the user token from the op ref in $ZNIX_SLACK_USER_TOKEN_OP_REF.
+# Outputs: message ts (from z:slack:post).
+function z:slackit() (
+  set -euo pipefail
+  local dest="${1:?destination missing}"
+  local text="${2:?message missing}"
+
+  local token
+  token="$(op read "${ZNIX_SLACK_USER_TOKEN_OP_REF:?required but not set}")" || {
+    log::warn "Failed to read Slack user token from 1Password"
+    return 1
+  }
+
+  z:slack:post "$token" "$dest" "$text"
+)
