@@ -15,6 +15,7 @@
           openssh
           sops
           suok
+          tailscale
           wireless-headless
         ])
         ++ [ inputs.disko.nixosModules.disko ];
@@ -23,6 +24,12 @@
         boot.enable = true;
         wirelessHeadless.enable = true;
         k3sAgent.enable = true;
+
+        tailscale = {
+          enable = true;
+          advertiseTags = [ "tag:k3s" ];
+          authKeyFile = config.sops.secrets.tailscale-authkey.path;
+        };
 
         cloudflareDynamicDns = {
           enable = true;
@@ -33,6 +40,9 @@
           };
         };
       };
+
+      # OAuth client secret for unattended Tailscale auth (advertises tag:k3s).
+      sops.secrets.tailscale-authkey.sopsFile = ../../../secrets/hosts/k3s.yaml;
 
       system.stateVersion = "26.11";
 

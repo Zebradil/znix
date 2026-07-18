@@ -55,6 +55,12 @@
       tailscale.enable = true;
     };
 
+    # Persist tailscaled node state across impermanence wipes so tuxedo stays
+    # authenticated. Lives here (not in the shared tailscale module) because
+    # `environment.persistence` only exists on impermanence hosts, and the k3s
+    # hosts that also import `tailscale` don't have it.
+    environment.persistence."/persist".directories = [ "/var/lib/tailscale" ];
+
     programs.zsh.enable = true;
 
     security.pam.loginLimits = [
