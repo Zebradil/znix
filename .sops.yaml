@@ -1,10 +1,11 @@
 keys:
-  # Users
   - users:
       - &zebradil age188h98rs643kglmetvqt3hhnllw0ga45jg94p8xar2qe0c987k59q9qxv3v
-  # Hosts
   - hosts:
       - &tuxedo age1nqcqaf0e2jzj7w9pj3d3cdlf8havcmzdfth8gzvgm0drwlqrnveq8eu8j2
+      - &d1 age1px5fk9va5z7wh6le8rwfkuxn7pn0jxklwuyzc90ky7ze7vgs634sg7ce8p
+      - &d2 age1hcr6466ujfhtzw7nzlqu9guk4yu8yx3kvevsr2va68grrd4ar5pskgr804
+      - &d3 age1xvracjzswt8l8tefkzreqj2wyf7ht3cqdsjel34svnep2vvhrpnsq9zqnz
   # CI (GitHub Actions); private key stored as the SOPS_AGE_KEY repo secret
   - ci:
       - &github-ci age1avy74tmpl5tws934r0rs9rxgcul2k3d942xmn4heh4t0xuf584msr7cewl
@@ -25,6 +26,13 @@ creation_rules:
       - age:
           - *tuxedo
           - *zebradil
+  - path_regex: secrets/hosts/k3s\.ya?ml$
+    key_groups:
+      - age:
+          - *zebradil
+          - *d1
+          - *d2
+          - *d3
   - path_regex: secrets/cache\.ya?ml$
     key_groups:
       - age:
