@@ -48,6 +48,11 @@ in
             (mkDirFiles profile "${cavemanSrc}/src/hooks" "hooks")
             // (mkDirFiles profile "${cavemanSrc}/skills" "skills")
             // (mkDirFiles profile "${cavemanSrc}/commands" "commands")
+            # znix-owned SubagentStart hook — upstream caveman ships none, and it
+            # can't live under vendor/caveman (vendir sync would wipe it).
+            // {
+              "${profile.configDir}/hooks/caveman-subagent.js".source = ./caveman/caveman-subagent.js;
+            }
           ) enabled
         );
       };
