@@ -286,6 +286,7 @@ in
           lib.optionalAttrs (profile.caveman && cavemanEnabled) {
             SessionStart = [ { hooks = [ (mkNodeHook profile.configDir "caveman-activate.js") ]; } ];
             UserPromptSubmit = [ { hooks = [ (mkNodeHook profile.configDir "caveman-mode-tracker.js") ]; } ];
+            SubagentStart = [ { hooks = [ (mkNodeHook profile.configDir "caveman-subagent.js") ]; } ];
           };
 
         mkPonytailHooks =
