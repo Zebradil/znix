@@ -52,6 +52,45 @@
           self.homeConfigurations."zebradil@tuxedo".config.home.persistence."/persist".directories;
       };
 
+      # Ephemeral root wipes $HOME every boot. Standalone home-manager (unlike the
+      # integrated NixOS module) installs no boot activation unit, so nothing
+      # recreates the dotfile symlinks. Without hyprland.conf at first launch, GDM
+      # runs Hyprland config-less and it writes an autogen hyprland.lua that then
+      # shadows HM's config (Hyprland 0.55 is lua-first). Ordering before
+      # display-manager restores the baked generation first; requiredBy makes a
+      # failed activation block GDM (fail to a TTY, recoverable) instead of letting
+      # it start config-less and corrupt the persisted Hyprland config.
+      #
+      # Referencing activationPackage builds the home at nixos-rebuild time;
+      # `home-manager switch` stays the fast iterate loop.
+      #
+      # ponytail: activate's `systemctl --user` reloads run late (no user bus yet)
+      # — fine, only the symlinks are on the critical path. Revisit if a home
+      # service must be live before the compositor.
+      systemd.services.home-manager-zebradil = lib.mkIf config.znix.impermanence.enable {
+        description = "Activate zebradil's home-manager generation at boot";
+        wantedBy = [ "multi-user.target" ];
+        before = [ "display-manager.service" ];
+        requiredBy = [ "display-manager.service" ];
+        after = [
+          "local-fs.target"
+          "nix-daemon.socket"
+        ];
+        # activate self-supplies coreutils; only needs nix on PATH for the
+        # user-environment realisation (nix-build/nix-env).
+        path = [ config.nix.package ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          User = "zebradil";
+          Environment = [
+            "HOME=/home/zebradil"
+            "USER=zebradil"
+          ];
+        };
+        script = "${self.homeConfigurations."zebradil@tuxedo".activationPackage}/activate";
+      };
+
       sops.secrets."u2f_keys/${config.networking.hostName}" = lib.mkIf config.znix.fido.enable {
         path = "/home/zebradil/.config/Yubico/u2f_keys";
         owner = "zebradil";
