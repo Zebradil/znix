@@ -1,3 +1,7 @@
+## Code
+
+The Boy Scout Rule: leave the code better than you found it.
+
 ## Code comments
 
 Comments explain the code as it is now — the non-obvious _why_. Never write history/changelog comments: no "was X",
