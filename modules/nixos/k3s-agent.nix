@@ -51,9 +51,13 @@ _: {
           config.sops.secrets.oci-registry-password.sopsFile
         ];
 
-        # Open kubelet (server -> agent) and flannel VXLAN, and trust the CNI/overlay interfaces.
+        # Open kubelet (server -> agent), metrics and flannel VXLAN, and trust the CNI/overlay interfaces.
         networking.firewall = {
-          allowedTCPPorts = [ 10250 ];
+          allowedTCPPorts = [
+            10250
+            19100
+            9100
+          ];
           allowedUDPPorts = [ 8472 ];
           trustedInterfaces = [
             "flannel.1"
