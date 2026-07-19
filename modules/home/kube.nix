@@ -1,5 +1,4 @@
-{ inputs, ... }:
-{
+_: {
   flake.modules.homeManager.kube =
     { config, lib, ... }:
     let
@@ -45,15 +44,13 @@
       };
     in
     {
-      imports = [ inputs.sops-nix.homeManagerModules.sops ];
-
+      # sops-nix home import + age.keyFile come from the shared home `sops` module.
       options.znix.kube.homelab.enable =
         lib.mkEnableOption "sops-rendered homelab kubeconfig in ~/.kube/custom.clusters";
 
       config = lib.mkIf cfg.enable {
         sops = {
           defaultSopsFile = ../../secrets/homelab-kube.yaml;
-          age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
 
           secrets = {
             "ca" = { };

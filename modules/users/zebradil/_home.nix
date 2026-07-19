@@ -7,4 +7,16 @@ _: {
   };
   sshPublicKey = builtins.readFile ./ssh.pub;
   znix.docker.multiarchBuilder.enable = true;
+  znix.docker.registryAuth = {
+    enable = true;
+    sopsFile = ../../../secrets/users/zebradil.yaml;
+    registries.zebradil-oci = {
+      endpoints = [
+        "oci.zebradil.dev"
+        "oci.lan.zebradil.dev"
+      ];
+      usernameSecret = "docker-oci-username";
+      passwordSecret = "docker-oci-password";
+    };
+  };
 }
