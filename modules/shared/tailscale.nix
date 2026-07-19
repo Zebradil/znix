@@ -1,5 +1,4 @@
-{ ... }:
-{
+_: {
   flake.modules.nixos.tailscale =
     {
       config,
@@ -35,14 +34,10 @@
         };
       };
 
-      # tailscaled state lives in /var/lib/tailscale; on impermanence hosts it is
-      # persisted from the impermanence manifest (guarded by services.tailscale.enable),
-      # not here — this module is imported by non-impermanence hosts too, and
-      # defining environment.persistence there errors even under mkIf.
       config = lib.mkIf cfg.enable {
         services.tailscale = {
           enable = true;
-          authKeyFile = cfg.authKeyFile;
+          inherit (cfg) authKeyFile;
           extraUpFlags = lib.mkIf (cfg.advertiseTags != [ ]) [
             "--advertise-tags=${lib.concatStringsSep "," cfg.advertiseTags}"
           ];
