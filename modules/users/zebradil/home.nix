@@ -35,12 +35,14 @@
         };
       };
 
-      znix.impermanence.enable = true;
-
-      znix.claude = {
-        caveman.enable = true;
-        ponytail.enable = true;
-        profiles.personal = self.lib.claude.mkPersonalProfile { };
+      znix = {
+        impermanence.enable = true;
+        kube.homelab.enable = true;
+        claude = {
+          caveman.enable = true;
+          ponytail.enable = true;
+          profiles.personal = self.lib.claude.mkPersonalProfile { };
+        };
       };
     };
 }

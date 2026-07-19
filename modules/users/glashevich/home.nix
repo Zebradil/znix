@@ -67,36 +67,38 @@ in
         stateVersion = "26.05";
       };
 
-      znix.jira = {
-        enable = true;
-        server = "https://trivago.atlassian.net";
-        login = "german.lashevich@trivago.com";
-      };
+      znix = {
+        kube.homelab.enable = true;
+        jira = {
+          enable = true;
+          server = "https://trivago.atlassian.net";
+          login = "german.lashevich@trivago.com";
+        };
+        claude = {
+          caveman.enable = true;
+          ponytail.enable = true;
+          worklog.enable = true;
 
-      znix.claude = {
-        caveman.enable = true;
-        ponytail.enable = true;
-        worklog.enable = true;
-
-        profiles = {
-          personal = self.lib.claude.mkPersonalProfile { } // {
-            worklog = true;
-            worklogSources = mkGithubSources "-org:trivago";
-          };
-
-          company = mkCompanyProfile {
-            configDir = ".config/trv-claude";
-            command = "trv-claude";
-          };
-
-          company-key =
-            (mkCompanyProfile {
-              configDir = ".config/trv-claude-key";
-              command = "trv-claude-key";
-            })
-            // {
-              runtimeEnv.ANTHROPIC_API_KEY = "op read 'op://Employee/Anthropic API key/credential'";
+          profiles = {
+            personal = self.lib.claude.mkPersonalProfile { } // {
+              worklog = true;
+              worklogSources = mkGithubSources "-org:trivago";
             };
+
+            company = mkCompanyProfile {
+              configDir = ".config/trv-claude";
+              command = "trv-claude";
+            };
+
+            company-key =
+              (mkCompanyProfile {
+                configDir = ".config/trv-claude-key";
+                command = "trv-claude-key";
+              })
+              // {
+                runtimeEnv.ANTHROPIC_API_KEY = "op read 'op://Employee/Anthropic API key/credential'";
+              };
+          };
         };
       };
     };
