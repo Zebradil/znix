@@ -35,9 +35,6 @@
         packages = [ pkgs.home-manager ];
       };
 
-      sops.defaultSopsFile = ../../../secrets/users/zebradil.yaml;
-      sops.secrets.password.neededForUsers = true;
-
       # Home persistence is system-owned. Current impermanence does ALL home
       # bind-mounting in its NixOS module (its home-manager.nix is validation-only);
       # so the mounts must be declared system-side. Rather than hand-copy the dir
@@ -91,10 +88,16 @@
         script = "${self.homeConfigurations."zebradil@tuxedo".activationPackage}/activate";
       };
 
-      sops.secrets."u2f_keys/${config.networking.hostName}" = lib.mkIf config.znix.fido.enable {
-        path = "/home/zebradil/.config/Yubico/u2f_keys";
-        owner = "zebradil";
-        mode = "0400";
+      sops = {
+        defaultSopsFile = ../../../secrets/users/zebradil.yaml;
+        secrets = {
+          password.neededForUsers = true;
+          "u2f_keys/${config.networking.hostName}" = lib.mkIf config.znix.fido.enable {
+            path = "/home/zebradil/.config/Yubico/u2f_keys";
+            owner = "zebradil";
+            mode = "0400";
+          };
+        };
       };
     };
 }
