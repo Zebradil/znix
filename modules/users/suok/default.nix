@@ -27,5 +27,21 @@ _: {
         ];
         openssh.authorizedKeys.keys = lib.splitString "\n" (builtins.readFile ../zebradil/ssh.pub);
       };
+
+      environment.systemPackages = with pkgs; [
+        bat
+        bind # provides dig, host and nslookup
+        btop
+        coreutils
+        curl
+        doggo
+        duf
+        eza
+        fd
+        htop
+        ncdu
+        neovim
+        ripgrep
+      ];
     };
 }
