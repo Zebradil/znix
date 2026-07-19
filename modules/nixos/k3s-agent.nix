@@ -51,6 +51,20 @@ _: {
           config.sops.secrets.oci-registry-password.sopsFile
         ];
 
+        # synology-csi's node plugin needs iscsiadm on the host.
+        services.openiscsi = {
+          enable = true;
+          name = "iqn.2005-03.org.open-iscsi:${config.networking.hostName}";
+        };
+
+        # The plugin execs `env iscsiadm` with the container's PATH
+        # (/usr/sbin:/sbin:...), which misses NixOS's /run/current-system/sw/bin.
+        # Bridge the binary onto /usr/bin — on PATH and the one FHS bin dir NixOS
+        # populates. Without this, iscsiadm is installed but `env` can't find it.
+        systemd.tmpfiles.rules = [
+          "L+ /usr/bin/iscsiadm - - - - /run/current-system/sw/sbin/iscsiadm"
+        ];
+
         # Open kubelet (server -> agent), metrics and flannel VXLAN, and trust the CNI/overlay interfaces.
         networking.firewall = {
           allowedTCPPorts = [
