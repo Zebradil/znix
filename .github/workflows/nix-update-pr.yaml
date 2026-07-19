@@ -319,8 +319,13 @@ jobs:
               : > "$RUNNER_TEMP/kasha-roots.txt"
               while IFS= read -r target; do
                 [[ -z "$target" ]] && continue
-                nix path-info ".#${target}" 2>/dev/null \
-                  | { grep -v '\.drv$' || true; } >> "$RUNNER_TEMP/kasha-roots.txt"
+                # Top-level outputs via the drv (not the closure), store-valid
+                # only. Guarded so a non-zero query can't trip `set -e`.
+                drv="$(nix path-info --derivation ".#${target}" 2>/dev/null || true)"
+                [[ -n "$drv" ]] || continue
+                for out in $(nix-store --query --outputs "$drv" 2>/dev/null || true); do
+                  nix-store --check-validity "$out" 2>/dev/null && printf '%s\n' "$out" >> "$RUNNER_TEMP/kasha-roots.txt"
+                done
               done < "$RUNNER_TEMP/diff-targets.txt"
               sort -u "$RUNNER_TEMP/kasha-roots.txt" -o "$RUNNER_TEMP/kasha-roots.txt"
               if [[ -s "$RUNNER_TEMP/kasha-roots.txt" ]]; then

@@ -147,15 +147,24 @@ if [[ "${pushed:-}" == 1 && -n "${KASHA_FLAKE:-}" && -n "${KASHA_EMIT_SCRIPT:-}"
     dirty=""
     git diff --quiet 2>/dev/null && git diff --cached --quiet 2>/dev/null || dirty="-dirty"
     for attr in "${attrs[@]}"; do
-      # Top-level output(s) of this attr — not its closure (no --requisites).
-      root="$(nix path-info ".#${attr}" 2>/dev/null | { grep -v '\.drv$' || true; })"
+      # Top-level output(s) of this attr — not its closure. Resolve via the
+      # drv's own outputs and keep only store-valid ones: an unbuilt toplevel
+      # was never pushed, so it must not be advertised as a root. Every query is
+      # guarded so a non-zero exit can't trip `set -e` mid-loop.
+      root=""
+      drv="$(nix path-info --derivation ".#${attr}" 2>/dev/null || true)"
+      if [[ -n "$drv" ]]; then
+        for out in $(nix-store --query --outputs "$drv" 2>/dev/null || true); do
+          nix-store --check-validity "$out" 2>/dev/null && root+="${out}"$'\n'
+        done
+      fi
       if [[ -z "$root" ]]; then
-        echo "::warning::kasha emit skipped for '${attr}' — no store-valid output." >&2
+        echo "::warning::kasha emit skipped for '${attr}' — top-level output not built/valid." >&2
         continue
       fi
       gen="${ref}-${sha}${dirty}-$(sanitize "$attr")"
       echo "Emitting root manifest ${KASHA_FLAKE}/${gen}…"
-      printf '%s\n' "$root" | emit_manifest "$gen"
+      printf '%s' "$root" | emit_manifest "$gen"
     done
   fi
 fi
