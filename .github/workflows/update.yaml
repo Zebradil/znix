@@ -34,6 +34,7 @@ jobs:
       cache-public-key: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
       run-flake-update: ${{ github.event_name == 'workflow_dispatch' && inputs.run-flake-update }}
       auto-commit: ${{ github.event_name == 'workflow_dispatch' && inputs.run-flake-update }}
+      kasha-flake: znix
     secrets:
       sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
       ci-push-ssh-key: ${{ secrets.CI_PUSH_DEPLOY_KEY }}

@@ -1,4 +1,5 @@
-_: {
+{ inputs, ... }:
+{
   perSystem =
     { pkgs, ... }:
     {
@@ -17,8 +18,19 @@ _: {
               gnugrep
               gnused
               findutils
+              # For kasha root-manifest emission (emit-root-manifest.sh).
+              awscli2
+              jq
             ];
-            text = builtins.readFile ./scripts/cache-push-local.sh;
+            # Emit kasha root manifests for locally-pushed generations, so they
+            # are discoverable by the box's mirror-down. The emit script is
+            # pinned via the kasha source input (no drift). Exports precede the
+            # readFile body; the body's shebang line is then just a comment.
+            text = ''
+              export KASHA_FLAKE=znix
+              export KASHA_EMIT_SCRIPT=${inputs.kasha}/scripts/emit-root-manifest.sh
+            ''
+            + builtins.readFile ./scripts/cache-push-local.sh;
           }
         }/bin/cache-push";
       };

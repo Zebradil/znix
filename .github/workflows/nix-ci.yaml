@@ -36,6 +36,13 @@ on:
         type: boolean
         required: false
         default: false
+      kasha-flake:
+        description: >
+          kasha flake id to publish root manifests under (roots/<flake>/) after each cache push.
+          Empty (default) skips manifest emission.
+        type: string
+        required: false
+        default: ''
       discovery-types:
         description: Newline-separated list of flake output types to discover (e.g. 'checks\nnixosConfigurations').
         type: string
@@ -250,6 +257,27 @@ jobs:
             > "$RUNNER_TEMP/store-paths.txt"
           echo "path-file=$RUNNER_TEMP/store-paths.txt" >> "$GITHUB_OUTPUT"
 
+      - name: Resolve kasha root manifest
+        id: kasha
+        # The manifest root is this attr's TOP-LEVEL output (not the closure the
+        # push resolves). Skip cleanly when the build produced no valid output.
+        if: ${{ always() && inputs.push-to-cache && inputs.kasha-flake != '' }}
+        run: |
+          attr='${{ matrix.attr }}'
+          root="$(nix path-info ".#${attr}" 2>/dev/null | { grep -v '\.drv$' || true; })"
+          if [[ -z "$root" ]]; then
+            echo "No store-valid output for ${attr}; skipping root manifest."
+            exit 0
+          fi
+          printf '%s\n' "$root" > "$RUNNER_TEMP/kasha-roots.txt"
+          san() { printf '%s' "$1" | tr -c 'A-Za-z0-9_.-' '-'; }
+          gen="$(san "${{ github.ref_name }}")-$(git rev-parse --short HEAD)-$(san "$attr")"
+          {
+            echo "roots-file=$RUNNER_TEMP/kasha-roots.txt"
+            echo "gen=$gen"
+            echo "emit-script=$(nix eval --raw .#lib.kashaEmitScript)"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Publish built path
         if: ${{ always() && inputs.push-to-cache }}
         uses: ./.znix-ci/.github/actions/push-nix-cache
@@ -259,6 +287,12 @@ jobs:
           s3-url: ${{ steps.cache-secrets.outputs.s3-url }}
           aws-access-key-id: ${{ steps.cache-secrets.outputs.aws-access-key-id }}
           aws-secret-access-key: ${{ steps.cache-secrets.outputs.aws-secret-access-key }}
+          # Emit a root manifest only when a root resolved (empty otherwise ->
+          # push proceeds, emission is skipped).
+          kasha-flake: ${{ steps.kasha.outputs.emit-script != '' && inputs.kasha-flake || '' }}
+          kasha-emit-script: ${{ steps.kasha.outputs.emit-script }}
+          roots-file: ${{ steps.kasha.outputs.roots-file }}
+          kasha-gen: ${{ steps.kasha.outputs.gen }}
 
       - name: Clean up signing key
         if: ${{ always() && steps.cache-secrets.outputs.signing-key-file != '' }}

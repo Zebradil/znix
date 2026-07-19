@@ -54,6 +54,13 @@ on:
         type: string
         required: false
         default: ''
+      kasha-flake:
+        description: >
+          kasha flake id to publish a root manifest under (roots/<flake>/) after pushing the
+          post-update builds. Empty (default) skips manifest emission.
+        type: string
+        required: false
+        default: ''
       cache-pull-url:
         description: HTTPS URL of the Nix binary cache used as an extra substituter during diff builds.
         type: string
@@ -302,12 +309,29 @@ jobs:
           done < "$RUNNER_TEMP/diff-targets.txt"
           sort -u "$RUNNER_TEMP/post-update-paths.txt" -o "$RUNNER_TEMP/post-update-paths.txt"
           if [[ -s "$RUNNER_TEMP/post-update-paths.txt" ]]; then
-            {
-              echo 'paths<<EOF'
-              cat "$RUNNER_TEMP/post-update-paths.txt"
-              echo 'EOF'
-            } >> "$GITHUB_OUTPUT"
+            # A file (not inline) so large closures don't overflow the step env,
+            # matching the store-paths-file the push action expects.
+            echo "path-file=$RUNNER_TEMP/post-update-paths.txt" >> "$GITHUB_OUTPUT"
             echo "has_paths=true" >> "$GITHUB_OUTPUT"
+            # kasha roots: the diff-targets' TOP-LEVEL outputs (not the closure
+            # pushed above). One manifest per update lists them all.
+            if [[ -n '${{ inputs.kasha-flake }}' ]]; then
+              : > "$RUNNER_TEMP/kasha-roots.txt"
+              while IFS= read -r target; do
+                [[ -z "$target" ]] && continue
+                nix path-info ".#${target}" 2>/dev/null \
+                  | { grep -v '\.drv$' || true; } >> "$RUNNER_TEMP/kasha-roots.txt"
+              done < "$RUNNER_TEMP/diff-targets.txt"
+              sort -u "$RUNNER_TEMP/kasha-roots.txt" -o "$RUNNER_TEMP/kasha-roots.txt"
+              if [[ -s "$RUNNER_TEMP/kasha-roots.txt" ]]; then
+                san() { printf '%s' "$1" | tr -c 'A-Za-z0-9_.-' '-'; }
+                {
+                  echo "roots-file=$RUNNER_TEMP/kasha-roots.txt"
+                  echo "gen=$(san '${{ github.ref_name }}')-$(git rev-parse --short HEAD)"
+                  echo "emit-script=$(nix eval --raw .#lib.kashaEmitScript)"
+                } >> "$GITHUB_OUTPUT"
+              fi
+            fi
           else
             echo "has_paths=false" >> "$GITHUB_OUTPUT"
           fi
@@ -316,11 +340,16 @@ jobs:
         if: ${{ always() && steps.post-paths.outputs.has_paths == 'true' && env.CAN_PUSH_CACHE == 'true' }}
         uses: ./.znix-ci/.github/actions/push-nix-cache
         with:
-          store-paths: ${{ steps.post-paths.outputs.paths }}
+          store-paths-file: ${{ steps.post-paths.outputs.path-file }}
           signing-key-file: ${{ steps.setup.outputs.signing-key-file }}
           s3-url: ${{ secrets.cache-s3-url }}
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+          # Emit one root manifest for the update's targets when a root resolved.
+          kasha-flake: ${{ steps.post-paths.outputs.emit-script != '' && inputs.kasha-flake || '' }}
+          kasha-emit-script: ${{ steps.post-paths.outputs.emit-script }}
+          roots-file: ${{ steps.post-paths.outputs.roots-file }}
+          kasha-gen: ${{ steps.post-paths.outputs.gen }}
 
       - name: Create or update PR
         if: ${{ steps.check.outputs.has_changes == 'true' }}

@@ -562,6 +562,22 @@
         "type": "github"
       }
     },
+    "kasha": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784493056,
+        "narHash": "sha256-SykMTDj8Mi5l8zaajO2gzMku81+fLRNb2TKMsZKdnew=",
+        "owner": "Zebradil",
+        "repo": "kasha",
+        "rev": "fcec038d797eed62fbd38fc948893236fda46273",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Zebradil",
+        "repo": "kasha",
+        "type": "github"
+      }
+    },
     "nix": {
       "inputs": {
         "flake-parts": "flake-parts",
@@ -885,6 +901,7 @@
         "homebrew-core": "homebrew-core",
         "impermanence": "impermanence",
         "import-tree": "import-tree",
+        "kasha": "kasha",
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",
         "nix-index-database": "nix-index-database",

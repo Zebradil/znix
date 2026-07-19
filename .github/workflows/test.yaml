@@ -26,6 +26,7 @@ jobs:
       cache-pull-url: https://znix.zebradil.dev
       cache-public-key: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
       push-to-cache: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+      kasha-flake: znix
     secrets:
       sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
 

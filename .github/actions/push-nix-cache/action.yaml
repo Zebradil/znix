@@ -31,6 +31,26 @@ inputs:
     description: AWS secret access key for S3 authentication.
     required: false
     default: ''
+  kasha-flake:
+    description: >
+      kasha flake id to publish a root manifest under (roots/<flake>/). Leave empty to skip
+      manifest emission — downstream reusers that don't wire kasha stay unaffected.
+    required: false
+    default: ''
+  kasha-emit-script:
+    description: Store path of kasha's emit-root-manifest.sh (from `nix eval --raw .#lib.kashaEmitScript`).
+    required: false
+    default: ''
+  roots-file:
+    description: >
+      File of top-level output paths (roots) for the manifest — NOT the closure. Paired with
+      kasha-gen. Required for emission in this (--paths-file) mode.
+    required: false
+    default: ''
+  kasha-gen:
+    description: Generation id for the root manifest (roots/<flake>/<gen>.json).
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -43,7 +63,19 @@ runs:
         CACHE_S3_URL: ${{ inputs.s3-url }}
         AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+        KASHA_FLAKE: ${{ inputs.kasha-flake }}
+        KASHA_EMIT_SCRIPT: ${{ inputs.kasha-emit-script }}
+        KASHA_GEN: ${{ inputs.kasha-gen }}
+        ROOTS_FILE: ${{ inputs.roots-file }}
       run: |
         # Shared resolve -> sign -> push core, also used by `nix run .#cache-push`.
-        bash "$GITHUB_ACTION_PATH/../../scripts/populate-nix-cache.sh" \
-          --paths-file "$STORE_PATHS_FILE"
+        core="$GITHUB_ACTION_PATH/../../scripts/populate-nix-cache.sh"
+        args=(--paths-file "$STORE_PATHS_FILE")
+        [[ -n "$ROOTS_FILE" ]] && args+=(--roots-file "$ROOTS_FILE")
+        if [[ -n "$KASHA_FLAKE" ]]; then
+          # emit-root-manifest.sh needs jq + aws; provide them without assuming
+          # the runner has them preinstalled (works on ubuntu + macos runners).
+          nix shell nixpkgs#awscli2 nixpkgs#jq --command bash "$core" "${args[@]}"
+        else
+          bash "$core" "${args[@]}"
+        fi

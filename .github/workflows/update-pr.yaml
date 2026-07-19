@@ -26,6 +26,7 @@ jobs:
         checks.aarch64-darwin.trv4250-build
       auto-merge: true
       branch-name: automation/flake-update
+      kasha-flake: znix
     secrets:
       ci-app-id: ${{ secrets.CI_APP_ID }}
       ci-app-private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}

@@ -20,11 +20,17 @@ set -euo pipefail
 #   (no args)           every output of `.#checks.<current-system>`
 
 paths_file=""
+roots_file=""
 attrs=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --paths-file) paths_file="$2"; shift 2 ;;
     --paths-file=*) paths_file="${1#*=}"; shift ;;
+    # Top-level output paths (roots) for kasha manifest emission in --paths-file
+    # mode, where a root can't be recovered from the expanded closure. Paired
+    # with KASHA_GEN from the caller. See the emit block below.
+    --roots-file) roots_file="$2"; shift 2 ;;
+    --roots-file=*) roots_file="${1#*=}"; shift ;;
     --) shift; attrs+=("$@"); break ;;
     *) attrs+=("$1"); shift ;;
   esac
@@ -107,4 +113,49 @@ elif [[ -z "${AWS_ACCESS_KEY_ID:-}" || -z "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
 else
   echo "Pushing ${#store_paths[@]} path(s) to ${CACHE_S3_URL}…"
   nix copy --to "$CACHE_S3_URL" "${store_paths[@]}"
+  pushed=1
+fi
+
+# ── Publish kasha root manifests ───────────────────────────────────────────
+# Only after a successful push, and only when configured (KASHA_FLAKE +
+# KASHA_EMIT_SCRIPT). A NAR in the remote cache without a roots/<flake>/<gen>.json
+# is invisible to the box's mirror-down, so the push would be wasted. Requires
+# jq + aws on PATH (local: cache-push runtimeInputs; CI: nix-shell wrap). Roots
+# are top-level outputs ONLY — never closures; kasha expands them via nix copy.
+if [[ "${pushed:-}" == 1 && -n "${KASHA_FLAKE:-}" && -n "${KASHA_EMIT_SCRIPT:-}" ]]; then
+  sanitize() { printf '%s' "$1" | tr -c 'A-Za-z0-9_.-' '-'; }
+  emit_manifest() { # $1=gen id; stdin=root paths, one per line
+    KASHA_FLAKE="$KASHA_FLAKE" KASHA_GEN="$1" KASHA_TARGET="$CACHE_S3_URL" \
+      bash "$KASHA_EMIT_SCRIPT"
+  }
+
+  if [[ -n "$paths_file" ]]; then
+    # --paths-file mode (CI): the caller resolved the attr's top-level root and
+    # the gen id, since neither is recoverable from an expanded closure here.
+    if [[ -n "$roots_file" && -n "${KASHA_GEN:-}" ]]; then
+      echo "Emitting root manifest ${KASHA_FLAKE}/${KASHA_GEN}…"
+      emit_manifest "$KASHA_GEN" < "$roots_file"
+    else
+      echo "::warning::kasha emit skipped — --roots-file and KASHA_GEN are required in --paths-file mode." >&2
+    fi
+  else
+    # attrs mode (local): one manifest per attr, keyed by commit provenance.
+    # Idempotent on re-run; ref + the manifest's embedded timestamp are the GC
+    # handles. A dirty worktree is non-reproducible, so it is marked as such.
+    ref="$(sanitize "$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo HEAD)")"
+    sha="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    dirty=""
+    git diff --quiet 2>/dev/null && git diff --cached --quiet 2>/dev/null || dirty="-dirty"
+    for attr in "${attrs[@]}"; do
+      # Top-level output(s) of this attr — not its closure (no --requisites).
+      root="$(nix path-info ".#${attr}" 2>/dev/null | { grep -v '\.drv$' || true; })"
+      if [[ -z "$root" ]]; then
+        echo "::warning::kasha emit skipped for '${attr}' — no store-valid output." >&2
+        continue
+      fi
+      gen="${ref}-${sha}${dirty}-$(sanitize "$attr")"
+      echo "Emitting root manifest ${KASHA_FLAKE}/${gen}…"
+      printf '%s\n' "$root" | emit_manifest "$gen"
+    done
+  fi
 fi
