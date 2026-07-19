@@ -97,6 +97,13 @@
           enable = true;
           settings = {
             nixd = {
+              # nixd completes by evaluating the expression left of the dot. Values
+              # arriving as module lambda args (`pkgs`, `lib` in flake-parts/HM/NixOS
+              # modules) have no value it can see, so member completion is empty
+              # without this. Registry `nixpkgs` keeps the config portable across repos.
+              nixpkgs.expr = ''import (builtins.getFlake "nixpkgs") { }'';
+              # Want `config.`/option completion too? Add options.<name>.expr pointing
+              # at a real NixOS/home-manager/flake-parts eval (see nixd docs).
               formatting.command = [ "nixfmt" ];
             };
           };
