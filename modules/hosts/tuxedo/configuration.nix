@@ -55,6 +55,11 @@
       tailscale.enable = true;
     };
 
+    # Persistence configuration for various pluggable services lives here instead
+    # of their corresponding modules because `environment.persistence` only exists
+    # on impermanence hosts, evaluation on other hosts would fail otherwise.
+    environment.persistence."/persist".directories = [ "/var/lib/tailscale" ];
+
     programs.zsh.enable = true;
 
     security.pam.loginLimits = [
