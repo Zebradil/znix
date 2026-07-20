@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o pipefail
+
+# Predict which binary cache Nix would pull a given store path from.
+#
+# Nix picks, among the substituters that actually hold the path, the one with
+# the lowest priority number (?priority=N in the URL overrides the value the
+# cache advertises in nix-cache-info; unset advertised priority defaults to 50).
+# We probe every substituter in the *effective* config (`nix config show`), so
+# this reflects what THIS host would do — including Determinate-mangled configs
+# and LAN-only caches that are unreachable off-network.
+
+usage() (
+  bold_green="$(tput bold)$(tput setaf 2)"
+  reset="$(tput sgr0)"
+  cat <<EOF
+Usage: ${bold_green}$(basename "$0") <store-path-or-hash>${reset}
+
+  Prints the substituters holding the path, sorted by effective priority.
+  The first line is the cache Nix would fetch from.
+
+  Accepts a full /nix/store/<hash>-name path or just the <hash>.
+EOF
+)
+
+case "${1:-}" in
+-h | --help | "")
+  usage
+  [[ -z "${1:-}" ]] && exit 2 || exit 0
+  ;;
+esac
+
+hash="$(basename "$1" | cut -d- -f1)"
+
+connect_timeout=5
+
+results=""
+while read -r url; do
+  [[ -z "$url" ]] && continue
+  base="${url%%\?*}"
+
+  # ?priority=N in the URL wins; otherwise ask the cache, defaulting to 50.
+  prio="$(sed -n 's/.*[?&]priority=\([0-9]*\).*/\1/p' <<<"$url")"
+  if [[ -z "$prio" ]]; then
+    prio="$(curl -s --connect-timeout "$connect_timeout" "$base/nix-cache-info" |
+      sed -n 's/^Priority: //p')"
+    prio="${prio:-50}"
+  fi
+
+  code="$(curl -s -o /dev/null -w '%{http_code}' \
+    --connect-timeout "$connect_timeout" "$base/$hash.narinfo")"
+  if [[ "$code" == 200 ]]; then
+    results+="$prio	$base"$'\n'
+  fi
+done < <(nix config show substituters | tr ' ' '\n')
+
+if [[ -z "$results" ]]; then
+  echo "No configured substituter holds $hash (all miss or unreachable)." >&2
+  exit 1
+fi
+
+printf '%s' "$results" | sort -n
+
+# vim: ft=bash tabstop=2 shiftwidth=2 softtabstop=2 expandtab:
