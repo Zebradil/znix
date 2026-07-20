@@ -219,11 +219,28 @@ jobs:
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
 
       - name: Build target
-        # --keep-going: don't stop at the first failed dependency. Building as
-        # much of the closure as possible means the successfully built paths can
-        # still be pushed to the cache below, so a single broken derivation does
-        # not force everything else to be rebuilt on the next run.
-        run: nix build --keep-going ".#${{ matrix.attr }}"
+        # Build only the genuinely-uncached derivations, NOT the top-level. The
+        # top-level's build merely links an already-substitutable closure, so
+        # realizing it would fetch the entire runtime closure (GBs) just to
+        # symlink it — the disk-exhaustion that fails these runners. Building the
+        # leaves still proves they compile (the buildability gate); the box
+        # realizes the top-level later from its pushed .drv. See build-set.sh.
+        #
+        # --keep-going: build as much as possible so the successful paths can
+        # still be pushed below; a single broken derivation fails the job (via
+        # nix build's exit code) without forcing everything else to rebuild.
+        run: |
+          drvs=$(.znix-ci/.github/scripts/build-set.sh "${{ matrix.attr }}")
+          if [[ -z "$drvs" ]]; then
+            echo "Nothing uncached to build for ${{ matrix.attr }}."
+            exit 0
+          fi
+          # `<drv>^*` requests all outputs of each derivation.
+          targets=()
+          while IFS= read -r d; do
+            [[ -n "$d" ]] && targets+=("${d}^*")
+          done <<<"$drvs"
+          nix build --keep-going --no-link "${targets[@]}"
 
       - name: Resolve built store paths
         id: store-path
@@ -255,12 +272,28 @@ jobs:
           # argument limits when passed inline to the publish action.
           comm -23 "$RUNNER_TEMP/candidates.txt" "$RUNNER_TEMP/invalid.txt" \
             > "$RUNNER_TEMP/store-paths.txt"
+          # Also publish the top-level's .drv recipe closure (its input drvs +
+          # source paths — text, KB-scale). The box has no flake evaluator, so
+          # this is the only way it can realize the top-level: `nix-store -r`
+          # the pushed .drv, substituting the inputs and building just the link
+          # step. These paths are always store-valid here (instantiated above).
+          if [[ -n "$drv" ]]; then
+            nix-store --query --requisites "$drv" >> "$RUNNER_TEMP/store-paths.txt"
+          fi
+          sort -u -o "$RUNNER_TEMP/store-paths.txt" "$RUNNER_TEMP/store-paths.txt"
           echo "path-file=$RUNNER_TEMP/store-paths.txt" >> "$GITHUB_OUTPUT"
 
       - name: Resolve kasha root manifest
         id: kasha
         # The manifest root is this attr's TOP-LEVEL output (not the closure the
         # push resolves). Skip cleanly when the build produced no valid output.
+        #
+        # Interim: the build job no longer realizes the top-level, so its output
+        # is never store-valid here and this step self-skips — no manifest is
+        # emitted and the box is not pre-warmed for the generation (consumers
+        # still deploy fine via their own substituters). Emitting the new
+        # {outPath, drvPath} root so the box can build the top-level from its
+        # pushed .drv lands with the ../kasha emit-script + reader changes.
         if: ${{ always() && inputs.push-to-cache && inputs.kasha-flake != '' }}
         run: |
           attr='${{ matrix.attr }}'

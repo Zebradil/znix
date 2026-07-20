@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 
-# Filters a build matrix down to targets that are NOT yet in the binary cache.
+# Filters a build matrix down to targets that still have something to build.
 #
-# Evaluates every target's output store path in a SINGLE `nix eval` (pure eval,
-# no build, works cross-system) and probes the cache for the corresponding
-# `.narinfo`. Targets already present are dropped so they never spin a runner;
-# everything else is kept.
+# For each target it computes the build-set — the genuinely-uncached
+# derivations (build-set.sh) — and drops the target when that set is empty,
+# i.e. every derivation it needs is already substitutable from a configured
+# cache. Such targets would spin a runner only to build nothing, so they are
+# skipped. Everything else is kept.
+#
+# Under the build-uncached-only CI (the top-level is never realized/pushed) the
+# target's own top-level narinfo is never in the cache, so probing for it would
+# rebuild every target on every push. Probing the build-set restores the
+# skip-unchanged saving without depending on a top-level NAR.
 #
 # On any uncertainty (eval failure, no cache URL) the target is kept — building
 # is the safe default that preserves the "main is always green and cached"
@@ -13,7 +19,8 @@
 #
 # Inputs (env):
 #   MATRIX    - JSON object '{"include":[{"attr":...,"system":...,"runner":...}]}'.
-#   CACHE_URL - HTTPS base URL of the binary cache to probe. Empty disables probing.
+#   CACHE_URL - HTTPS base URL of the binary cache (probing needs it configured
+#               as a substituter; empty disables probing and builds all).
 #
 # Outputs ($GITHUB_OUTPUT):
 #   matrix      - filtered '{"include":[...]}' object.
@@ -24,34 +31,10 @@ set -euo pipefail
 : "${MATRIX:?MATRIX is required}"
 cache_url="${CACHE_URL:-}"
 
+script_dir=$(cd "$(dirname "$0")" && pwd)
+
 include=$(jq -c '.include // []' <<<"$MATRIX")
 n=$(jq 'length' <<<"$include")
-
-# Map of attr -> output store path. Empty when probing is disabled or eval
-# failed; a missing/null entry for an attr means "couldn't resolve, build it".
-outpaths='{}'
-if [[ -n "$cache_url" && "$n" -gt 0 ]]; then
-	# One eval for the whole matrix: load the flake once and resolve every
-	# requested attr's outPath by its dotted path. Per-attr tryEval keeps a
-	# single bad target from sinking the batch (it resolves to null -> build).
-	# This replaces a loop of N cold `nix eval` processes, each of which
-	# re-loaded the flake from scratch.
-	attrs_json=$(jq -c '[.[].attr]' <<<"$include")
-	if ! outpaths=$(ATTRS="$attrs_json" nix eval --json --impure --expr '
-		let
-			flake = builtins.getFlake (builtins.toString ./.);
-			lib = flake.inputs.nixpkgs.lib;
-			attrs = builtins.fromJSON (builtins.getEnv "ATTRS");
-			resolve = a:
-				let r = builtins.tryEval
-					(lib.attrByPath (lib.splitString "." a) null flake).outPath;
-				in if r.success then r.value else null;
-		in builtins.listToAttrs (map (a: { name = a; value = resolve a; }) attrs)
-	' 2>/dev/null); then
-		echo "::warning::probe-cache: batched outPath eval failed; building all targets"
-		outpaths='{}'
-	fi
-fi
 
 filtered='[]'
 
@@ -62,20 +45,14 @@ for ((i = 0; i < n; i++)); do
 	keep=true
 	if [[ -z "$cache_url" ]]; then
 		echo "probe-cache: no cache URL configured; building ${attr}"
+	elif ! drvs=$("$script_dir/build-set.sh" "$attr" 2>/dev/null); then
+		echo "::warning::probe-cache: build-set eval failed for ${attr}; building to be safe"
+	elif [[ -z "$drvs" ]]; then
+		echo "::notice::probe-cache: ${attr} has an empty build-set (all cached); skipping build"
+		keep=false
 	else
-		out=$(jq -r --arg a "$attr" '.[$a] // empty' <<<"$outpaths")
-		if [[ -z "$out" ]]; then
-			echo "::warning::probe-cache: failed to eval ${attr}.outPath; building to be safe"
-		else
-			hash=$(basename "$out")
-			hash="${hash%%-*}"
-			if curl -fsI -o /dev/null --max-time 20 "${cache_url%/}/${hash}.narinfo"; then
-				echo "::notice::probe-cache: ${attr} already cached (${hash}); skipping build"
-				keep=false
-			else
-				echo "probe-cache: ${attr} not in cache (${hash}); will build"
-			fi
-		fi
+		count=$(grep -c . <<<"$drvs")
+		echo "probe-cache: ${attr} has ${count} derivation(s) to build"
 	fi
 
 	if [[ "$keep" == true ]]; then
