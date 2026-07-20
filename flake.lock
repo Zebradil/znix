@@ -565,11 +565,11 @@
     "kasha": {
       "flake": false,
       "locked": {
-        "lastModified": 1784493056,
-        "narHash": "sha256-SykMTDj8Mi5l8zaajO2gzMku81+fLRNb2TKMsZKdnew=",
+        "lastModified": 1784569429,
+        "narHash": "sha256-pEvKTDqcki08t4xsgSxycqqWF77Z+7bJkz0AMpf5Ly0=",
         "owner": "Zebradil",
         "repo": "kasha",
-        "rev": "fcec038d797eed62fbd38fc948893236fda46273",
+        "rev": "b83925d19ec2bcbc28bd7583d6f4a8e83661f404",
         "type": "github"
       },
       "original": {
