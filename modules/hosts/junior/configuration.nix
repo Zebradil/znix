@@ -28,14 +28,11 @@
         ])
         ++ [ inputs.disko.nixosModules.disko ];
 
-      networking.hostName = "junior";
-      networking.domain = "zebradil.dev";
-
       znix = {
         boot.enable = true;
         k3sNode = {
           enable = true;
-          selfLan = ip; # 192.168.0.100
+          selfLan = ip;
           selfVpn = "100.85.146.64"; # junior-1, the tagged tailnet identity
         };
 
@@ -47,18 +44,64 @@
 
         cloudflareDynamicDns = {
           enable = true;
-          configs = {
-            lan = {
-              domains = [ "${config.networking.hostName}.lan.zebradil.dev" ];
-              iface = "eno1";
-              stack = "ipv4";
+          configs =
+            let
+              n = config.networking.hostName;
+            in
+            {
+              lan = {
+                domains = [
+                  "${n}.lan.zebradil.dev"
+                  "*.${n}.lan.zebradil.dev"
+                ];
+                iface = "eno1";
+                stack = "ipv4";
+              };
+              wan = {
+                domains = [
+                  "${n}.zebradil.dev"
+                  "*.${n}.zebradil.dev"
+                ];
+                iface = "eno1";
+                stack = "ipv6";
+              };
+              ts = {
+                domains = [
+                  "${n}.ts.zebradil.dev"
+                  "*.${n}.ts.zebradil.dev"
+                ];
+                iface = "tailscale0";
+                stack = "ipv4";
+              };
+              lan-multi = {
+                domains = [
+                  "lan.zebradil.dev"
+                  "*.lan.zebradil.dev"
+                ];
+                iface = "eno1";
+                stack = "ipv4";
+                multihost = true;
+              };
+              wan-multi = {
+                domains = [
+                  "zebradil.dev"
+                  "*.zebradil.dev"
+                ];
+                iface = "eno1";
+                stack = "ipv6";
+                multihost = true;
+                proxy = "enabled";
+              };
+              ts-multi = {
+                domains = [
+                  "ts.zebradil.dev"
+                  "*.ts.zebradil.dev"
+                ];
+                iface = "tailscale0";
+                stack = "ipv4";
+                multihost = true;
+              };
             };
-            wan = {
-              domains = [ "${config.networking.hostName}.zebradil.dev" ];
-              iface = "eno1";
-              stack = "ipv6";
-            };
-          };
         };
       };
 
@@ -83,18 +126,20 @@
         ];
       };
 
-      # apiserver, on top of the worker ports opened by k3s-node.
-      networking.firewall.allowedTCPPorts = [
-        80
-        443
-        6443
-      ];
-
       # Static wired networking on the onboard NIC (matched by name — one fixed
       # onboard e1000e). DNS from the router; resolved off (matches the fleet).
       networking = {
+        hostName = "junior";
+        domain = "zebradil.dev";
         useDHCP = false;
         nameservers = [ "192.168.0.1" ];
+
+        # apiserver, on top of the worker ports opened by k3s-node.
+        firewall.allowedTCPPorts = [
+          80
+          443
+          6443
+        ];
       };
       services.resolved.enable = false;
       systemd.network = {

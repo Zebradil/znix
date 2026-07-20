@@ -50,26 +50,22 @@ _: {
         };
       };
 
-      # Build the config file as a line list rather than a `''` block: no
-      # indentation pitfalls, and optional keys drop cleanly.
-      mkConfigYaml =
+      # JSON is valid YAML, so build an attrset and serialize instead of
+      # hand-assembling indented text.
+      mkConfigJson =
         c:
-        lib.concatStringsSep "\n" (
-          [ ''token: "${config.sops.placeholder.cloudflare-dynamic-dns-token}"'' ]
-          ++ lib.optional (c.iface != null) "iface: ${c.iface}"
-          ++ lib.optional (c.ipcmd != null) "ipcmd: ${c.ipcmd}"
-          ++ [
-            "stack: ${c.stack}"
-            "proxy: ${c.proxy}"
-          ]
-          ++ lib.optionals c.multihost [
-            "multihost: true"
-            "host-id: ${cfg.hostId}"
-          ]
-          ++ [ "domains:" ]
-          ++ map (d: "  - ${d}") c.domains
-        )
-        + "\n";
+        builtins.toJSON (
+          lib.filterAttrs (_: v: v != null) {
+            token = config.sops.placeholder.cloudflare-dynamic-dns-token;
+            host-id = if c.multihost then cfg.hostId else null;
+            inherit (c) iface;
+            inherit (c) ipcmd;
+            inherit (c) stack;
+            inherit (c) proxy;
+            inherit (c) multihost;
+            inherit (c) domains;
+          }
+        );
 
       configFile = name: "/etc/cloudflare-dynamic-dns/config.d/${name}.yaml";
     in
@@ -117,7 +113,7 @@ _: {
           lib.nameValuePair "cloudflare-dynamic-dns-${name}.yaml" {
             path = configFile name;
             mode = "0600";
-            content = mkConfigYaml c;
+            content = mkConfigJson c;
           }
         ) cfg.configs;
 
