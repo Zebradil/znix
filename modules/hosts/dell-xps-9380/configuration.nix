@@ -11,6 +11,7 @@
           dell-xps-9380-disko
           dell-xps-9380-hardware
           k3s-agent
+          k3s-node
           nix-settings
           openssh
           sops

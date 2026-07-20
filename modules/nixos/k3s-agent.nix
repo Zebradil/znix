@@ -3,7 +3,6 @@ _: {
     {
       config,
       lib,
-      pkgs,
       ...
     }:
     let
@@ -13,70 +12,13 @@ _: {
       options.znix.k3sAgent.enable = lib.mkEnableOption "k3s agent joining homelab cluster";
 
       config = lib.mkIf cfg.enable {
-        sops = {
-          secrets = {
-            k3s-token.sopsFile = ../../secrets/hosts/k3s.yaml;
-            oci-registry-password.sopsFile = ../../secrets/hosts/k3s.yaml;
-          };
-          templates."registries.yaml" = {
-            path = "/etc/rancher/k3s/registries.yaml";
-            mode = "0600";
-            content = ''
-              mirrors:
-                oci.zebradil.dev:
-                  endpoint:
-                    - https://oci.zebradil.dev
-              configs:
-                oci.zebradil.dev:
-                  auth:
-                    username: "robot$homelab-puller"
-                    password: "${config.sops.placeholder.oci-registry-password}"
-            '';
-          };
-        };
+        # All shared worker plumbing (token, registries, iSCSI, firewall) lives
+        # in k3s-node; the agent adds only its role and the server it joins.
+        znix.k3sNode.enable = true;
 
         services.k3s = {
-          enable = true;
           role = "agent";
-          package = pkgs.k3s_1_36;
-          # TODO: pull this from the master config when it's checked into this nix config
           serverAddr = "https://192.168.0.100:6443";
-          tokenFile = config.sops.secrets.k3s-token.path;
-        };
-
-        # k3s reads registries.yaml only at start. Restart when the encrypted
-        # secrets file changes so password rotation and secret edits take effect
-        # (structural edits to the template above are rare -> restart by hand).
-        systemd.services.k3s.restartTriggers = [
-          config.sops.secrets.oci-registry-password.sopsFile
-        ];
-
-        # synology-csi's node plugin needs iscsiadm on the host.
-        services.openiscsi = {
-          enable = true;
-          name = "iqn.2005-03.org.open-iscsi:${config.networking.hostName}";
-        };
-
-        # The plugin execs `env iscsiadm` with the container's PATH
-        # (/usr/sbin:/sbin:...), which misses NixOS's /run/current-system/sw/bin.
-        # Bridge the binary onto /usr/bin — on PATH and the one FHS bin dir NixOS
-        # populates. Without this, iscsiadm is installed but `env` can't find it.
-        systemd.tmpfiles.rules = [
-          "L+ /usr/bin/iscsiadm - - - - /run/current-system/sw/sbin/iscsiadm"
-        ];
-
-        # Open kubelet (server -> agent), metrics and flannel VXLAN, and trust the CNI/overlay interfaces.
-        networking.firewall = {
-          allowedTCPPorts = [
-            10250
-            19100
-            9100
-          ];
-          allowedUDPPorts = [ 8472 ];
-          trustedInterfaces = [
-            "flannel.1"
-            "cni0"
-          ];
         };
       };
     };

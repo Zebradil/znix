@@ -3,9 +3,18 @@ let
   system = "x86_64-linux";
 
   hosts = {
-    d1.address = "192.168.0.111/24";
-    d2.address = "192.168.0.112/24";
-    d3.address = "192.168.0.113/24";
+    d1 = {
+      address = "192.168.0.111/24";
+      vpn = "100.104.120.72";
+    };
+    d2 = {
+      address = "192.168.0.112/24";
+      vpn = "100.90.127.59";
+    };
+    d3 = {
+      address = "192.168.0.113/24";
+      vpn = "100.122.248.98";
+    };
   };
 in
 {
@@ -14,6 +23,10 @@ in
       imports = [ inputs.self.modules.nixos.dell-xps-9380 ];
       networking.hostName = name;
       znix.wirelessHeadless.address = h.address;
+      znix.k3sNode = {
+        selfLan = lib.removeSuffix "/24" h.address;
+        selfVpn = h.vpn;
+      };
     }) hosts;
 
     nixosConfigurations = lib.mergeAttrsList (

@@ -1,4 +1,9 @@
 _: {
+  # TODO: extract a tool-agnostic lean-admin base. This user is now shared by
+  # toddler and junior, but the name, the toddler-only `dialout` group (ANT+
+  # USB) and the toddler-flavoured comment below are appliance-specific — split
+  # the reusable core (SSH login, NOPASSWD sudo, CLI toolset) from those.
+  #
   # Lean admin user for the toddler appliance. No home-manager, no password:
   # SSH key login (security.pam.sshAgentAuth, enabled by the shared openssh
   # module) + true NOPASSWD sudo via security.sudo.extraRules. Reuses the

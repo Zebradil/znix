@@ -16,6 +16,13 @@ let
       targetUser = "suok";
       tags = [ "appliance" ];
     };
+    # k3s server. Tagged only "server" (not "k3s") so `apply --on @k3s` sweeps
+    # the agent fleet without ever rolling the control plane by accident.
+    junior = {
+      targetHost = config.flake.nixosConfigurations.junior.config.znix.k3sNode.selfLan;
+      targetUser = "suok";
+      tags = [ "server" ];
+    };
   }
   // lib.genAttrs [ "d1" "d2" "d3" ] (host: {
     targetHost =

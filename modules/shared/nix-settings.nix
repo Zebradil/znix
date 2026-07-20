@@ -21,7 +21,7 @@ let
       # cache.nixos.org (40) and the box's advertised 50, so it wins for paths
       # it holds; misses fall through to the other caches. Off-LAN it fails
       # within connect-timeout below.
-      "https://kasha.lan.zebradil.dev?priority=10"
+      # "https://kasha.lan.zebradil.dev?priority=10"
     ];
     extra-trusted-public-keys = [
       "znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw="
