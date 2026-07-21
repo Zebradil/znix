@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Print the derivations CI should actually build for a flake attr: the
-# genuinely-uncached *leaf* derivations, EXCLUDING both the top-level and the
+# genuinely-uncached *real* derivations, EXCLUDING both the top-level and the
 # whole assembly tower beneath it.
 #
 # Why this is not just "uncached minus the top-level":
@@ -13,34 +13,43 @@
 # build, yet it references the *whole* closure and drags every path onto the
 # runner (GBs) — the disk-exhaustion these runners die on.
 #
-# So we keep only candidates whose own build does NOT pull in a large chunk of
-# the closure: a real leaf's build fetches a handful of (mostly cached) inputs;
-# an assembly drv's build fetches basically the whole closure. We measure that
-# directly — each candidate gets its own --dry-run and we count what IT would
-# fetch. (The narinfo probed by the top-level dry-run is disk-cached, so the
-# per-candidate dry-runs are cheap.) The buildability gate is preserved for the
-# leaves (the things that can fail to compile); the tower is assembled later by
-# the consumer, which already has the disk.
+# How we tell an aggregator from a real build: by how much of the top-level's
+# derivation closure it references. An aggregator links ~everything, so its own
+# .drv input closure is essentially the top-level's (~100%); a real package —
+# even a heavy one — references only its own build closure (a small fraction).
+# We compare each candidate's .drv closure size to the top-level's and skip the
+# ones at or above BUILD_SET_MAX_CLOSURE_PCT.
+#
+# This metric is store-state INDEPENDENT: the .drv graph is fully materialized
+# once `nix path-info --derivation` instantiates the top-level, so the counts
+# never depend on what the runner happens to have substituted. (An earlier
+# version counted what each candidate's *build* would fetch — that number is the
+# build-input closure on a cold runner, which is large for any heavy package, so
+# real packages like keepassxc/neovim got misclassified as aggregators and were
+# never built or pushed.)
 #
 # Usage:
 #   build-set.sh <flake-attr>     print one .drv path per line (may be empty)
-#   build-set.sh --self-test      run the parser's assert-based self-check
+#   build-set.sh --self-test      run the pure-helper assert-based self-check
 #
 # Env:
-#   BUILD_SET_MAX_FETCH   max paths a candidate's own build may fetch before it
-#                         is treated as an assembly drv and skipped (default
-#                         50). ponytail: a fixed cutoff, not a fraction of the
-#                         closure — bump it if a legitimately heavy leaf package
-#                         (large uncached build-input set) gets skipped.
+#   BUILD_SET_MAX_CLOSURE_PCT   a candidate whose .drv input closure is >= this
+#                               percentage of the top-level's is treated as an
+#                               aggregation drv and skipped (default 90).
+#                               ponytail: real builds sit far below the tower
+#                               (measured: packages <25%, a plugin-heavy neovim
+#                               ~52%, the aggregators 98-101%), so the exact
+#                               cutoff is not delicate — lower it only if a new
+#                               aggregator variant slips through.
 #
 # Exits non-zero only on eval failure. An empty set (exit 0, no output) means
-# nothing uncached-and-cheap is left to build — the caller may skip the target.
+# nothing uncached-and-real is left to build — the caller may skip the target.
 
 set -euo pipefail
 
-: "${BUILD_SET_MAX_FETCH:=50}"
+: "${BUILD_SET_MAX_CLOSURE_PCT:=90}"
 
-# --- pure parsers/helpers (exercised by --self-test, no store needed) --------
+# --- pure helpers (exercised by --self-test, no store needed) ----------------
 
 # Drv paths under the "these N derivations will be built:" block, dropping the
 # top-level drv ($1). Reads the merged dry-run plan on stdin.
@@ -51,18 +60,21 @@ parse_built() {
 		| grep -vxF "$top_drv" || true
 }
 
-# Store paths under the "these N paths will be fetched (...)" block — the
-# outputs that would be downloaded to the runner. Reads the plan on stdin.
-# The header line carries no /nix/store token, so it is naturally excluded.
-parse_fetched() {
-	sed -n '/will be fetched/,$p' \
-		| grep -oE '/nix/store/[^ ]+' || true
+# Is a candidate an aggregation drv? True when its .drv closure ($1) is at least
+# $3 percent of the top-level's ($2). Guards a zero/empty top size (treat as
+# not-aggregator so nothing is silently dropped on a bad measurement).
+is_aggregator() {
+	local size="$1" top="$2" pct="$3"
+	((top > 0)) || return 1
+	((size * 100 >= top * pct))
 }
 
-# Number of store paths in the "will be fetched" block of a dry-run plan on
-# stdin — i.e. how much a build would download. Zero when nothing is fetched.
-count_fetched() {
-	parse_fetched | grep -c . || true
+# --- store queries -----------------------------------------------------------
+
+# Number of derivations in a drv's input closure. Warmth-independent: every
+# input .drv is present once the top-level is instantiated.
+drv_closure_size() {
+	nix-store --query --requisites "$1" 2>/dev/null | grep -c '\.drv$' || true
 }
 
 # --- self-test ---------------------------------------------------------------
@@ -88,23 +100,18 @@ self_test() {
 /nix/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-bar.drv'
 	[[ "$got" == "$want" ]] || { echo "self-test FAILED (parse_built)" >&2; printf 'got:\n%s\n' "$got" >&2; return 1; }
 
-	got=$(parse_fetched <<<"$plan")
-	want='/nix/store/cccccccccccccccccccccccccccccccc-pkg-a
-/nix/store/dddddddddddddddddddddddddddddddd-pkg-b'
-	[[ "$got" == "$want" ]] || { echo "self-test FAILED (parse_fetched)" >&2; printf 'got:\n%s\n' "$got" >&2; return 1; }
-
 	# An all-cached plan (only a fetched block) yields no candidates.
 	got=$(parse_built "$top" <<<'these 5 paths will be fetched (1 MiB):
   /nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-pkg')
 	[[ -z "$got" ]] || { echo "self-test FAILED (expected no candidates)" >&2; return 1; }
 
-	# count_fetched: a leaf plan (no fetched block) is 0; an assembly plan
-	# reports its full fetched block.
-	[[ "$(count_fetched <<<'this derivation will be built:
-  /nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-leaf.drv')" == 0 ]] \
-		|| { echo "self-test FAILED (leaf count != 0)" >&2; return 1; }
-	[[ "$(count_fetched <<<"$plan")" == 2 ]] \
-		|| { echo "self-test FAILED (assembly count != 2)" >&2; return 1; }
+	# is_aggregator, using the measured shape (top=7372): the tower clusters at
+	# ~100%, a plugin-heavy neovim at ~52%, ordinary packages under 25%.
+	is_aggregator 7334 7372 90    || { echo "self-test FAILED (tower not flagged)" >&2; return 1; }
+	! is_aggregator 3835 7372 90  || { echo "self-test FAILED (heavy build flagged)" >&2; return 1; }
+	! is_aggregator 1237 7372 90  || { echo "self-test FAILED (package flagged)" >&2; return 1; }
+	# A zero top size never drops a candidate.
+	! is_aggregator 100 0 90      || { echo "self-test FAILED (zero-top guard)" >&2; return 1; }
 
 	echo "self-test OK"
 }
@@ -121,22 +128,24 @@ attr="${1:?usage: build-set.sh <flake-attr>|--self-test}"
 top_drv="$(nix path-info --derivation ".#${attr}")"
 
 # One dry-run plans the whole build without doing it: what it would build and
-# what it would substitute. Everything else derives from this single plan.
+# what it would substitute. This tells us which candidates are uncached (the
+# "will be built" block) — the only ones worth building and pushing.
 plan="$(nix-store --realise --dry-run "$top_drv" 2>&1)"
 
 candidates="$(parse_built "$top_drv" <<<"$plan")"
 [[ -n "$candidates" ]] || exit 0
 
-# Keep a candidate only when its own build would fetch few paths. Its dry-run
-# reuses the narinfo the top-level dry-run already cached, so this is a cheap
-# store/network query, not a rebuild. Assembly drvs reference ~everything and
-# blow past the cutoff; real leaves fetch a handful.
+# Size the top-level's derivation closure once; each candidate is judged as a
+# fraction of it.
+top_size="$(drv_closure_size "$top_drv")"
+((top_size > 0)) || { echo "build-set: empty top-level drv closure for ${attr}" >&2; exit 1; }
+
 while IFS= read -r drv; do
 	[[ -n "$drv" ]] || continue
-	n="$(nix-store --realise --dry-run "$drv" 2>&1 | count_fetched)"
-	if ((n <= BUILD_SET_MAX_FETCH)); then
-		printf '%s\n' "$drv"
+	size="$(drv_closure_size "$drv")"
+	if is_aggregator "$size" "$top_size" "$BUILD_SET_MAX_CLOSURE_PCT"; then
+		echo "build-set: skipping aggregation drv (${size}/${top_size} drvs >= ${BUILD_SET_MAX_CLOSURE_PCT}%): ${drv}" >&2
 	else
-		echo "build-set: skipping assembly drv (${n} paths to fetch > ${BUILD_SET_MAX_FETCH}): ${drv}" >&2
+		printf '%s\n' "$drv"
 	fi
 done <<<"$candidates"
