@@ -21,20 +21,11 @@ let
     # our caches. A plain substituters assignment has no such ordering hazard.
     substituters = [
       "https://cache.nixos.org/"
-      "https://znix.zebradil.dev"
-      # kasha net-local box (LAN 192.168.0.100). priority=10 beats
-      # cache.nixos.org (40) and the box's advertised 50, so it wins for paths
-      # it holds; misses fall through to the other caches. Off-LAN it fails
-      # within connect-timeout below.
+      # Explicitly prioritize LAN cache over remote one with priority parameters.
+      "https://znix.zebradil.dev?priority=50"
       "https://kasha.lan.zebradil.dev?priority=10"
     ];
-    # Full list (not extra-trusted-public-keys), same reason as substituters
-    # above: Determinate writes nix.custom.conf alphabetically, so a plain
-    # `trusted-public-keys = cache.nixos.org` line lands *after* any
-    # `extra-trusted-public-keys` and resets the list, dropping our keys — then
-    # every znix-signed path fails require-sigs and gets rebuilt. A plain
-    # assignment merges into that single line instead. cache.nixos.org is kept
-    # explicitly so replacing the built-in default loses nothing.
+    # Full list (not extra-trusted-public-keys), same reason as substituters above
     trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw="
@@ -42,7 +33,7 @@ let
     ];
     # Bounds the off-LAN tax: the box connection fails this fast on roaming
     # hosts before nix tries the next substituter.
-    connect-timeout = 5;
+    connect-timeout = 2;
   };
 
   nixosModule =
