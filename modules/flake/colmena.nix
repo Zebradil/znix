@@ -27,7 +27,7 @@ let
   // lib.genAttrs [ "d1" "d2" "d3" ] (host: {
     targetHost =
       lib.removeSuffix "/24"
-        config.flake.nixosConfigurations.${host}.config.znix.wirelessHeadless.address;
+        config.flake.nixosConfigurations.${host}.config.znix.dualNet.address;
     targetUser = "suok";
     tags = [
       "k3s"

@@ -17,13 +17,13 @@
           sops
           suok
           tailscale
-          wireless-headless
+          dual-net
         ])
         ++ [ inputs.disko.nixosModules.disko ];
 
       znix = {
         boot.enable = true;
-        wirelessHeadless.enable = true;
+        dualNet.enable = true;
         k3sAgent.enable = true;
 
         tailscale = {
@@ -36,7 +36,10 @@
           enable = true;
           configs.lan = {
             domains = [ "${config.networking.hostName}.lan.zebradil.dev" ];
-            iface = "wlan0";
+            # Static wired IP (same value k3s advertises as node.k8s.lan). Read
+            # as a constant, not off an interface, so the record stays correct
+            # regardless of which link is up.
+            ipcmd = "echo ${config.znix.k3sNode.selfLan}";
             stack = "ipv4";
           };
         };
