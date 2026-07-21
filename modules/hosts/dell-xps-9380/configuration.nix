@@ -50,6 +50,11 @@
       time.timeZone = "Europe/Berlin";
       i18n.defaultLocale = "en_US.UTF-8";
 
+      # Headless: the panel is otherwise never idle-blanked, so it stays lit
+      # 24/7 behind the closed lid. Blank the console after 60s of inactivity,
+      # which powers the internal backlight off.
+      boot.kernelParams = [ "consoleblank=60" ];
+
       # Headless with the lid closed: nothing must ever suspend. Mask the sleep
       # targets and tell logind to ignore the lid on every power source.
       systemd.targets = {
