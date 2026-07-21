@@ -20,6 +20,26 @@ let
       { systems = null; } // v;
   normalized = lib.mapAttrs (_: normalize) pins;
 
+  # ld64-957.1 (the pure-Nix Darwin stdenv linker) SIGTRAPs — "Trace/BPT trap:
+  # 5" — linking large Qt apps on aarch64-darwin. The compiler and small links
+  # are fine, so link just these packages with LLVM lld (shipped with the clang
+  # stdenv). Drop entries as the nixpkgs ld64 regression gets fixed.
+  lldLinkedDarwinPkgs = [
+    "keepassxc"
+    "moonlight-qt"
+  ];
+  lldLinkOverlay =
+    _final: prev:
+    lib.optionalAttrs prev.stdenv.isDarwin (
+      lib.genAttrs lldLinkedDarwinPkgs (
+        name:
+        prev.${name}.overrideAttrs (old: {
+          nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ prev.lld ];
+          NIX_CFLAGS_LINK = (old.NIX_CFLAGS_LINK or "") + " -fuse-ld=lld";
+        })
+      )
+    );
+
   inputName = name: "nixpkgs-pin-${name}";
   appliesTo = system: { systems, ... }: systems == null || builtins.elem system systems;
 
@@ -64,6 +84,7 @@ in
     (final: _prev: {
       inherit (inputs.gke-kubeconfiger.packages.${final.stdenv.hostPlatform.system}) gke-kubeconfiger;
     })
+    lldLinkOverlay
     pinsOverlay
   ];
 }
