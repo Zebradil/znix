@@ -44,6 +44,7 @@ _: {
         eza
         fd
         htop
+        iperf3
         ncdu
         neovim
         ripgrep
