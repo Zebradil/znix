@@ -33,7 +33,7 @@ The file is encrypted to two recipients (see `.sops.yaml`):
 Run from a checkout of this flake:
 
 ```bash
-# Publish specific built attrs (closure of outputs, drvs excluded, valid paths only)
+# Publish specific built attrs (output closure + the .drv recipe closure, valid paths only)
 nix run .#cache-push -- checks.aarch64-darwin.trv4250-build
 
 # No args: publish every checks.<current-system>.* output

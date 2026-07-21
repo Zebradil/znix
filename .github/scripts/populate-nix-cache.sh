@@ -69,6 +69,10 @@ else
     fi
     nix-store --query --requisites --include-outputs "$drv" \
       | { grep -v '\.drv$' || true; } >> "$candidates"
+    # Also publish the .drv recipe closure (text, KB-scale). A v2 root manifest
+    # advertises this attr's drvPath; the box copies that recipe and realises
+    # its input drvs, so the recipe closure must live in the cache too.
+    nix-store --query --requisites "$drv" >> "$candidates"
   done
   sort -u -o "$candidates" "$candidates"
   # Keep only paths valid in the store, so a partial build still contributes its
@@ -147,24 +151,24 @@ if [[ "${pushed:-}" == 1 && -n "${KASHA_FLAKE:-}" && -n "${KASHA_EMIT_SCRIPT:-}"
     dirty=""
     git diff --quiet 2>/dev/null && git diff --cached --quiet 2>/dev/null || dirty="-dirty"
     for attr in "${attrs[@]}"; do
-      # Top-level output(s) of this attr — not its closure. Resolve via the
-      # drv's own outputs and keep only store-valid ones: an unbuilt toplevel
-      # was never pushed, so it must not be advertised as a root. Every query is
+      # A v2 root is this attr's top-level {outPath, drvPath}. Resolve the drv
+      # (always store-valid — instantiated above) and pair each of its outputs
+      # with it as a tab-separated `<outPath>\t<drvPath>` line. Every query is
       # guarded so a non-zero exit can't trip `set -e` mid-loop.
-      root=""
+      roots=""
       drv="$(nix path-info --derivation ".#${attr}" 2>/dev/null || true)"
       if [[ -n "$drv" ]]; then
         for out in $(nix-store --query --outputs "$drv" 2>/dev/null || true); do
-          nix-store --check-validity "$out" 2>/dev/null && root+="${out}"$'\n'
+          roots+="${out}"$'\t'"${drv}"$'\n'
         done
       fi
-      if [[ -z "$root" ]]; then
-        echo "::warning::kasha emit skipped for '${attr}' — top-level output not built/valid." >&2
+      if [[ -z "$roots" ]]; then
+        echo "::warning::kasha emit skipped for '${attr}' — no top-level output/drv resolved." >&2
         continue
       fi
       gen="${ref}-${sha}${dirty}-$(sanitize "$attr")"
       echo "Emitting root manifest ${KASHA_FLAKE}/${gen}…"
-      printf '%s' "$root" | emit_manifest "$gen"
+      printf '%s' "$roots" | emit_manifest "$gen"
     done
   fi
 fi
