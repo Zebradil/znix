@@ -293,26 +293,30 @@ jobs:
 
       - name: Resolve kasha root manifest
         id: kasha
-        # The manifest root is this attr's TOP-LEVEL output (not the closure the
-        # push resolves). Skip cleanly when the build produced no valid output.
+        # A v2 root is this attr's top-level {outPath, drvPath}. The build job
+        # never realizes the top-level output (build-set.sh skips the assembly
+        # tower), so gate on the DRV, not the output: the drv is always
+        # store-valid here (instantiated in "Resolve built store paths") and its
+        # recipe closure — pushed above — is what the box needs. mirror-down
+        # copies the drvPath and substitutes its input closure, never the top
+        # output. outPath is recorded for the consumer's future GC only.
         if: ${{ always() && inputs.kasha-flake != '' }}
         run: |
           attr='${{ matrix.attr }}'
-          # Top-level outputs via the drv (not the closure), store-valid only —
-          # a failed build leaves an invalid toplevel with nothing to root.
+          # One tab-separated `<outPath>\t<drvPath>` line per top-level output.
           # Guarded so a non-zero query can't trip the shell's `set -e`.
-          root=""
+          roots=""
           drv="$(nix path-info --derivation ".#${attr}" 2>/dev/null || true)"
           if [[ -n "$drv" ]]; then
             for out in $(nix-store --query --outputs "$drv" 2>/dev/null || true); do
-              nix-store --check-validity "$out" 2>/dev/null && root+="${out}"$'\n'
+              roots+="${out}"$'\t'"${drv}"$'\n'
             done
           fi
-          if [[ -z "$root" ]]; then
-            echo "No store-valid top-level output for ${attr}; skipping root manifest."
+          if [[ -z "$roots" ]]; then
+            echo "No top-level outputs for ${attr}; skipping root manifest."
             exit 0
           fi
-          printf '%s' "$root" > "$RUNNER_TEMP/kasha-roots.txt"
+          printf '%s' "$roots" > "$RUNNER_TEMP/kasha-roots.txt"
           san() { printf '%s' "$1" | tr -c 'A-Za-z0-9_.-' '-'; }
           gen="$(san "${{ github.ref_name }}")-$(git rev-parse --short HEAD)-$(san "$attr")"
           {
