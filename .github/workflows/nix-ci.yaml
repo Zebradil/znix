@@ -199,140 +199,17 @@ jobs:
           path: .znix-ci
           sparse-checkout: .github
 
-      - name: Setup Nix
-        id: setup
-        uses: ./.znix-ci/.github/actions/setup-nix
+      - name: Build and publish
+        uses: ./.znix-ci/.github/actions/build-and-publish
         with:
-          extra-substituters: ${{ inputs.cache-pull-url }}
-          extra-trusted-public-keys: ${{ inputs.cache-public-key }}
-
-      - name: Decrypt cache secrets
-        id: cache-secrets
-        if: ${{ always() && inputs.push-to-cache }}
-        uses: ./.znix-ci/.github/actions/decrypt-cache-secrets
-        with:
+          attr: ${{ matrix.attr }}
+          push-to-cache: ${{ inputs.push-to-cache }}
+          kasha-flake: ${{ inputs.kasha-flake }}
+          cache-pull-url: ${{ inputs.cache-pull-url }}
+          cache-public-key: ${{ inputs.cache-public-key }}
+          cache-secrets-file: ${{ inputs.cache-secrets-file }}
           sops-age-key: ${{ secrets.sops-age-key }}
-          sops-file: ${{ inputs.cache-secrets-file }}
-          signing-key: ${{ secrets.cache-signing-key }}
-          s3-url: ${{ secrets.cache-s3-url }}
+          cache-signing-key: ${{ secrets.cache-signing-key }}
+          cache-s3-url: ${{ secrets.cache-s3-url }}
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
-
-      - name: Build target
-        # Build only the genuinely-uncached derivations, NOT the top-level. The
-        # top-level's build merely links an already-substitutable closure, so
-        # realizing it would fetch the entire runtime closure (GBs) just to
-        # symlink it — the disk-exhaustion that fails these runners. Building the
-        # leaves still proves they compile (the buildability gate); the box
-        # realizes the top-level later from its pushed .drv. See build-set.sh.
-        #
-        # --keep-going: build as much as possible so the successful paths can
-        # still be pushed below; a single broken derivation fails the job (via
-        # nix build's exit code) without forcing everything else to rebuild.
-        run: |
-          drvs=$(.znix-ci/.github/scripts/build-set.sh "${{ matrix.attr }}")
-          if [[ -z "$drvs" ]]; then
-            echo "Nothing uncached to build for ${{ matrix.attr }}."
-            exit 0
-          fi
-          # `<drv>^*` requests all outputs of each derivation.
-          targets=()
-          while IFS= read -r d; do
-            [[ -n "$d" ]] && targets+=("${d}^*")
-          done <<<"$drvs"
-          nix build --keep-going --no-link "${targets[@]}"
-
-      - name: Resolve built store paths
-        id: store-path
-        # always(): run even when the build step failed so we can still publish
-        # whatever was built. Skip the work entirely when not pushing.
-        if: ${{ always() && inputs.push-to-cache }}
-        run: |
-          # The final output may be invalid (build failed), so resolve the whole
-          # derivation closure including outputs and keep only the paths that
-          # actually exist in the store. nix path-info --derivation instantiates
-          # the .drv without building it.
-          drv=$(nix path-info --derivation ".#${{ matrix.attr }}" 2>/dev/null || true)
-          : > "$RUNNER_TEMP/candidates.txt" "$RUNNER_TEMP/invalid.txt"
-          if [[ -n "$drv" ]]; then
-            # Build-closure outputs minus the .drv files themselves (we publish
-            # built outputs, not derivations).
-            nix-store --query --requisites --include-outputs "$drv" \
-              | { grep -v '\.drv$' || true; } | sort -u > "$RUNNER_TEMP/candidates.txt"
-            # Keep only paths valid in the store. --print-invalid lists the
-            # missing ones in a single call, so a partial build still
-            # contributes its finished outputs without spawning a process per
-            # path.
-            xargs -r nix-store --check-validity --print-invalid \
-              < "$RUNNER_TEMP/candidates.txt" 2>/dev/null \
-              | sort -u > "$RUNNER_TEMP/invalid.txt"
-          fi
-          # Write the valid paths to a file and export only its path. Large
-          # closures (1000s of paths) would otherwise overflow the step env /
-          # argument limits when passed inline to the publish action.
-          comm -23 "$RUNNER_TEMP/candidates.txt" "$RUNNER_TEMP/invalid.txt" \
-            > "$RUNNER_TEMP/store-paths.txt"
-          # Also publish the top-level's .drv recipe closure (its input drvs +
-          # source paths — text, KB-scale). The box has no flake evaluator, so
-          # this is the only way it can realize the top-level: `nix-store -r`
-          # the pushed .drv, substituting the inputs and building just the link
-          # step. These paths are always store-valid here (instantiated above).
-          if [[ -n "$drv" ]]; then
-            nix-store --query --requisites "$drv" >> "$RUNNER_TEMP/store-paths.txt"
-          fi
-          sort -u -o "$RUNNER_TEMP/store-paths.txt" "$RUNNER_TEMP/store-paths.txt"
-          echo "path-file=$RUNNER_TEMP/store-paths.txt" >> "$GITHUB_OUTPUT"
-
-      - name: Resolve kasha root manifest
-        id: kasha
-        # A v2 root is this attr's top-level {outPath, drvPath}. The build job
-        # never realizes the top-level output (build-set.sh skips the assembly
-        # tower), so gate on the DRV, not the output: the drv is always
-        # store-valid here (instantiated in "Resolve built store paths") and its
-        # recipe closure — pushed above — is what the box needs. mirror-down
-        # copies the drvPath and substitutes its input closure, never the top
-        # output. outPath is recorded for the consumer's future GC only.
-        if: ${{ always() && inputs.push-to-cache && inputs.kasha-flake != '' }}
-        run: |
-          attr='${{ matrix.attr }}'
-          # One tab-separated `<outPath>\t<drvPath>` line per top-level output.
-          # Guarded so a non-zero query can't trip the shell's `set -e`.
-          roots=""
-          drv="$(nix path-info --derivation ".#${attr}" 2>/dev/null || true)"
-          if [[ -n "$drv" ]]; then
-            for out in $(nix-store --query --outputs "$drv" 2>/dev/null || true); do
-              roots+="${out}"$'\t'"${drv}"$'\n'
-            done
-          fi
-          if [[ -z "$roots" ]]; then
-            echo "No top-level outputs for ${attr}; skipping root manifest."
-            exit 0
-          fi
-          printf '%s' "$roots" > "$RUNNER_TEMP/kasha-roots.txt"
-          san() { printf '%s' "$1" | tr -c 'A-Za-z0-9_.-' '-'; }
-          gen="$(san "${{ github.ref_name }}")-$(git rev-parse --short HEAD)-$(san "$attr")"
-          {
-            echo "roots-file=$RUNNER_TEMP/kasha-roots.txt"
-            echo "gen=$gen"
-            echo "emit-script=$(nix eval --raw .#lib.kashaEmitScript)"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Publish built path
-        if: ${{ always() && inputs.push-to-cache }}
-        uses: ./.znix-ci/.github/actions/push-nix-cache
-        with:
-          store-paths-file: ${{ steps.store-path.outputs.path-file }}
-          signing-key-file: ${{ steps.cache-secrets.outputs.signing-key-file }}
-          s3-url: ${{ steps.cache-secrets.outputs.s3-url }}
-          aws-access-key-id: ${{ steps.cache-secrets.outputs.aws-access-key-id }}
-          aws-secret-access-key: ${{ steps.cache-secrets.outputs.aws-secret-access-key }}
-          # Emit a root manifest only when a root resolved (empty otherwise ->
-          # push proceeds, emission is skipped).
-          kasha-flake: ${{ steps.kasha.outputs.emit-script != '' && inputs.kasha-flake || '' }}
-          kasha-emit-script: ${{ steps.kasha.outputs.emit-script }}
-          roots-file: ${{ steps.kasha.outputs.roots-file }}
-          kasha-gen: ${{ steps.kasha.outputs.gen }}
-
-      - name: Clean up signing key
-        if: ${{ always() && steps.cache-secrets.outputs.signing-key-file != '' }}
-        run: rm -f '${{ steps.cache-secrets.outputs.signing-key-file }}'
