@@ -17,7 +17,13 @@
       claudeCfg = config.znix.claude or { };
       profiles = claudeCfg.profiles or { };
       enabled = lib.filterAttrs (_: p: p.enable) profiles;
-      znixStatusline = "${claudeCfg.assetsRoot}/statusline-command.sh";
+      # Copy just this file into the store: embedding a subpath of assetsRoot
+      # (inputs.self/ai) would pin the whole flake source, so every repo change
+      # would rebuild the composed statusline.
+      znixStatusline = builtins.path {
+        path = claudeCfg.assetsRoot + "/statusline-command.sh";
+        name = "znix-statusline-command.sh";
+      };
 
       cavemanOn = p: (claudeCfg.caveman.enable or false) && p.caveman;
       ponytailOn = p: (claudeCfg.ponytail.enable or false) && p.ponytail;

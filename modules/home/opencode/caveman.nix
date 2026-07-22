@@ -21,8 +21,17 @@
       # Claude's `tools: [array]` schema, which opencode rejects.
       mkOpencodeMd =
         src:
-        pkgs.runCommand "oc-${baseNameOf (toString src)}" { } ''
-          ${pkgs.gnused}/bin/sed -E '/^(tools|model|allowed-tools):/d' ${src} > $out
+        let
+          name = builtins.unsafeDiscardStringContext (baseNameOf src);
+          # Copy just this file into the store so the transform depends on its
+          # content alone, not the whole flake source (inputs.self) it lives under.
+          file = builtins.path {
+            path = src;
+            inherit name;
+          };
+        in
+        pkgs.runCommand "oc-${name}" { } ''
+          ${pkgs.gnused}/bin/sed -E '/^(tools|model|allowed-tools):/d' ${file} > $out
         '';
 
       # Symlink every entry of a source dir under a relative dest dir.
@@ -69,7 +78,7 @@
           map (
             f:
             lib.nameValuePair ".config/opencode/agents/${f}" {
-              source = mkOpencodeMd "${cavemanSrc}/agents/${f}";
+              source = mkOpencodeMd (cavemanSrc + "/agents/${f}");
             }
           ) cavecrewAgents
         ))

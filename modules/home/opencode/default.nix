@@ -23,8 +23,17 @@ _: {
       # stripOpencodeAgentTools (bin/lib/opencode-agent.js).
       mkOpencodeMd =
         src:
-        pkgs.runCommand "oc-${baseNameOf (toString src)}" { } ''
-          ${pkgs.gnused}/bin/sed -E '/^(tools|model|allowed-tools):/d' ${src} > $out
+        let
+          name = builtins.unsafeDiscardStringContext (baseNameOf src);
+          # Copy just this file into the store so the transform depends on its
+          # content alone, not the whole flake source (inputs.self) it lives under.
+          file = builtins.path {
+            path = src;
+            inherit name;
+          };
+        in
+        pkgs.runCommand "oc-${name}" { } ''
+          ${pkgs.gnused}/bin/sed -E '/^(tools|model|allowed-tools):/d' ${file} > $out
         '';
 
       # Symlink every entry of a source dir (skills: dirs are skills, the loose
@@ -42,7 +51,7 @@ _: {
         relBase: srcDir:
         lib.optionalAttrs (builtins.pathExists srcDir) (
           lib.mapAttrs' (
-            name: _: lib.nameValuePair "${relBase}/${name}" { source = mkOpencodeMd "${srcDir}/${name}"; }
+            name: _: lib.nameValuePair "${relBase}/${name}" { source = mkOpencodeMd (srcDir + "/${name}"); }
           ) (lib.filterAttrs (n: _: lib.hasSuffix ".md" n) (builtins.readDir srcDir))
         );
 
@@ -87,8 +96,8 @@ _: {
         home.file = lib.mkMerge [
           (mkSymlinkEntries ".config/opencode/skills" "${assetsRoot}/skills")
           (lib.mkMerge (map (mkSymlinkEntries ".config/opencode/skills") extraSkillRoots))
-          (mkTransformedMds ".config/opencode/agents" "${assetsRoot}/agents")
-          (mkTransformedMds ".config/opencode/commands" "${assetsRoot}/commands")
+          (mkTransformedMds ".config/opencode/agents" (assetsRoot + "/agents"))
+          (mkTransformedMds ".config/opencode/commands" (assetsRoot + "/commands"))
           # Global instructions. When caveman is on, caveman.nix composes AGENTS.md
           # (instructions + ruleset) instead, so guard against a double definition.
           (lib.optionalAttrs (!cavemanOn) {
