@@ -152,16 +152,18 @@
       end,
     }):map("<leader>ua")
 
-    -- Reference highlight (illuminate).
+    -- Reference highlight (Snacks.words, LSP-driven).
+    -- Note: Snacks.words only highlights when an LSP is attached; unlike
+    -- illuminate it has no treesitter/regex fallback for non-LSP buffers.
+    -- Bring illuminate back if you edit LSP-less files and want highlights there.
     Snacks.toggle({
       name = "Reference Highlight",
-      get = function() return vim.g.illuminate_enabled ~= false end,
+      get = function() return Snacks.words.is_enabled() end,
       set = function(state)
-        vim.g.illuminate_enabled = state
         if state then
-          require("illuminate").resume()
+          Snacks.words.enable()
         else
-          require("illuminate").pause()
+          Snacks.words.disable()
         end
       end,
     }):map("<leader>ur")

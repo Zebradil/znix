@@ -163,15 +163,6 @@
       yaml.enable = true;
     };
 
-    lsp-signature = {
-      enable = true;
-      settings = {
-        bind = true;
-        handler_opts.border = "rounded";
-        hint_enable = false;
-      };
-    };
-
     lazydev.enable = true;
 
     # ─ Formatting ─────────────────────────────────────────────────

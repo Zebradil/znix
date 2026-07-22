@@ -129,7 +129,6 @@
 
     # ─ Editor ─────────────────────────────────────────────────────
     nvim-autopairs.enable = true;
-    illuminate.enable = true;
   };
 
   # ── Extra plugins (no native nixvim module) ──────────────────────

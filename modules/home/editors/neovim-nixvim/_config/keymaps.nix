@@ -338,12 +338,21 @@ _: {
       options.desc = "Base64 decode";
     }
 
-    # ─ LazyGit ─
+    # ─ Git (Snacks) ─
     {
       mode = "n";
       key = "<Leader>gg";
-      action = "<cmd>LazyGit<cr>";
+      action.__raw = "function() Snacks.lazygit() end";
       options.desc = "Open LazyGit";
+    }
+    {
+      mode = [
+        "n"
+        "x"
+      ];
+      key = "<Leader>gy";
+      action.__raw = "function() Snacks.gitbrowse() end";
+      options.desc = "Open in browser";
     }
 
     # ─ OpenCode ─
