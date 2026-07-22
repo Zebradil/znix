@@ -3,54 +3,6 @@
   plugins = {
 
     # ─ UI ─────────────────────────────────────────────────────────
-    neo-tree = {
-      enable = true;
-      settings = {
-        close_if_last_window = true;
-        filesystem = {
-          filtered_items = {
-            hide_dotfiles = false;
-            hide_gitignored = true;
-          };
-          follow_current_file.enabled = true;
-        };
-        window = {
-          position = "left";
-          width = 30;
-          mappings = {
-            # AstroNvim-style: l expands a dir, enters its first child when already
-            # expanded, or opens a file. h collapses an expanded dir, or focuses
-            # the parent node when on a leaf. Overrides the upstream default
-            # l = focus_preview (focus_preview is intentionally left unbound).
-            l.__raw = ''
-              function(state)
-                local node = state.tree:get_node()
-                if node.type == "directory" then
-                  if not node:is_expanded() then
-                    require("neo-tree.sources.filesystem").toggle_directory(state, node)
-                  elseif node:has_children() then
-                    require("neo-tree.ui.renderer").focus_node(state, node:get_child_ids()[1])
-                  end
-                else
-                  state.commands.open(state)
-                end
-              end
-            '';
-            h.__raw = ''
-              function(state)
-                local node = state.tree:get_node()
-                if node.type == "directory" and node:is_expanded() then
-                  require("neo-tree.sources.filesystem").toggle_directory(state, node)
-                else
-                  require("neo-tree.ui.renderer").focus_node(state, node:get_parent_id())
-                end
-              end
-            '';
-          };
-        };
-      };
-    };
-
     which-key = {
       enable = true;
       settings = {
@@ -135,13 +87,23 @@
             { section = "recent_files"; }
           ];
         };
+        explorer.enabled = true;
         indent.enabled = true;
         input.enabled = true;
         notifier = {
           enabled = true;
           timeout = 3000;
         };
-        picker.enabled = true;
+        picker = {
+          enabled = true;
+          sources.explorer = {
+            hidden = true; # show dotfiles
+            ignored = false; # hide gitignored
+            follow_file = true;
+            layout.preset = "sidebar";
+            layout.layout.width = 30;
+          };
+        };
         quickfile.enabled = true;
         scratch.enabled = true;
         statuscolumn.enabled = true;

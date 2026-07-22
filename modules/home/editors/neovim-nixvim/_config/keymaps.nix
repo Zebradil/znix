@@ -155,18 +155,18 @@ _: {
       options.desc = "Format buffer";
     }
 
-    # ─ Neo-tree ─
+    # ─ Explorer ─
     {
       mode = "n";
       key = "<Leader>e";
-      action = "<cmd>Neotree toggle<cr>";
+      action.__raw = "function() Snacks.explorer() end";
       options.desc = "Toggle file tree";
     }
     {
       mode = "n";
       key = "<Leader>o";
-      action = "<cmd>Neotree focus<cr>";
-      options.desc = "Focus file tree";
+      action.__raw = "function() Snacks.explorer.reveal() end";
+      options.desc = "Reveal file in tree";
     }
 
     # ─ Flash ─
