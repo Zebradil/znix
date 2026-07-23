@@ -69,6 +69,25 @@ _: {
           }
         ];
 
+        # Split-horizon for the homelab. On the LAN, the canonical
+        # <svc>.zebradil.dev names resolve to the LAN ingress (fast, no OIDC)
+        # instead of the Cloudflare-proxied public path. Off-LAN clients use
+        # other resolvers and keep hitting the public (authenticated) path.
+        #
+        # CNAME to lan.zebradil.dev rather than a hardcoded IP: that record is
+        # DDNS-managed and aggregates the LAN edge IP(s), so adding an edge
+        # needs no change here. It has no AAAA, which forces dual-stack clients
+        # onto IPv4 and off the public IPv6 path (the AAAA trap).
+        #
+        # The rewrites *table* can't express exclusions, so these are
+        # AdBlock-style $dnsrewrite rules. @@ exempts names that must resolve
+        # normally: znix (CNAME to R2) and the .ts debug names.
+        user_rules = [
+          "||zebradil.dev^$dnsrewrite=NOERROR;CNAME;lan.zebradil.dev"
+          "@@||znix.zebradil.dev^$dnsrewrite"
+          "@@||ts.zebradil.dev^$dnsrewrite"
+        ];
+
         # SD-card wear: shorter retention than the old 90d, file-backed logs.
         # See DEFER-1 in docs/hosts/toddler.md for further mitigation.
         querylog = {
