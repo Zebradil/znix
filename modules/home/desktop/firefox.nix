@@ -19,6 +19,19 @@
       base = {
         home.sessionVariables.MOZ_ENABLE_WAYLAND = "1";
 
+        # Without an explicit default, the XDG portal picks the first .desktop
+        # handling these schemes; brave-browser.desktop sorts before firefox.desktop.
+        xdg.mimeApps = {
+          enable = true;
+          defaultApplications = builtins.listToAttrs (
+            map (t: lib.nameValuePair t "firefox.desktop") [
+              "text/html"
+              "x-scheme-handler/http"
+              "x-scheme-handler/https"
+            ]
+          );
+        };
+
         # Extensions are managed declaratively via `extensions.packages`.
         # Firefox persists extension enabled/disabled state in `extensions.json`,
         # which conflicts with declarative management after reboot (via impermanence).
