@@ -2,10 +2,11 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'Merge pull request #469 from mattpocock/to-issues/wide-refactor-expand-contract...'
-      sha: 8515a080a74dbcf5019a1a78efc24b5fcafb36b8
+      commitTitle: 'refactor(to-tickets): remove redundant instructions for ticket
+        implementation'
+      sha: ed37663cc5fbef691ddfecd080dff42f7e7e350d
       tags:
-      - v1.0.1-126-g8515a08
+      - v1.1.0-40-ged37663
     path: .
   path: vendor/mattpocock-skills
 - contents:
@@ -18,11 +19,10 @@ directories:
   path: vendor/caveman
 - contents:
   - git:
-      commitTitle: 'feat: hide the pi status bar indicator while keeping ponytail
-        active (#324) (#544)...'
-      sha: 1b2760d384c44e573a9d8c7a729fac616e5c3a76
+      commitTitle: 'docs: FAQ entry on using caveman with ponytail (#599)...'
+      sha: 16f29800fd2681bdf24f3eb4ccffe38be3baec6b
       tags:
-      - v4.8.4-18-g1b2760d
+      - v4.8.4-53-g16f2980
     path: .
   path: vendor/ponytail
 kind: LockConfig
