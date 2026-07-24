@@ -9,5 +9,11 @@ _: {
       # .desktop basename: "hyprland" = plain start-hyprland entry.
       defaultSession = "hyprland";
     };
+
+    # Don't tear down the live graphical session on activation. A rebuild that
+    # touches the DM or its deps otherwise restarts display-manager.service,
+    # killing the running Wayland session mid-switch (and can wedge the user
+    # manager on restart). DM changes apply on next reboot instead.
+    systemd.services.display-manager.restartIfChanged = false;
   };
 }
