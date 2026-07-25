@@ -100,7 +100,9 @@ let
   };
 in
 {
-  flake.lib.nixSettings = nixSettings;
-  flake.modules.nixos.nix-settings = nixosModule;
-  flake.modules.darwin.nix-settings = darwinModule;
+  flake = {
+    lib.nixSettings = nixSettings;
+    modules.nixos.nix-settings = nixosModule;
+    modules.darwin.nix-settings = darwinModule;
+  };
 }
