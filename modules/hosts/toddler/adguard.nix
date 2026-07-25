@@ -84,6 +84,7 @@ _: {
         # normally: znix (CNAME to R2) and the .ts debug names.
         user_rules = [
           "||zebradil.dev^$dnsrewrite=NOERROR;CNAME;lan.zebradil.dev"
+          "@@|zebradil.dev^$dnsrewrite"
           "@@||znix.zebradil.dev^$dnsrewrite"
           "@@||ts.zebradil.dev^$dnsrewrite"
         ];
