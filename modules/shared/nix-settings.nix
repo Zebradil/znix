@@ -33,7 +33,7 @@ let
     ];
     # Bounds the off-LAN tax: the box connection fails this fast on roaming
     # hosts before nix tries the next substituter.
-    connect-timeout = 2;
+    connect-timeout = 5;
   };
 
   nixosModule =
