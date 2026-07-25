@@ -6,11 +6,12 @@
     { pkgs, ... }:
     {
       imports = with inputs.self.modules.nixos; [
+        iperf3-server
         nix-settings # kasha binary cache substituter — avoids emulated rebuilds
-        openssh # SSH + sudo via ssh-agent (no password secret)
+        openssh
         suok # lean admin user
-        toddler-hardware
         toddler-adguard
+        toddler-hardware
       ];
 
       networking = {

@@ -10,6 +10,7 @@
           cloudflare-dynamic-dns
           dell-xps-9380-disko
           dell-xps-9380-hardware
+          iperf3-server
           k3s-agent
           k3s-node
           nix-settings

@@ -17,6 +17,7 @@
         (with inputs.self.modules.nixos; [
           boot
           cloudflare-dynamic-dns
+          iperf3-server
           junior-disko
           junior-hardware
           k3s-node
