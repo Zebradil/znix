@@ -58,7 +58,17 @@ _: {
                 Type = "ether";
                 Path = "*usb*";
               };
-              address = [ cfg.address ];
+              # RouteMetric sets the on-link subnet route's metric. Every k3s
+              # node is on this /24, so all node-to-node traffic (flannel VXLAN,
+              # ClusterIP backends) is on-link and never touches the default
+              # route below — without this the wired and WiFi subnet routes are
+              # equal-cost and the kernel sends the overlay out WiFi at random.
+              addresses = [
+                {
+                  Address = cfg.address;
+                  RouteMetric = 100;
+                }
+              ];
               routes = [
                 {
                   Gateway = cfg.gateway;
@@ -67,10 +77,16 @@ _: {
               ];
             };
 
-            # WiFi hot standby. Higher metric => used only when wired is down.
+            # WiFi hot standby. Higher metric => used only when wired is down,
+            # for both the default route and the on-link subnet route.
             "10-wlan" = {
               matchConfig.Type = "wlan";
-              address = [ cfg.fallbackAddress ];
+              addresses = [
+                {
+                  Address = cfg.fallbackAddress;
+                  RouteMetric = 600;
+                }
+              ];
               routes = [
                 {
                   Gateway = cfg.gateway;
