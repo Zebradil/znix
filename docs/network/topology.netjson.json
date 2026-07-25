@@ -1,0 +1,119 @@
+{
+  "type": "NetworkGraph",
+  "label": "znix home LAN",
+  "protocol": "static",
+  "version": "1",
+  "metric": "none",
+  "updated": "2026-07-21",
+  "_comment": "NetJSON NetworkGraph (https://netjson.org). Hand-maintained. link.properties.expected_mbit is the SOURCE OF TRUTH for the 'link ran slow' alert: alert when observed link speed < expected_mbit. Fill every TODO switch_port by unplugging one cable at a time and watching the switch web UI.",
+  "nodes": [
+    {
+      "id": "rt",
+      "label": "RT-AX53U router",
+      "properties": {
+        "model": "ASUS RT-AX53U (AX1800)",
+        "firmware": "OpenWrt",
+        "ip": "192.168.0.1",
+        "role": "gateway/router",
+        "wan_down_mbit": 300,
+        "wan_up_mbit": 150,
+        "monitoring": "OpenWrt - install prometheus-node-exporter-lua or snmpd; sees its own ports only"
+      }
+    },
+    {
+      "id": "sw",
+      "label": "SG108E switch",
+      "properties": {
+        "model": "TP-Link TL-SG108E (8-port gigabit Easy Smart, no PoE)",
+        "ip": "192.168.0.2",
+        "ports": 8,
+        "snmp": false,
+        "mgmt": "web UI + Easy Smart protocol (UDP 29808); NO SNMP",
+        "monitoring": "web-scrape exporter, see monitoring-handover.md",
+        "note": "Port numbers in web UI DO map to physical ports (verified 2026-07-07)."
+      }
+    },
+    {
+      "id": "mac",
+      "label": "trv4250 MacBook",
+      "properties": {
+        "model": "MacBook Pro M2",
+        "host": "trv4250 (nix)",
+        "ip": "192.168.1.52",
+        "netmask": "255.255.0.0 (/16)",
+        "nic": "en11 USB 10/100/1000 LAN via dock, MAC d8:d0:90:48:db:f7",
+        "note": "IP is .1.x on a /16 while rest of LAN is .0.x/24 - ODD, suspected cause of slow inter-host iperf (routed via .0.1). TODO fix subnet."
+      }
+    },
+    {
+      "id": "dock",
+      "label": "Dell dock",
+      "properties": {
+        "model": "Dell dock (exact model TBD)",
+        "role": "USB-C/Thunderbolt dock providing MacBook wired NIC (en11)"
+      }
+    },
+    {
+      "id": "pi",
+      "label": "toddler Pi",
+      "properties": {
+        "host": "toddler (nix)",
+        "ip": "192.168.0.20",
+        "role": "appliance host (AdGuard)"
+      }
+    },
+    {
+      "id": "wax",
+      "label": "WAX214 AP",
+      "properties": {
+        "model": "Netgear WAX214 (AX1800 WiFi 6 PoE AP)",
+        "ip": "192.168.0.5",
+        "role": "wireless access point"
+      }
+    }
+  ],
+  "links": [
+    {
+      "source": "mac",
+      "target": "dock",
+      "cost": 1,
+      "properties": { "media": "USB-C/Thunderbolt", "expected_mbit": null }
+    },
+    {
+      "source": "dock",
+      "target": "sw",
+      "cost": 1,
+      "properties": {
+        "media": "copper",
+        "expected_mbit": 1000,
+        "switch_port": "TODO",
+        "observed_mbit": 1000,
+        "history": "was 100baseTX until 2026-07-07; fixed by reseating switch-side plug (marginal contact)"
+      }
+    },
+    {
+      "source": "sw",
+      "target": "rt",
+      "cost": 1,
+      "properties": { "media": "copper", "expected_mbit": 1000, "switch_port": "TODO" }
+    },
+    {
+      "source": "sw",
+      "target": "pi",
+      "cost": 1,
+      "properties": { "media": "copper", "expected_mbit": 1000, "switch_port": "4", "observed_mbit": 1000 }
+    },
+    {
+      "source": "sw",
+      "target": "wax",
+      "cost": 1,
+      "properties": {
+        "media": "copper (PoE)",
+        "expected_mbit": 1000,
+        "switch_port": "TODO",
+        "observed_mbit": 1000,
+        "history": "was 100baseTX until 2026-07-07; fixed by reseating (marginal contact)"
+      }
+    }
+  ]
+}
