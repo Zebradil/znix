@@ -57,6 +57,9 @@
           # Uncomment if you use VRR and experience brightness flickers caused by
           # Low Framerate Compensation (LFC) suddenly altering the panel's voltage.
           # "amdgpu.freesync_video=0"
+
+          # disable DCN 3.5 IPS: fixes external-DP black flashes on Strix over Thunderbolt
+          "amdgpu.dcdebugmask=0x800"
         ];
         initrd = {
           availableKernelModules = [
