@@ -66,6 +66,8 @@
       # service must be live before the compositor.
       systemd.services.home-manager-zebradil = lib.mkIf config.znix.impermanence.enable {
         description = "Activate zebradil's home-manager generation at boot";
+        # Restarting this service would also restart requiredBy ones.
+        restartIfChanged = false;
         wantedBy = [ "multi-user.target" ];
         before = [ "display-manager.service" ];
         requiredBy = [ "display-manager.service" ];
