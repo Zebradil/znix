@@ -17,7 +17,7 @@ _: {
           resolved = {
             enable = true;
             settings.Resolve = {
-              DNSSEC = "allow-downgrade";
+              DNSSEC = "true";
               FallbackDNS = [
                 "1.1.1.1"
                 "8.8.8.8"
