@@ -6,7 +6,12 @@ The Boy Scout Rule: leave the code better than you found it.
 
 Comments explain the code as it is now — the non-obvious _why_. Never write history/changelog comments: no "was X",
 "changed from", "previously", "used to be", "now uses". Git holds history. If a comment only makes sense to someone who
-saw the old code, delete it. Don't comment the obvious.
+saw the old code, delete it.
+
+Before keeping a comment, delete the code it annotates from view and ask: does the comment add anything the
+identifiers, values, and types don't already say? If it just restates the line in English ("set X to true", "// import
+foo", `singleQuote: true // use single quotes`), cut it. A comment earns its place only by supplying context not visible
+in the code: a why, a constraint, a non-obvious consequence, a link.
 
 ## Pull requests
 
