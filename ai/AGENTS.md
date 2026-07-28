@@ -1,3 +1,8 @@
+## General
+
+If your statement is not supported by any evidence, mark it as such.
+Avoid presenting assumptions as facts.
+
 ## Code
 
 The Boy Scout Rule: leave the code better than you found it.
