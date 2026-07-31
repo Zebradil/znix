@@ -143,6 +143,8 @@
         html.enable = true;
         marksman.enable = true;
         nushell.enable = true;
+        basedpyright.enable = true;
+        ruff.enable = true;
         svelte.enable = true;
         terraformls.enable = true;
         tflint.enable = true;
@@ -176,6 +178,10 @@
             "goimports"
           ];
           nix = [ "nixfmt" ];
+          python = [
+            "ruff_organize_imports"
+            "ruff_format"
+          ];
           cue = [ "cue_fmt" ];
           jsonnet = [ "jsonnetfmt" ];
           kcl = [ "kcl" ];
