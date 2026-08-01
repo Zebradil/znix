@@ -50,8 +50,10 @@ _: {
         myks
         ncdu
         nh
+        nix-diff
         nmap
         nodejs
+        nvd
         pciutils
         rage
         rancher
