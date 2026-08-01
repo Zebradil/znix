@@ -140,6 +140,11 @@
           80
           443
           6443
+          # kube-controller-manager and kube-scheduler metrics. The bind-address
+          # flags above put them on the LAN IP, but vmagent scrapes from a
+          # worker node, so the port has to be open too.
+          10257
+          10259
         ];
       };
       services.resolved.enable = false;
