@@ -41,6 +41,12 @@
           enable = true;
           advertiseTags = [ "tag:k3s" ];
           authKeyFile = config.sops.secrets.tailscale-authkey.path;
+          # Subnet router for the LAN, so tailnet clients reach appliances that
+          # cannot run tailscale themselves (the OpenWrt router, the SG108E
+          # switch). /24 not /16: the fleet lives in 192.168.0.0/24, and a
+          # roaming client on a foreign 192.168.x.x LAN must keep routing that
+          # LAN locally.
+          advertiseRoutes = [ "192.168.0.0/24" ];
         };
 
         cloudflareDynamicDns = {
