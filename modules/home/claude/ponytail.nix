@@ -25,7 +25,12 @@ in
         allProfiles = config.znix.claude.profiles or { };
         enabled = lib.filterAttrs (_: p: p.enable && ponytailCfg.enable && p.ponytail) allProfiles;
 
-        ponytailSrc = inputs.self + "/vendor/ponytail";
+        # Scoped store copy: linking straight into inputs.self would pin the
+        # whole flake source, so any tracked file change rebuilds the profile.
+        ponytailSrc = builtins.path {
+          path = inputs.self + "/vendor/ponytail";
+          name = "znix-vendor-ponytail";
+        };
 
         mkDirFiles =
           profile: srcDir: destDir:

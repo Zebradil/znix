@@ -12,7 +12,10 @@
       personal = profiles.personal or null;
       cavemanOn = (config.znix.claude.caveman.enable or false) && personal != null && personal.caveman;
       assetsRoot = config.znix.claude.assetsRoot;
-      cavemanSrc = inputs.self + "/vendor/caveman";
+      cavemanSrc = builtins.path {
+        path = inputs.self + "/vendor/caveman";
+        name = "znix-vendor-caveman";
+      };
 
       pluginDir = ".config/opencode/plugins/caveman";
       ocPluginSrc = "${cavemanSrc}/src/plugins/opencode";

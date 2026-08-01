@@ -26,7 +26,13 @@ let
       options.znix.claude = {
         assetsRoot = lib.mkOption {
           type = lib.types.path;
-          default = inputs.self + "/ai";
+          # builtins.path scopes the store copy to ai/ alone, so the home
+          # generation's hash tracks the assets — not every tracked file in the
+          # flake. Same reason as znix.mkRepoLink (modules/home/repo-dir.nix).
+          default = builtins.path {
+            path = inputs.self + "/ai";
+            name = "znix-ai-assets";
+          };
           description = ''
             Root path of the shared, tool-agnostic AI agent asset tree
             (AGENTS.md, skills/, agents/, commands/). Lives at the repo root
@@ -37,10 +43,19 @@ let
 
         extraSkillRoots = lib.mkOption {
           type = lib.types.listOf lib.types.path;
-          default = [
-            (inputs.self + "/vendor/mattpocock-skills/engineering")
-            (inputs.self + "/vendor/mattpocock-skills/productivity")
-          ];
+          default =
+            map
+              (
+                sub:
+                builtins.path {
+                  path = inputs.self + "/vendor/mattpocock-skills/${sub}";
+                  name = "znix-vendor-skills-${sub}";
+                }
+              )
+              [
+                "engineering"
+                "productivity"
+              ];
           description = ''
             Extra directories whose immediate children are skill bundles, merged
             into each profile's skills/ alongside assetsRoot/skills. Defaults to

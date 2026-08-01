@@ -11,7 +11,10 @@
       profiles = config.znix.claude.profiles or { };
       personal = profiles.personal or null;
       ponytailOn = (config.znix.claude.ponytail.enable or false) && personal != null && personal.ponytail;
-      ponytailSrc = inputs.self + "/vendor/ponytail";
+      ponytailSrc = builtins.path {
+        path = inputs.self + "/vendor/ponytail";
+        name = "znix-vendor-ponytail";
+      };
     in
     # The plugin path in opencode.json (./plugins/ponytail/ponytail.mjs) is wired
     # in opencode/default.nix's ocSettings. Here we only place the file. The

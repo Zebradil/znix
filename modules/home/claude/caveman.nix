@@ -26,7 +26,12 @@ in
         allProfiles = config.znix.claude.profiles or { };
         enabled = lib.filterAttrs (_: p: p.enable && cavemanCfg.enable && p.caveman) allProfiles;
 
-        cavemanSrc = inputs.self + "/vendor/caveman";
+        # Scoped store copy: linking straight into inputs.self would pin the
+        # whole flake source, so any tracked file change rebuilds the profile.
+        cavemanSrc = builtins.path {
+          path = inputs.self + "/vendor/caveman";
+          name = "znix-vendor-caveman";
+        };
 
         # The composed statusline (znix base + caveman/ponytail badges) lives in
         # modules/home/claude/statusline.nix so no single addon owns the file.
