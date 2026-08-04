@@ -72,9 +72,10 @@ runs:
         # enrolled as a substituter that 401s on every narinfo lookup.
         #
         # The installer skips the login entirely when the OIDC endpoint env
-        # vars are absent, so blank them here. It then logs one info line
-        # claiming the workflow is misconfigured -- that is this comment, not a
-        # mistake. Nothing else in these workflows uses OIDC.
+        # vars are unset or empty, so force-disable them here by setting blank
+        # values. It then logs one info line claiming the workflow is
+        # misconfigured -- that is this comment, not a mistake. Nothing else in
+        # these workflows uses OIDC.
         ACTIONS_ID_TOKEN_REQUEST_URL: ''
         ACTIONS_ID_TOKEN_REQUEST_TOKEN: ''
       with:
