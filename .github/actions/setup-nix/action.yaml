@@ -1,7 +1,7 @@
 name: Setup Nix
 description: >
-  Install Nix with optional signing key configuration. Installs Determinate Nix via determinate-nix-action (includes
-  FlakeHub Cache authentication) and optionally writes a signing key to disk.
+  Install Nix with optional signing key configuration. Installs Determinate Nix via determinate-nix-action and
+  optionally writes a signing key to disk.
 
 inputs:
   extra-substituters:
@@ -65,6 +65,18 @@ runs:
 
     - name: Install Nix
       uses: DeterminateSystems/determinate-nix-action@61cbfe2efc2d4e7a8a6d56967c3c1058e846c858 # v3.21.9
+      env:
+        # This account has no FlakeHub Cache entitlement, so the installer's
+        # FlakeHub login succeeds at OIDC and then fails at FlakeHub ("User is
+        # not authorized for this resource"), leaving cache.flakehub.com
+        # enrolled as a substituter that 401s on every narinfo lookup.
+        #
+        # The installer skips the login entirely when the OIDC endpoint env
+        # vars are absent, so blank them here. It then logs one info line
+        # claiming the workflow is misconfigured -- that is this comment, not a
+        # mistake. Nothing else in these workflows uses OIDC.
+        ACTIONS_ID_TOKEN_REQUEST_URL: ''
+        ACTIONS_ID_TOKEN_REQUEST_TOKEN: ''
       with:
         extra-conf: |
           download-buffer-size = 524288000
