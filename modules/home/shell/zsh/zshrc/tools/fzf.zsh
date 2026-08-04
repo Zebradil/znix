@@ -6,8 +6,9 @@ if lib::check_commands fzf fd bat exa; then
   log::debug "Configuring fzf"
 
   export FZF_DEFAULT_OPTS='--multi --no-height --extended'
-  export FZF_DEFAULT_COMMAND='fd --no-ignore --strip-cwd-prefix --hidden --exclude .git --exclude node_modules --exclude "$GOPATH"'
+  export FZF_DEFAULT_COMMAND='fd --no-ignore --strip-cwd-prefix --hidden --exclude .git --exclude .direnv --exclude node_modules --exclude "$GOPATH"'
   export FZF_CTRL_T_COMMAND="${FZF_DEFAULT_COMMAND}"
+  export FZF_ALT_C_COMMAND="${FZF_DEFAULT_COMMAND} --type d"
   # TODO transform these commands to functions
   FZF_PREVIEW_MAX_LINES=200
   FZF_DIRECTORY_PREVIEW_CMD="exa -l --group-directories-first -T -L5 --color=always --color-scale {} | head -${FZF_PREVIEW_MAX_LINES}"
