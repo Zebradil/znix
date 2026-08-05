@@ -48,6 +48,11 @@
             icon = " ";
           }
           {
+            __unkeyed-1 = "<leader>m";
+            group = "Markdown";
+            icon = "󰍔 ";
+          }
+          {
             __unkeyed-1 = "<leader>r";
             group = "REST";
             icon = "󰆨 ";
@@ -125,6 +130,22 @@
     mini = {
       enable = true;
       modules.icons = { };
+    };
+
+    # ─ Markdown ───────────────────────────────────────────────────
+    markview = {
+      enable = true;
+      settings.preview.icon_provider = "mini";
+    };
+
+    markdown-preview = {
+      enable = true;
+      settings = {
+        # Preview is opened on demand, so keep it alive when hopping buffers.
+        auto_close = 0;
+        echo_preview_url = 1;
+        theme = "dark";
+      };
     };
 
     # ─ Editor ─────────────────────────────────────────────────────

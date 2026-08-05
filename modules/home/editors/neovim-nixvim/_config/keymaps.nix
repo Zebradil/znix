@@ -536,6 +536,32 @@ _: {
       options.desc = "Select scratch buffer";
     }
 
+    # ─ Markdown ─
+    {
+      mode = "n";
+      key = "<Leader>mm";
+      action = "<cmd>Markview toggle<cr>";
+      options.desc = "Markdown: Toggle in-buffer render";
+    }
+    {
+      mode = "n";
+      key = "<Leader>ms";
+      action = "<cmd>Markview splitToggle<cr>";
+      options.desc = "Markdown: Toggle split preview";
+    }
+    {
+      mode = "n";
+      key = "<Leader>mh";
+      action = "<cmd>Markview hybridToggle<cr>";
+      options.desc = "Markdown: Toggle hybrid mode";
+    }
+    {
+      mode = "n";
+      key = "<Leader>mp";
+      action = "<cmd>MarkdownPreviewToggle<cr>";
+      options.desc = "Markdown: Toggle browser preview";
+    }
+
     # ─ Neotest ─
     {
       mode = "n";
