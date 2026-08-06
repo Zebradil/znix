@@ -51,14 +51,14 @@ EOF
   )
 
   deletePod() {
-    kubectl delete $pod --wait=false
+    kubectl delete "$pod" --wait=false
   }
   trap deletePod EXIT
 
   echo "Created $pod"
   echo "Waiting for container to start..."
-  kubectl wait --for=condition=Ready $pod >/dev/null
-  kubectl attach -it $pod -c ssh-node
+  kubectl wait --for=condition=Ready "$pod" >/dev/null
+  kubectl attach -it "$pod" -c ssh-node
 
 }
 
@@ -108,9 +108,9 @@ if [ "$1" == "--help" ]; then
 fi
 
 if [[ "$1" == node/* ]]; then
-  ssh_node ${1:5}
+  ssh_node "${1:5}"
 elif [ "$1" == "node" ]; then
-  ssh_node $2
+  ssh_node "$2"
 elif [[ "$1" == pod/* ]]; then
   ssh_pod "$@"
 elif [ "$1" == "pod" ]; then

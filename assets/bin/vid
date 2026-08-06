@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-readonly USAGE="$(basename "$0") TASK INPUT -- do stuff with video files
+USAGE="$(basename "$0") TASK INPUT -- do stuff with video files
 
 Output filename is defined automatically from the source filename and applied command
 
@@ -19,6 +19,7 @@ Environment variables
 
  SKIP_CONFIRMATION  : Allows skipping confirmation before running commands if set to 1
 "
+readonly USAGE
 
 usage() {
   echo "${USAGE}"
@@ -42,7 +43,7 @@ confirm_and_run() {
   fi
 
   local CMD=$1
-  echo $CMD
+  echo "$CMD"
   if [ "${SKIP_CONFIRMATION:-0}" -eq 0 ]
   then
     read -p "Run this command? [y/n] " -n 1 -r
@@ -123,8 +124,9 @@ case $TASK in
     readonly INPUT=$1
     readonly SPEED=$2
     readonly FRAMERATE=$3
-    readonly VSPD=$(awk "BEGIN { print 1 / (${SPEED}) }")
-    readonly ASPD=$(awk "BEGIN { print ${SPEED} }")
+    VSPD=$(awk "BEGIN { print 1 / (${SPEED}) }")
+    ASPD=$(awk "BEGIN { print ${SPEED} }")
+    readonly VSPD ASPD
     readonly OUTPUT="${INPUT%.*}_spd_${VSPD}.${INPUT##*.}"
     readonly TF="[0:v]setpts=${VSPD}*PTS[v];[0:a]atempo=${ASPD}[a]"
     confirm_and_run "ffmpeg -i ${INPUT} -r ${FRAMERATE} -filter_complex ${TF} -map [v] -map [a] ${OUTPUT}"

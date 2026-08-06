@@ -62,6 +62,9 @@ for profile in "${XDG_CONFIG_HOME:?}/$NVIM_PROFILES_DIR_NAME"/*; do
   fi
 done
 
+# NVIM_COMMAND is an override that may carry flags (e.g. "nvim --clean"), so it
+# is left unquoted deliberately.
+# shellcheck disable=SC2086
 env \
   XDG_CONFIG_HOME="${XDG_CONFIG_HOME:?}/$NVIM_PROFILES_DIR_NAME/${NVIM_PROFILE_NAME}" \
   XDG_DATA_HOME="${XDG_DATA_HOME:?}/$NVIM_PROFILES_DIR_NAME/${NVIM_PROFILE_NAME}" \
