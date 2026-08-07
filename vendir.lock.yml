@@ -2,27 +2,26 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'Merge pull request #469 from mattpocock/to-issues/wide-refactor-expand-contract...'
-      sha: 8515a080a74dbcf5019a1a78efc24b5fcafb36b8
+      commitTitle: 'Merge pull request #788 from mattpocock/grill-me-align...'
+      sha: 84fdeffd12f2ee307994d1eb6feb48173b6e0502
       tags:
-      - v1.0.1-126-g8515a08
+      - v1.2.3-2-g84fdeff
     path: .
   path: vendor/mattpocock-skills
 - contents:
   - git:
-      commitTitle: 'chore: sync SKILL.md copies [skip ci]'
-      sha: 0d95a81d35a9f2d123a5e9430d1cfc43d55f1bb0
+      commitTitle: Update README for clarity on coding runs
+      sha: ec83e5bace4c20484d704dea21e12fc4eb94e9aa
       tags:
-      - v1.9.1
+      - v1.10.0-2-gec83e5b
     path: .
   path: vendor/caveman
 - contents:
   - git:
-      commitTitle: 'feat: hide the pi status bar indicator while keeping ponytail
-        active (#324) (#544)...'
-      sha: 1b2760d384c44e573a9d8c7a729fac616e5c3a76
+      commitTitle: 'feat: add Grok Build native skills adapter (revive #561) (#661)...'
+      sha: 2ed6c52c9d7e5e56942508591085fd45dea277d3
       tags:
-      - v4.8.4-18-g1b2760d
+      - v4.9.0-3-g2ed6c52
     path: .
   path: vendor/ponytail
 kind: LockConfig
