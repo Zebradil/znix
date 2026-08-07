@@ -6,7 +6,10 @@ let
   #
   # Shorthand (all systems):   pkgname = "github:NixOS/nixpkgs/<rev>";
   # Long form (per-system):    pkgname = { ref = "github:NixOS/nixpkgs/<rev>"; systems = [ "aarch64-darwin" ]; };
-  pins = { };
+  pins = {
+    # Last known working revision. In later revisions mise build is broken, missing cmake.
+    mise = "github:NixOS/nixpkgs/9bc02893134c733dd85de46ee4fb2fac696b5529";
+  };
   # ===========================================================
 
   normalize =
