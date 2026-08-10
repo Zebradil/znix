@@ -38,9 +38,6 @@ REDACTIONS = [
     ),
 ]
 
-LEVELS = ("brief", "full", "debug")
-PRESETS = {"llm": {"level": "brief", "header": "minimal"}}
-
 
 def redact(text):
     if not text:
@@ -378,7 +375,7 @@ def build_events(records, level):
             for block in blocks(record, "text"):
                 emit(record, "user", "text", text=redact(block.get("text", "")))
 
-            if level == "brief":
+            if level in ("llm", "brief"):
                 continue
             for block in blocks(record, "tool_result"):
                 # toolUseResult is a dict for structured tools and a bare string
@@ -422,6 +419,49 @@ def build_events(records, level):
             )
 
     return events
+
+
+def collapse_tools(events, level):
+    """Per-call lines are noise once a session runs long, so below `full` a
+    contiguous run of calls becomes a single count (`brief`) or disappears
+    (`llm`). Adjacency is the whole run boundary: prose, a question block, or a
+    role change all sit between calls as events, so they split runs for free.
+    """
+    if level in ("full", "debug"):
+        return events
+
+    out = []
+    run = []
+
+    def flush():
+        if not run:
+            return
+        counts = {}
+        for event in run:
+            counts[event["name"]] = counts.get(event["name"], 0) + 1
+        if level == "brief":
+            out.append(
+                {
+                    "ts": run[0]["ts"],
+                    "role": "assistant",
+                    "kind": "tool_stats",
+                    "total": len(run),
+                    # Sorted so an export of the same session is byte-stable.
+                    "counts": dict(
+                        sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+                    ),
+                }
+            )
+        run.clear()
+
+    for event in events:
+        if event["kind"] == "tool_use":
+            run.append(event)
+            continue
+        flush()
+        out.append(event)
+    flush()
+    return out
 
 
 # --- rendering --------------------------------------------------------------
@@ -573,6 +613,9 @@ def render_markdown(meta, events, level, header):
                     "```",
                     "",
                 ]
+        elif kind == "tool_stats":
+            breakdown = ", ".join(f"{name} {n}" for name, n in event["counts"].items())
+            out += [f"*{plural(event['total'], 'tool call')}: {breakdown}*", ""]
         elif kind == "tool_result":
             out += [
                 "",
@@ -623,7 +666,7 @@ def export(path, level, header, as_json):
     # leaf is a heuristic that silently drops most of the transcript when wrong.
     # Untested case is a real rewind (edited message), which would show the
     # abandoned branch here. Add --thread if that ever bites.
-    events = build_events(records, level)
+    events = collapse_tools(build_events(records, level), level)
     return (
         render_json(meta, events, header)
         if as_json
@@ -734,6 +777,34 @@ FIXTURE = [
             ],
         },
     },
+    # A run of several calls in a row: the case the collapsed line exists for.
+    {
+        "type": "assistant",
+        "timestamp": "2026-01-01T10:00:04.500Z",
+        "message": {
+            "model": "claude-opus-5",
+            "content": [
+                {
+                    "type": "tool_use",
+                    "id": "t2",
+                    "name": "Read",
+                    "input": {"file_path": "/tmp/x/a"},
+                },
+                {
+                    "type": "tool_use",
+                    "id": "t3",
+                    "name": "Read",
+                    "input": {"file_path": "/tmp/x/b"},
+                },
+                {
+                    "type": "tool_use",
+                    "id": "t4",
+                    "name": "Bash",
+                    "input": {"command": "ls"},
+                },
+            ],
+        },
+    },
     {
         "type": "system",
         "subtype": "away_summary",
@@ -752,7 +823,11 @@ def selftest():
         assert "sk-ant-" not in brief, "redaction did not fire"
         assert "[REDACTED]" in brief, "redacted marker missing"
         assert "```\nline" not in brief, "brief must not render tool_result bodies"
-        assert "`Bash` rg -n secret ." in brief, "tool call line missing"
+        assert "`Bash` rg -n secret ." not in brief, "brief must not render tool inputs"
+        assert "*1 tool call: Bash 1*" in brief, "lone call lost its stats line"
+        assert "*3 tool calls: Read 2, Bash 1*" in brief, (
+            "a run must collapse into one line, counts ordered by frequency"
+        )
         assert "**B** ← selected" in brief, "answer not marked"
         assert "with a caveat" in brief, "free-text notes dropped"
         assert "**Outcome:** User rejected tool use" in brief, (
@@ -764,23 +839,46 @@ def selftest():
         full = export(path, "full", "table", False)
         assert "… (truncated)" in full, "full must truncate long tool results"
         assert "first" in full, "full must render option descriptions"
+        assert "`Bash` rg -n secret ." in full, "full must keep per-call detail"
+        assert "tool calls:" not in full, "full must not collapse runs"
 
         debug = export(path, "debug", "table", False)
         assert "42-char signature" in debug, "thinking marker missing at debug"
         assert "… (truncated)" not in debug, "debug must not truncate"
 
-        llm = export(path, "brief", "minimal", False)
+        llm = export(path, "llm", "minimal", False)
         assert "Tokens" not in llm, "minimal header must drop token counts"
         assert "Session of 2026-01-01" in llm, "minimal header lost the date"
+        assert "tool call" not in llm, "llm must not mention tool calls at all"
+        assert "Bash" not in llm, "llm leaked a tool name"
+        assert "```\nline" not in llm, "llm must not render tool_result bodies"
+        assert "**B** ← selected" in llm, "llm dropped the question substance"
 
         payload = json.loads(export(path, "brief", "table", True))
         assert payload["session"]["counts"]["tools"] == {
-            "Bash": 1,
+            "Bash": 2,
             "AskUserQuestion": 2,
+            "Read": 2,
+        }
+        assert not [e for e in payload["events"] if e["kind"] == "tool_use"], (
+            "brief JSON must carry stats, not per-call events"
+        )
+        assert [e for e in payload["events"] if e["kind"] == "tool_stats"][-1] == {
+            "ts": "2026-01-01T10:00:04.500Z",
+            "role": "assistant",
+            "kind": "tool_stats",
+            "total": 3,
+            "counts": {"Read": 2, "Bash": 1},
         }
         assert payload["events"][-1]["kind"] == "summary"
         question = next(e for e in payload["events"] if e["kind"] == "question")
         assert question["items"][0]["answer"] == "B"
+
+        assert not [
+            e
+            for e in json.loads(export(path, "llm", "minimal", True))["events"]
+            if e["kind"] in ("tool_use", "tool_stats")
+        ], "llm JSON must drop tool calls entirely"
     print("selftest ok")
 
 
@@ -819,7 +917,7 @@ def main():
     elif args.debug:
         level = "debug"
     elif args.llm:
-        level, header = PRESETS["llm"]["level"], PRESETS["llm"]["header"]
+        level, header = "llm", "minimal"
 
     sys.stdout.write(export(resolve(args.session), level, header, args.json))
 

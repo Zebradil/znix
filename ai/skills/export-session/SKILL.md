@@ -20,13 +20,13 @@ claude-session-export --list               # id / time / size / title for this p
 
 ## Which mode
 
-| Flag      | Use when                                                                                                    |
-| --------- | ----------------------------------------------------------------------------------------------------------- |
-| _(none)_  | Reading or sharing. Prose, decisions, and one line per tool call; no tool output.                           |
-| `--llm`   | **Reseeding a fresh session.** Same content, minimal header, no statistics. ~19× smaller than the raw file. |
-| `--full`  | You need what the commands actually returned (truncated to 20 lines each).                                  |
-| `--debug` | Auditing the agent: every tool input, hook firing, and attachment, untruncated.                             |
-| `--json`  | Normalized `{session, events}` instead of Markdown. Combines with any of the above.                         |
+| Flag      | Use when                                                                                                     |
+| --------- | ------------------------------------------------------------------------------------------------------------ |
+| _(none)_  | Reading or sharing. Prose, decisions, and a count line per run of tool calls; no tool inputs or output.      |
+| `--llm`   | **Reseeding a fresh session.** Prose, decisions and questions only — minimal header, no stats, no tool calls. |
+| `--full`  | You need the actual calls and what they returned (truncated to 20 lines each).                               |
+| `--debug` | Auditing the agent: every tool input, hook firing, and attachment, untruncated.                              |
+| `--json`  | Normalized `{session, events}` instead of Markdown. Combines with any of the above.                          |
 
 Output goes to stdout — redirect it, or pipe it wherever it needs to land.
 
@@ -40,8 +40,7 @@ claude-session-export <session-id> --llm > /tmp/prior-session.md
 
 Then read that file into the new session. It keeps the durable content — the prompts, the agent's prose, every
 AskUserQuestion with its options and the user's answer and free-text notes, and any away-summary — and drops the
-perishable content, which is mostly stale command output a fresh agent can regenerate in seconds and which would
-otherwise be ~75% of the export.
+perishable content: stale command output and the calls that produced it, which a fresh agent can regenerate in seconds.
 
 ## Things worth knowing
 
