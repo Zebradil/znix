@@ -11,14 +11,11 @@ This is a unified Nix configuration using the **dendritic pattern** with flake-p
 
 ### Shared AI agent assets (`ai/`)
 
-The tool-agnostic agent asset tree lives at the repo root in `ai/`
-(`AGENTS.md`, `skills/`, `agents/`, `commands/`, `statusline-command.sh`) — it is
-**not** owned by any single tool's module. Both the Claude and opencode home
-modules consume it via the `znix.claude.assetsRoot` option, which defaults to
-`inputs.self + "/ai"`. `AGENTS.md` is the global instructions file: the Claude
-module symlinks it to each profile's `CLAUDE.md`; opencode reads it as `AGENTS.md`.
-Vendored skills wire in separately via `znix.claude.extraSkillRoots` (see
-`docs/vendored-skills.md`).
+The tool-agnostic agent asset tree lives at the repo root in `ai/` (`AGENTS.md`, `skills/`, `agents/`, `commands/`,
+`statusline-command.sh`) — it is **not** owned by any single tool's module. Both the Claude and opencode home modules
+consume it via the `znix.claude.assetsRoot` option, which defaults to `inputs.self + "/ai"`. `AGENTS.md` is the global
+instructions file: the Claude module symlinks it to each profile's `CLAUDE.md`; opencode reads it as `AGENTS.md`.
+Vendored skills wire in separately via `znix.claude.extraSkillRoots` (see `docs/vendored-skills.md`).
 
 ## Key Patterns
 
@@ -56,8 +53,8 @@ colmena apply --on <host>          # Deploy to remote host(s) over SSH
 colmena apply --on @<tag>          # Deploy all hosts with a tag
 ```
 
-Remote deploys use colmena (`nix develop` provides the CLI). Hosts are registered
-in `modules/flake/colmena.nix`. See `docs/adr/0003-colmena-deploy.md`.
+Remote deploys use colmena (`nix develop` provides the CLI). Hosts are registered in `modules/flake/colmena.nix`. See
+`docs/adr/0003-colmena-deploy.md`.
 
 ## Secrets
 
@@ -65,40 +62,33 @@ Managed with sops-nix. See `docs/secrets.md`. Never commit unencrypted secrets.
 
 ## Workarounds
 
-Packages broken in nixpkgs get a temporary pin or override, one file per package under
-`modules/flake/workarounds/`. A weekly probe opens the removal PR once upstream is fixed.
-See `docs/workarounds.md`.
+Packages broken in nixpkgs get a temporary pin or override, one file per package under `modules/flake/workarounds/`. A
+weekly probe opens the removal PR once upstream is fixed. See `docs/workarounds.md`.
 
 ## Project constraints
 
 ### Claude Code profiles & marketplace independence
 
-This repo runs three Claude Code profiles: `personal`, plus the company
-`trv-claude` / `trv-claude-key` on host `trv4250` (see
-`modules/hosts/trv4250/claude.nix`). The company profiles **cannot use the
-official `claude-plugins-official` marketplace** — they are restricted to an
-internal marketplace with a limited plugin set.
+This repo runs three Claude Code profiles: `personal`, plus the company `trv-claude` / `trv-claude-key` on host
+`trv4250` (see `modules/hosts/trv4250/claude.nix`). The company profiles **cannot use the official
+`claude-plugins-official` marketplace** — they are restricted to an internal marketplace with a limited plugin set.
 
-So any Claude Code feature that depends on a marketplace must be provided in a
-**marketplace-independent** way, or it silently won't work on the company
-profiles. The LSP wiring follows this: a local `znix-lsp@skills-dir` plugin
-(no marketplace) rendered from `znix.lsp.servers`. Prefer uniform,
-marketplace-independent mechanisms, and provision all agent tool binaries via
-Nix store paths (no tool-side auto-install).
+So any Claude Code feature that depends on a marketplace must be provided in a **marketplace-independent** way, or it
+silently won't work on the company profiles. The LSP wiring follows this: a local `znix-lsp@skills-dir` plugin (no
+marketplace) rendered from `znix.lsp.servers`. Prefer uniform, marketplace-independent mechanisms, and provision all
+agent tool binaries via Nix store paths (no tool-side auto-install).
 
 ## Agent skills
 
 ### Issue tracker
 
-Issues tracked in GitHub Issues (`gh` CLI). External PRs are also a triage
-surface. See `docs/agents/issue-tracker.md`.
+Issues tracked in GitHub Issues (`gh` CLI). External PRs are also a triage surface. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`,
-`ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See
+`docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context: `CONTEXT.md` + `docs/adr/` at repo root. See
-`docs/agents/domain.md`.
+Single-context: `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`.
