@@ -1,0 +1,154 @@
+name: Workaround Probe
+
+# Weekly check on whether the temporary workarounds in modules/flake/workarounds/
+# are still earning their place. For each one it builds the *vanilla* nixpkgs
+# package — no overlays — and a build that SUCCEEDS is the alarm: upstream is
+# fixed and the workaround can go. Successes are pushed to the cache, because
+# the vanilla path is what every host wants the moment the workaround is dropped.
+#
+# Deliberately standalone: its pass condition is inverted relative to every other
+# workflow here, and it must never be able to block the nightly lock update.
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      has-targets: ${{ steps.matrix.outputs.has_targets }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Nix
+        uses: ./.github/actions/setup-nix
+
+      - name: Build probe matrix
+        id: matrix
+        env:
+          RUNNER_MAPPING: |
+            x86_64-linux:ubuntu-latest
+            aarch64-linux:ubuntu-24.04-arm
+            aarch64-darwin:macos-26
+        run: .github/scripts/workaround-matrix.sh
+
+  probe:
+    needs: matrix
+    if: ${{ needs.matrix.outputs.has-targets == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Nix
+        id: nix
+        uses: ./.github/actions/setup-nix
+        with:
+          extra-substituters: https://znix.zebradil.dev
+          extra-trusted-public-keys: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
+          cache-signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
+
+      # A failing build is the expected outcome, so the step must not fail the
+      # job. `nix build` output is left in the log; only the verdict is exported.
+      - name: Probe vanilla package
+        id: probe
+        env:
+          NAME: ${{ matrix.name }}
+          SYSTEM: ${{ matrix.system }}
+        run: |
+          if nix build --no-link --print-out-paths ".#workaroundProbes.${SYSTEM}.${NAME}" > "$RUNNER_TEMP/paths"; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::${NAME} builds unaided on ${SYSTEM} — workaround may be removable"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            : > "$RUNNER_TEMP/paths"
+            echo "::notice::${NAME} still fails on ${SYSTEM} — workaround still needed"
+          fi
+
+      # Verdict first, cache second: a missing artifact reads as "still broken",
+      # so a cache-push failure must not be able to bury an ok=true verdict.
+      - name: Record verdict
+        env:
+          NAME: ${{ matrix.name }}
+          SYSTEM: ${{ matrix.system }}
+          OK: ${{ steps.probe.outputs.ok }}
+        run: |
+          jq -n --arg n "$NAME" --arg s "$SYSTEM" --argjson ok "$OK" \
+            '{name: $n, system: $s, ok: $ok}' \
+            > "$RUNNER_TEMP/${NAME}__${SYSTEM}.json"
+
+      - name: Upload verdict
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: probe-${{ matrix.name }}-${{ matrix.system }}
+          path: ${{ runner.temp }}/${{ matrix.name }}__${{ matrix.system }}.json
+          retention-days: 7
+
+      - name: Push to cache
+        if: ${{ steps.probe.outputs.ok == 'true' }}
+        uses: ./.github/actions/push-nix-cache
+        with:
+          store-paths-file: ${{ runner.temp }}/paths
+          signing-key-file: ${{ steps.nix.outputs.signing-key-file }}
+          s3-url: ${{ secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  propose:
+    needs: [matrix, probe]
+    if: ${{ always() && needs.matrix.outputs.has-targets == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      HAS_APP_TOKEN: ${{ secrets.CI_APP_ID != '' && secrets.CI_APP_PRIVATE_KEY != '' }}
+    steps:
+      # Before checkout, so actions/checkout can configure the push credentials.
+      - name: Generate app token
+        id: app_token
+        if: ${{ env.HAS_APP_TOKEN == 'true' }}
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.CI_APP_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.app_token.outputs.token || github.token }}
+
+      - name: Setup Nix
+        uses: ./.github/actions/setup-nix
+        with:
+          extra-substituters: https://znix.zebradil.dev
+          extra-trusted-public-keys: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
+
+      - name: Download verdicts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: probe-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/verdicts
+
+      - name: Open or close removal PRs
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token || github.token }}
+          RESULTS_DIR: ${{ runner.temp }}/verdicts
+        run: .github/scripts/workaround-propose.sh

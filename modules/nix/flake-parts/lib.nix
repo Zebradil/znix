@@ -59,7 +59,7 @@
     # Unlike integrated home (useGlobalPkgs borrows the system's pkgs), this
     # builds its own pkgs, so it must replicate BOTH host-divergence knobs:
     #   - `nixpkgs`: the host's own input (tuxedo pins nixpkgs-tuxedo for GDM).
-    #   - self.overlays.default: tree-sitter grammars + package pins.
+    #   - self.overlays.default: tree-sitter grammars + workarounds.
     # Omitting either would resolve files to different store paths than the
     # system switch. `standalone = true` flips the HM impermanence import.
     mkHomeManager =

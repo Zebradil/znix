@@ -44,8 +44,8 @@ git worktree remove "$wt" --force
      `nix flake check` — unstaged files are invisible to Nix.
    - **Build failure** — the bumped input/package fails to build or a dependent breaks.
    - **`nix flake check` failure** — a module assertion or option type regression.
-   - **Broken upstream package** — fixable with a temporary pin via the `pins` map in
-     `modules/flake/overlays.nix` (see `docs/package-pins.md`).
+   - **Broken upstream package** — fixable with a temporary workaround file under
+     `modules/flake/workarounds/` (see `docs/workarounds.md`).
    Verify with `nix flake check` and, for a host, `nixos-rebuild build --flake .#<host>` /
    `darwin-rebuild build --flake .#<host>` (build, never switch).
 

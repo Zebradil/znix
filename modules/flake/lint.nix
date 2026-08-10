@@ -9,7 +9,6 @@
             nativeBuildInputs = [
               pkgs.actionlint
               pkgs.shellcheck
-              # The only self-test dependency stdenv does not already provide.
               pkgs.jq
             ];
           }
@@ -20,12 +19,14 @@
             # assets/bin takes whatever scripts land there, so lint by shebang
             # rather than by glob -- a python helper must not break the check.
             for f in ${inputs.self}/assets/bin/*; do
-              if head -n1 "$f" | grep -qE '^#!.*\b(ba)?sh$'; then
+              if head -n1 "$f" | grep -qE '^#!.*\b(ba|z)?sh$'; then
                 shellcheck "$f"
               fi
             done
 
             bash ${inputs.self}/assets/bin/kubectl-inventory --self-test
+            bash ${inputs.self}/.github/scripts/workaround-matrix.sh --self-test
+            bash ${inputs.self}/.github/scripts/workaround-propose.sh --self-test
             touch $out
           '';
     };

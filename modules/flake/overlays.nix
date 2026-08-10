@@ -1,73 +1,9 @@
-{ inputs, lib, ... }:
-let
-  # ===========================================================
-  # Package pins — edit here to pin packages to specific refs.
-  # See docs/package-pins.md for the full workflow.
-  #
-  # Shorthand (all systems):   pkgname = "github:NixOS/nixpkgs/<rev>";
-  # Long form (per-system):    pkgname = { ref = "github:NixOS/nixpkgs/<rev>"; systems = [ "aarch64-darwin" ]; };
-  pins = {
-    # Last known working revision. In later revisions mise build is broken, missing cmake.
-    mise = "github:NixOS/nixpkgs/9bc02893134c733dd85de46ee4fb2fac696b5529";
-  };
-  # ===========================================================
-
-  normalize =
-    v:
-    if builtins.isString v then
-      {
-        ref = v;
-        systems = null;
-      }
-    else
-      { systems = null; } // v;
-  normalized = lib.mapAttrs (_: normalize) pins;
-
-  # ld64-957.1 (the pure-Nix Darwin stdenv linker) SIGTRAPs — "Trace/BPT trap:
-  # 5" — linking large Qt apps on aarch64-darwin. The compiler and small links
-  # are fine, so link just these packages with LLVM lld (shipped with the clang
-  # stdenv). Drop entries as the nixpkgs ld64 regression gets fixed.
-  lldLinkedDarwinPkgs = [
-    "keepassxc"
-    "moonlight-qt"
-  ];
-  lldLinkOverlay =
-    _final: prev:
-    lib.optionalAttrs prev.stdenv.isDarwin (
-      lib.genAttrs lldLinkedDarwinPkgs (
-        name:
-        prev.${name}.overrideAttrs (old: {
-          nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ prev.lld ];
-          NIX_CFLAGS_LINK = (old.NIX_CFLAGS_LINK or "") + " -fuse-ld=lld";
-        })
-      )
-    );
-
-  inputName = name: "nixpkgs-pin-${name}";
-  appliesTo = system: { systems, ... }: systems == null || builtins.elem system systems;
-
-  pinsOverlay =
-    _final: prev:
-    lib.mapAttrs (
-      name: _:
-      (import inputs.${inputName name} {
-        system = prev.stdenv.hostPlatform.system;
-        # prev.config is the *evaluated* config: it carries every option default
-        # (rewriteURL, replaceStdenv, assertions, ...). Re-importing a pinned
-        # nixpkgs re-runs its config module against it, and any option whose type
-        # changed between revs (e.g. rewriteURL) breaks eval. Forward only the
-        # plain user-intent options the pins actually need.
-        config = lib.filterAttrs (
-          n: _:
-          builtins.elem n [
-            "allowUnfree"
-            "allowUnfreePredicate"
-            "permittedInsecurePackages"
-          ]
-        ) prev.config;
-      }).${name}
-    ) (lib.filterAttrs (_: p: appliesTo prev.stdenv.hostPlatform.system p) normalized);
-in
+{
+  config,
+  inputs,
+  lib,
+  ...
+}:
 {
   flake-file.inputs = {
     gke-kubeconfiger = {
@@ -77,9 +13,11 @@ in
     tree-sitter-queries.url = "github:zebradil/tree-sitter-queries";
     tree-sitter-test_highlights.url = "github:zebradil/tree-sitter-test_highlights";
     tree-sitter-ytt_annotation.url = "github:zebradil/tree-sitter-ytt_annotation";
-  }
-  // lib.mapAttrs' (name: { ref, ... }: lib.nameValuePair (inputName name) { url = ref; }) normalized;
+  };
 
+  # Permanent additions first, then the workaround overlay assembled from
+  # modules/flake/workarounds/ — see docs/workarounds.md. Everything in the
+  # latter is temporary and probed weekly for removal.
   flake.overlays.default = lib.composeManyExtensions [
     inputs.tree-sitter-queries.overlays.default
     inputs.tree-sitter-test_highlights.overlays.default
@@ -87,7 +25,6 @@ in
     (final: _prev: {
       inherit (inputs.gke-kubeconfiger.packages.${final.stdenv.hostPlatform.system}) gke-kubeconfiger;
     })
-    lldLinkOverlay
-    pinsOverlay
+    config.flake.overlays.workarounds
   ];
 }

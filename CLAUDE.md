@@ -63,9 +63,11 @@ in `modules/flake/colmena.nix`. See `docs/adr/0003-colmena-deploy.md`.
 
 Managed with sops-nix. See `docs/secrets.md`. Never commit unencrypted secrets.
 
-## Package pins
+## Workarounds
 
-Temporarily override broken packages via the `pins` map in `modules/flake/overlays.nix`. See `docs/package-pins.md`.
+Packages broken in nixpkgs get a temporary pin or override, one file per package under
+`modules/flake/workarounds/`. A weekly probe opens the removal PR once upstream is fixed.
+See `docs/workarounds.md`.
 
 ## Project constraints
 

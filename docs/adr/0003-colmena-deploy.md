@@ -32,7 +32,7 @@ module set `mkNixos` builds) plus its `nixpkgs.hostPlatform` from
   host later is a 4-line table entry, not learning colmena under pressure.
 - **Per-node pkgs via `meta.nodeNixpkgs`** — rejected. Pinning `nixpkgs.pkgs`
   makes NixOS ignore each host's `nixpkgs.overlays`/`config`, silently dropping
-  the repo's tree-sitter grammars + package pins from deployed hosts. Instead we
+  the repo's tree-sitter grammars + workarounds from deployed hosts. Instead we
   set only `nixpkgs.hostPlatform` per node and let each host's `nix-settings`
   module apply overlays — identical to `mkNixos`.
 
