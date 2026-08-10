@@ -154,7 +154,6 @@
 
   # ── Extra plugins (no native nixvim module) ──────────────────────
   extraPlugins = with pkgs.vimPlugins; [
-    CopilotChat-nvim
     tree-sitter-queries-nvim
     tree-sitter-test_highlights-nvim
     tree-sitter-ytt_annotation-nvim

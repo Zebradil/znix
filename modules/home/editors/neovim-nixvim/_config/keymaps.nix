@@ -375,47 +375,53 @@ _: {
       options.desc = "OpenCode: Select action";
     }
 
-    # ─ Copilot Chat ─
+    # ─ Copilot ─
+    # Master switch. vim.lsp.enable(name, true) reattaches to already-open
+    # buffers; passing false stops every client of that name.
     {
       mode = "n";
-      key = "<Leader>cc";
-      action = "<cmd>CopilotChatToggle<cr>";
-      options.desc = "Copilot Chat Toggle";
-    }
-    {
-      mode = "v";
-      key = "<Leader>ce";
-      action = "<cmd>CopilotChatExplain<cr>";
-      options.desc = "Copilot Explain";
-    }
-    {
-      mode = "v";
-      key = "<Leader>cf";
-      action = "<cmd>CopilotChatFix<cr>";
-      options.desc = "Copilot Fix";
-    }
-    {
-      mode = "v";
-      key = "<Leader>cr";
-      action = "<cmd>CopilotChatReview<cr>";
-      options.desc = "Copilot Review";
-    }
-    {
-      mode = "v";
-      key = "<Leader>cd";
-      action = "<cmd>CopilotChatDocs<cr>";
-      options.desc = "Copilot Docs";
-    }
-    {
-      mode = "n";
-      key = "<Leader>cp";
+      key = "<Leader>ct";
       action.__raw = ''
         function()
-          local actions = require("CopilotChat.actions")
-          require("CopilotChat.integrations.snacks").pick(actions.prompt_actions())
+          local on = not vim.lsp.is_enabled("copilot")
+          vim.lsp.enable("copilot", on)
+          vim.notify("Copilot " .. (on and "enabled" or "disabled"))
         end
       '';
-      options.desc = "Copilot Prompt actions";
+      options.desc = "Copilot Toggle (NES)";
+    }
+    {
+      mode = "n";
+      key = "<Leader>cs";
+      action.__raw = ''
+        function()
+          vim.lsp.inline_completion.enable(not vim.lsp.inline_completion.is_enabled())
+        end
+      '';
+      options.desc = "Copilot Toggle ghost text";
+    }
+    {
+      mode = "i";
+      key = "<M-l>";
+      action.__raw = "vim.lsp.inline_completion.get";
+      options.desc = "Copilot Accept ghost text";
+    }
+    # Falls through to the builtin <C-i> (jumplist forward) when no suggestion
+    # is pending, since nixvim keymaps are noremap by default.
+    {
+      mode = "n";
+      key = "<Tab>";
+      action.__raw = ''
+        function()
+          if not require("sidekick").nes_jump_or_apply() then
+            return "<Tab>"
+          end
+        end
+      '';
+      options = {
+        desc = "Copilot Goto/Apply next edit suggestion";
+        expr = true;
+      };
     }
 
     # ─ DAP ─
