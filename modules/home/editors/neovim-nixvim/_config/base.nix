@@ -77,19 +77,6 @@
 
   # ── Extra Lua config (for plugins without nixvim modules) ────────
   extraConfigLua = ''
-    -- CopilotChat setup
-    require("CopilotChat").setup({
-      window = {
-        layout = "float",
-        width = 0.8,
-        height = 0.8,
-        border = "rounded",
-      },
-      show_help = true,
-      question_header = "  User ",
-      answer_header = "  Copilot ",
-    })
-
     -- DAP UI auto open/close
     local dap, dapui = require("dap"), require("dapui")
     dap.listeners.after.event_initialized["dapui_config"] = function() dapui.open() end

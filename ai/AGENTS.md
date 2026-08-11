@@ -1,7 +1,6 @@
 ## General
 
-If your statement is not supported by any evidence, mark it as such.
-Avoid presenting assumptions as facts.
+If your statement is not supported by any evidence, mark it as such. Avoid presenting assumptions as facts.
 
 ## Code
 
@@ -13,10 +12,10 @@ Comments explain the code as it is now — the non-obvious _why_. Never write hi
 "changed from", "previously", "used to be", "now uses". Git holds history. If a comment only makes sense to someone who
 saw the old code, delete it.
 
-Before keeping a comment, delete the code it annotates from view and ask: does the comment add anything the
-identifiers, values, and types don't already say? If it just restates the line in English ("set X to true", "// import
-foo", `singleQuote: true // use single quotes`), cut it. A comment earns its place only by supplying context not visible
-in the code: a why, a constraint, a non-obvious consequence, a link.
+Before keeping a comment, delete the code it annotates from view and ask: does the comment add anything the identifiers,
+values, and types don't already say? If it just restates the line in English ("set X to true", "// import foo",
+`singleQuote: true // use single quotes`), cut it. A comment earns its place only by supplying context not visible in
+the code: a why, a constraint, a non-obvious consequence, a link.
 
 ## Pull requests
 
@@ -39,6 +38,13 @@ Default template (fill in only what's relevant, remove empty sections):
 
 Always use the `gh` CLI tool when interacting with GitHub (creating PRs, issues, checking status, etc.) rather than
 using the API directly or other methods.
+
+## Asking questions
+
+Never set the `preview` field on `AskUserQuestion` options. It switches the UI to a side-by-side layout where option
+labels are short and the descriptions are hidden, which is not enough context to choose confidently. Always use the
+plain form: every option carries both a `label` and a `description`. Code snippets, mockups, and comparisons belong in
+the message text instead.
 
 ## Tools
 

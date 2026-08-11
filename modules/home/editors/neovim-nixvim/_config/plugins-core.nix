@@ -257,12 +257,17 @@
       settings = {
         keymap = {
           preset = "default";
+          # select_and_accept takes the first item when nothing is selected, so
+          # Tab accepts without pre-selecting; snippet_forward keeps the
+          # placeholder jumping the default preset put on Tab.
+          # Item navigation stays on <C-n>/<C-p> and <Down>/<Up>.
           "<Tab>" = [
-            "select_next"
+            "select_and_accept"
+            "snippet_forward"
             "fallback"
           ];
           "<S-Tab>" = [
-            "select_prev"
+            "snippet_backward"
             "fallback"
           ];
           "<CR>" = [
