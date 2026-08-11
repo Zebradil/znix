@@ -68,3 +68,26 @@ pin.
 - A workaround is removed only when it builds on **all** the systems it claims.
   Partial fixes keep the workaround and produce no PR, rather than a red one.
 - `nix flake check` warns about the unknown `workaroundProbes` output. Harmless.
+
+## Amendment: probes leave one out
+
+"Vanilla nixpkgs, no overlays" was too blunt, and `mise` showed why. It carried
+two independent workarounds — `doCheck = false` for a test that fails on Darwin,
+and a pin — but only the pin was declared as one; the other sat in
+`modules/home/mise.nix` as an `overrideAttrs` on `programs.mise.package`. The
+probe therefore built a package no host builds: plain `mise`, which hydra had
+already cached, so the probe "succeeded" without compiling anything and opened a
+removal PR that CI immediately failed.
+
+A probe now builds its package with every **other** workaround still applied,
+and drops only its own. For a package with one workaround that is the vanilla
+build as before; for `mise` it asks the two questions that actually matter —
+does the Darwin test pass yet, and has nixpkgs moved cmake out of
+`nativeCheckInputs`. Several workarounds may therefore target one package
+(`package` names the attribute, the entry name stays unique), and they compose
+in a fixed order: the pin picks the base, overrides fold on top in name order.
+
+The corollary is a rule: a package modification that is temporary belongs in
+`modules/flake/workarounds/`, never inline in the module that consumes it. An
+inline override is invisible to the probe, and it makes the probe lie about the
+workarounds that *are* declared.

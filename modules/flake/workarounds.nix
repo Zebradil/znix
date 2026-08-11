@@ -50,19 +50,36 @@ let
     else
       throw "workaround ${name}: needs either `pin` or `override`";
 
-  resolve =
-    prev: name: w:
-    if kindOf name w == "pin" then
-      (import inputs.${w.pin} {
-        system = prev.stdenv.hostPlatform.system;
-        config = userIntentConfig prev.config;
-      }).${w.package}
-    else
-      prev.${w.package}.overrideAttrs (w.override prev);
+  workaroundsFor = ws: package: lib.filterAttrs (_: w: w.package == package) ws;
+  packagesIn = ws: lib.unique (map (w: w.package) (lib.attrValues ws));
+  applicableOn = system: lib.filterAttrs (_: appliesTo system) workarounds;
 
-  # Probes deliberately build vanilla nixpkgs with no overlays: the question they
-  # answer is "does upstream work on its own yet?". allowUnfree is required or
-  # unfree probes fail on the licence check, which is indistinguishable from the
+  # One package can carry several workarounds — mise needs one to skip a test
+  # that fails on Darwin, and another to put back the cmake that skipping drags
+  # out of nativeCheckInputs. They stack in a fixed order: the pin chooses the
+  # base package, then every override folds on top in name order. Each still
+  # dies on its own probe.
+  apply =
+    pkgs: package: ws:
+    let
+      pins = lib.filterAttrs (name: w: kindOf name w == "pin") ws;
+      overrides = lib.filterAttrs (name: w: kindOf name w == "override") ws;
+      base =
+        if pins == { } then
+          pkgs.${package}
+        else if lib.length (lib.attrNames pins) > 1 then
+          throw "package ${package}: pinned by ${lib.concatStringsSep " and " (lib.attrNames pins)}, but a package takes at most one pin"
+        else
+          (import inputs.${(lib.head (lib.attrValues pins)).pin} {
+            inherit (pkgs.stdenv.hostPlatform) system;
+            config = userIntentConfig pkgs.config;
+          }).${package};
+    in
+    lib.foldl' (pkg: w: pkg.overrideAttrs (w.override pkgs)) base (lib.attrValues overrides);
+
+  # Probes build from vanilla nixpkgs with no overlays: the question they answer
+  # is "does upstream work on its own yet?". allowUnfree is required or unfree
+  # probes fail on the licence check, which is indistinguishable from the
   # workaround still being needed.
   vanilla =
     system:
@@ -76,8 +93,8 @@ in
     description = ''
       Temporary replacements for packages broken in nixpkgs, one entry per file
       under modules/flake/workarounds/. Every entry is expected to die: the
-      weekly probe builds the vanilla package and opens a removal PR once
-      upstream builds it unaided. See docs/workarounds.md.
+      weekly probe rebuilds the package without it and opens a removal PR once
+      upstream no longer needs the help. See docs/workarounds.md.
     '';
     default = { };
     type = lib.types.attrsOf (
@@ -128,18 +145,22 @@ in
   config.flake = {
     overlays.workarounds =
       _final: prev:
-      lib.mapAttrs' (name: w: lib.nameValuePair w.package (resolve prev name w)) (
-        lib.filterAttrs (_: appliesTo prev.stdenv.hostPlatform.system) workarounds
-      );
+      let
+        ws = applicableOn prev.stdenv.hostPlatform.system;
+      in
+      lib.genAttrs (packagesIn ws) (package: apply prev package (workaroundsFor ws package));
 
+    # Leave-one-out: every *other* workaround on the package stays applied, so a
+    # probe asks "is this one still pulling its weight?" rather than "is vanilla
+    # nixpkgs fine?". The two answers differ whenever a package carries more than
+    # one workaround, and only the first is the question worth asking.
     workaroundProbes = lib.genAttrs probeSystems (
       system:
       let
         pkgs = vanilla system;
+        ws = applicableOn system;
       in
-      lib.mapAttrs' (name: w: lib.nameValuePair name pkgs.${w.package}) (
-        lib.filterAttrs (_: appliesTo system) workarounds
-      )
+      lib.mapAttrs (name: w: apply pkgs w.package (removeAttrs (workaroundsFor ws w.package) [ name ])) ws
     );
 
     # Plain data for CI: the probe matrix and what a removal PR has to delete.
