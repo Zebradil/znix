@@ -121,7 +121,7 @@ function pr_body() {
 }
 
 function propose_removal() {
-	local name="${1:?}" branch="${2:?}" file="${3:?}" reason="${4:?}" base="${5:?}"
+	local name="${1:?}" branch="${2:?}" file="${3:?}" reason="${4:?}" base="${5:?}" pr="${6:-}"
 
 	git switch --quiet --force-create "$branch" "$base"
 
@@ -138,12 +138,19 @@ function propose_removal() {
 	# One workaround failing to reach GitHub (org PR policy, rate limit) must not
 	# strand the others, so this returns 0. A branch pushed without its PR is
 	# retried next week: the open-PR lookup finds nothing and force-pushes again.
+	#
+	# The branch is rebuilt on the current base every week even when its PR is
+	# already open: the removal is only meaningful against today's nixpkgs, and a
+	# PR left sitting on a stale base tests a lock nobody will merge.
 	if ! {
 		git push --quiet --force origin "$branch" &&
-			gh pr create \
-				--title "chore: drop the ${name} workaround" \
-				--head "$branch" \
-				--body "$(pr_body "$name" "$file" "$reason")"
+			{
+				[[ -n "$pr" ]] ||
+					gh pr create \
+						--title "chore: drop the ${name} workaround" \
+						--head "$branch" \
+						--body "$(pr_body "$name" "$file" "$reason")"
+			}
 	}; then
 		echo "::warning::workaround-probe: could not open the removal PR for '$name', skipping"
 		git switch --quiet --force "$base"
@@ -165,13 +172,13 @@ for name in $(jq -r 'keys[]' <<<"$registry"); do
 	pr=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')
 
 	if is_fixed "$name" "$registry"; then
+		propose_removal "$name" "$branch" \
+			"$(jq -r --arg n "$name" '.[$n].file' <<<"$registry")" \
+			"$(jq -r --arg n "$name" '.[$n].reason' <<<"$registry")" \
+			"$base" "$pr"
 		if [[ -n "$pr" ]]; then
-			echo "workaround-probe: '$name' already has PR #${pr}, leaving it alone"
+			echo "::notice::workaround-probe: rebased the removal PR #${pr} for '$name' onto ${base}"
 		else
-			propose_removal "$name" "$branch" \
-				"$(jq -r --arg n "$name" '.[$n].file' <<<"$registry")" \
-				"$(jq -r --arg n "$name" '.[$n].reason' <<<"$registry")" \
-				"$base"
 			echo "::notice::workaround-probe: opened a removal PR for '$name'"
 		fi
 	elif [[ -n "$pr" ]]; then
