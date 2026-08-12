@@ -54,14 +54,15 @@ let
     }
   '';
 
-  stdinLib = "${pkgs.anyrun}/lib/libstdin.so";
+  anyrun-pick = import ./_anyrun-pick.nix { inherit pkgs; };
+
   wifi-picker = pkgs.writeShellApplication {
     name = "wifi-picker";
-    runtimeInputs = with pkgs; [
-      anyrun
-      gawk
-      libnotify
-      networkmanager
+    runtimeInputs = [
+      anyrun-pick
+      pkgs.gawk
+      pkgs.libnotify
+      pkgs.networkmanager
     ];
     text = ''
       networks=$(nmcli -t -f SSID,SIGNAL,SECURITY device wifi list --rescan yes 2>/dev/null \
@@ -77,7 +78,7 @@ let
         exit 1
       fi
 
-      chosen=$(printf '%s\n' "$networks" | anyrun --plugins "${stdinLib}" --show-results-immediately true)
+      chosen=$(printf '%s\n' "$networks" | anyrun-pick)
       [[ -z "$chosen" ]] && exit 0
 
       ssid="''${chosen%% (*}"
@@ -87,19 +88,22 @@ let
 
   perf-picker = pkgs.writeShellApplication {
     name = "perf-picker";
-    runtimeInputs = with pkgs; [
-      anyrun
-      libnotify
-      power-profiles-daemon
-      gnused
+    runtimeInputs = [
+      anyrun-pick
+      pkgs.libnotify
+      pkgs.power-profiles-daemon
+      pkgs.gnused
     ];
     text = ''
+      # The sed capture keeps powerprofilesctl's two-character active marker
+      # ("* " or "  ") so the picker shows it; strip it back off before use.
       chosen=$(powerprofilesctl list \
         | sed -nE 's/^([* ]{2}[a-z-]+):$/\1/p' \
-        | anyrun --plugins "${stdinLib}" --show-results-immediately true)
+        | anyrun-pick)
       [[ -z "$chosen" ]] && exit 0
-      powerprofilesctl set "$chosen"
-      notify-send "Performance" "Profile: $chosen"
+      profile="''${chosen:2}"
+      powerprofilesctl set "$profile"
+      notify-send "Performance" "Profile: $profile"
     '';
   };
 in

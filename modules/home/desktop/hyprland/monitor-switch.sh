@@ -245,21 +245,22 @@ elif [[ "${1:-}" == "--pick" || $# -eq 0 ]]; then
   has_external=false
   [[ -n $external ]] && has_external=true
 
+  active_marker="* "
   options=()
   for preset in single external-only extended mirror; do
     if ! $has_external && [[ $preset != "single" ]]; then
       continue
     fi
     if [[ $active == "$preset" ]]; then
-      options+=("* $preset")
+      options+=("$active_marker$preset")
     else
       options+=("$preset")
     fi
   done
 
-  stdin_lib="$(dirname "$(command -v anyrun)")/../lib/libstdin.so"
-  chosen=$(printf '%s\n' "${options[@]}" | anyrun --plugins "$stdin_lib" --show-results-immediately true)
+  chosen=$(printf '%s\n' "${options[@]}" | anyrun-pick)
   [[ -z $chosen ]] && exit 0
+  chosen=${chosen#"$active_marker"}
   apply_preset "$chosen"
   save_state "$chosen" "manual"
 elif [[ "${1:-}" == "--reconcile" ]]; then

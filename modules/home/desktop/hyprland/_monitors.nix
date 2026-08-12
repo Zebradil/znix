@@ -1,12 +1,14 @@
-{ lib, pkgs, ... }:
+{ pkgs, ... }:
 let
+  anyrun-pick = import ./_anyrun-pick.nix { inherit pkgs; };
+
   monitor-switch = pkgs.writeShellApplication {
     name = "monitor-switch";
-    runtimeInputs = with pkgs; [
-      anyrun
-      hyprland
-      jq
-      libnotify
+    runtimeInputs = [
+      anyrun-pick
+      pkgs.hyprland
+      pkgs.jq
+      pkgs.libnotify
     ];
     text = builtins.readFile ./monitor-switch.sh;
   };
