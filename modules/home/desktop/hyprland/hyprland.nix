@@ -158,6 +158,8 @@
               "$mod SHIFT, F, togglefloating"
               "$mod SHIFT CTRL, L, exec, hypr-exec loginctl lock-session"
 
+              "$mod, E, exec, hypr-exec $terminal -e yazi"
+
               # Focus movement
               "$mod, l, movefocus, l"
               "$mod, h, movefocus, r"
