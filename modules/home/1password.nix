@@ -41,11 +41,17 @@ _: {
               signByDefault = true;
               # On darwin _1password-gui ships op-ssh-sign inside the .app
               # bundle, not in $out/bin, so getExe' produces a dead path.
+              #
+              # On nixos, go through system PATH instead of pkgs._1password-gui:
+              # programs._1password-gui patches the polkit policy with
+              # polkitPolicyOwners, so the system package is a different
+              # derivation than the plain one. Referencing pkgs here would pull a
+              # second ~540 MB copy into the home closure.
               signer =
                 if isDarwin then
                   "${pkgs._1password-gui}/Applications/1Password.app/Contents/MacOS/op-ssh-sign"
                 else
-                  "${lib.getExe' pkgs._1password-gui "op-ssh-sign"}";
+                  "/run/current-system/sw/bin/op-ssh-sign";
             };
             settings."gpg.ssh".allowedSignersFile = toString allowedSignersFile;
           };
