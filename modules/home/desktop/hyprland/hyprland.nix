@@ -152,7 +152,7 @@
             withCyrillic [
               "$mod, Space, exec, $menu"
 
-              "$mod SHIFT, F, fullscreen"
+              "$mod, F, fullscreen"
               "$mod SHIFT, Q, killactive"
 
               "$mod SHIFT, F, togglefloating"
