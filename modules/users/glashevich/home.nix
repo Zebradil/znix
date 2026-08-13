@@ -40,6 +40,18 @@ let
     cmd = ''JIRA_API_TOKEN=$(op read 'op://Employee/Jira API token/credential') jira issue list --jql 'project IS NOT EMPTY AND assignee = currentUser() AND updated >= "{{since}}"' --plain --no-headers --no-truncate --columns KEY,STATUS,SUMMARY'';
   };
 
+  # opencode keeps its own durable session history, so it needs no Stop hook —
+  # the standup window is just a query against its SQLite store. `parent_id is
+  # null` drops subagent sessions, the message floor drops throwaways, and
+  # -readonly makes a renamed db (the filename tracks the release channel) fail
+  # loudly instead of silently reporting zero sessions. `dirCmp` splits work
+  # from personal: "like" for the trv worklog, "not like" for the personal one.
+  mkOpencodeSource = dirCmp: {
+    name = "opencode sessions";
+    instruction = "Work done in opencode rather than Claude. May overlap the worklog or a PR above — merge, don't double-count.";
+    cmd = ''sqlite3 -readonly ~/.local/share/opencode/opencode-stable.db "select '- ' || title || ' — ' || directory from session where parent_id is null and time_created >= strftime('%s','{{since}}') * 1000 and directory ${dirCmp} '%/github.com/trivago/%' and (select count(*) from message where message.session_id = session.id) > 2 order by time_created;"'';
+  };
+
   mkCompanyProfile =
     { configDir, command }:
     {
@@ -48,7 +60,10 @@ let
       ponytail = true;
       worklog = true;
       worklogName = "trv"; # both company profiles share one worklog
-      worklogSources = mkGithubSources "org:trivago" ++ [ jiraSource ];
+      worklogSources = mkGithubSources "org:trivago" ++ [
+        jiraSource
+        (mkOpencodeSource "like")
+      ];
       inherit configDir command;
     };
 in
@@ -87,7 +102,7 @@ in
           profiles = {
             personal = self.lib.claude.mkPersonalProfile { } // {
               worklog = true;
-              worklogSources = mkGithubSources "-org:trivago";
+              worklogSources = mkGithubSources "-org:trivago" ++ [ (mkOpencodeSource "not like") ];
             };
 
             company = mkCompanyProfile {
