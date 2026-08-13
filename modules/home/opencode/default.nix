@@ -73,6 +73,7 @@ _: {
         plugin =
           lib.optional cavemanOn "./plugins/caveman/plugin.js"
           ++ lib.optional ponytailOn "./plugins/ponytail/ponytail.mjs";
+        permission.external_directory."/nix/store/**" = "allow";
       }
       // lib.optionalAttrs (lspServers != { }) { lsp = lib.mapAttrs (_: mkOcLsp) lspServers; };
       ocSettingsFile = pkgs.writeText "opencode.json" (builtins.toJSON ocSettings);

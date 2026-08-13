@@ -82,7 +82,10 @@ let
             # znix-lsp @skills-dir plugin (see znix.lsp.servers), not a marketplace.
             env.ENABLE_LSP_TOOL = "1";
             model = "opusplan";
-            permissions.defaultMode = "auto";
+            permissions = {
+              defaultMode = "auto";
+              additionalDirectories = [ "/nix/store" ];
+            };
             remoteControlAtStartup = true;
             tui = "fullscreen";
             verbose = true;
