@@ -1,6 +1,27 @@
 _: {
   flake.modules.homeManager.cli-tools =
     { pkgs, ... }:
+    let
+      ghRenovateTriage = pkgs.writeShellApplication {
+        name = "gh-renovate-triage";
+        runtimeInputs = with pkgs; [
+          coreutils
+          gh
+          gnugrep
+          jq
+        ];
+        text = builtins.readFile ./cli-tools/gh-renovate-triage;
+      };
+      ghPrUnresolvedComments = pkgs.writeShellApplication {
+        name = "gh-pr-unresolved-comments";
+        runtimeInputs = with pkgs; [
+          coreutils
+          gh
+          jq
+        ];
+        text = builtins.readFile ./cli-tools/gh-pr-unresolved-comments;
+      };
+    in
     {
       home.packages = with pkgs; [
         # Desktop apps
@@ -23,6 +44,8 @@ _: {
         translate-shell
 
         # CLI tools
+        ghRenovateTriage
+        ghPrUnresolvedComments
         bashInteractive
         comma
         coreutils

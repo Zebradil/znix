@@ -20,35 +20,12 @@
       pluginDir = ".config/opencode/plugins/caveman";
       ocPluginSrc = "${cavemanSrc}/src/plugins/opencode";
 
-      # Same frontmatter strip as opencode/default.nix — cavecrew agents target
-      # Claude's `tools: [array]` schema, which opencode rejects.
-      mkOpencodeMd =
-        src:
-        let
-          name = builtins.unsafeDiscardStringContext (baseNameOf src);
-          # Copy just this file into the store so the transform depends on its
-          # content alone, not the whole flake source (inputs.self) it lives under.
-          file = builtins.path {
-            path = src;
-            inherit name;
-          };
-        in
-        pkgs.runCommand "oc-${name}" { } ''
-          ${pkgs.gnused}/bin/sed -E '/^(tools|model|allowed-tools):/d' ${file} > $out
-        '';
-
       # Symlink every entry of a source dir under a relative dest dir.
       mkSymlinkEntries =
         relBase: srcDir:
         lib.mapAttrs' (name: _: lib.nameValuePair "${relBase}/${name}" { source = "${srcDir}/${name}"; }) (
           builtins.readDir srcDir
         );
-
-      cavecrewAgents = [
-        "cavecrew-investigator.md"
-        "cavecrew-builder.md"
-        "cavecrew-reviewer.md"
-      ];
 
       # Compose global instructions + the always-on caveman ruleset so both load.
       agentsMd = pkgs.writeText "opencode-AGENTS.md" (
@@ -76,17 +53,7 @@
         # 3. Caveman skills (auto-discovered SKILL.md).
         (mkSymlinkEntries ".config/opencode/skills" "${cavemanSrc}/skills")
 
-        # 4. Cavecrew subagents, tools-stripped for opencode's schema.
-        (lib.listToAttrs (
-          map (
-            f:
-            lib.nameValuePair ".config/opencode/agents/${f}" {
-              source = mkOpencodeMd (cavemanSrc + "/agents/${f}");
-            }
-          ) cavecrewAgents
-        ))
-
-        # 5. Global instructions + caveman ruleset (default.nix yields AGENTS.md
+        # 4. Global instructions + caveman ruleset (default.nix yields AGENTS.md
         #    to this module whenever caveman is on, so no collision).
         {
           ".config/opencode/AGENTS.md".source = agentsMd;

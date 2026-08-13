@@ -401,11 +401,14 @@ in
           in
           lib.foldl' (acc: root: acc // mkRoot root) { } extraSkillRoots;
 
-        # Package every file in scripts/ as a standalone executable on PATH.
+        # Package Claude-specific scripts as standalone executables on PATH.
         helperScripts =
           let
             dir = ./scripts;
-            entries = builtins.readDir dir;
+            entries = builtins.removeAttrs (builtins.readDir dir) [
+              "gh-renovate-triage"
+              "gh-pr-unresolved-comments"
+            ];
           in
           lib.mapAttrsToList (
             name: _type: pkgs.writeShellScriptBin name (builtins.readFile "${dir}/${name}")

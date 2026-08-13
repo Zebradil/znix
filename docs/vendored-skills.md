@@ -1,7 +1,8 @@
 # Vendored AI Skills
 
 External agent skills ([mattpocock/skills](https://github.com/mattpocock/skills),
-[JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman)) are vendored
+[JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman),
+[DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail)) are vendored
 into the repo with [vendir](https://carvel.dev/vendir/) rather than pulled as
 flake inputs. The synced files are committed, so every upstream update lands as a
 reviewable diff instead of an opaque lock bump.
@@ -18,7 +19,9 @@ vendor/
   caveman/                 not just skills — also hooks/plugins/rules/commands
     src/{hooks,plugins,rules}/
     skills/<skill>/
-    commands/ agents/
+    commands/
+  ponytail/
+    hooks/ skills/ commands/ .opencode/ .cursor/
 ```
 
 ## How it wires in
@@ -26,19 +29,25 @@ vendor/
 `vendir.yml` strips the upstream `skills/` prefix (`newRootPath`) so each skill
 bundle lands directly under `engineering/` or `productivity/`. The
 `znix.claude.extraSkillRoots` option (in `modules/home/claude/default.nix`)
-defaults to those two directories. Both the Claude module (`mkExtraSkillFiles`)
-and the opencode module symlink every bundle into each profile's `skills/`,
-honouring per-profile `excludeAssets.skills`.
+defaults to those two directories. Claude, OpenCode, and Cursor symlink bundles
+into their native skill locations. Claude honours per-profile `excludeAssets.skills`.
 
 No `.nix` change is needed to add or drop a skill from an already-vendored
-source — `vendir sync` rewrites the tree and the modules pick it up.
+source — `vendir sync` rewrites the tree and the modules pick it up. Cursor
+excludes skills without compatible runtime support; see issue #113.
 
 `caveman` is consumed differently: `modules/home/{claude,opencode}/caveman.nix`
-reference `inputs.self + "/vendor/caveman/..."` directly (hooks, the opencode
-plugin, the activation ruleset and skills), not via `extraSkillRoots`.
+and `modules/home/cursor.nix` reference `inputs.self + "/vendor/caveman/..."`
+directly. Cursor uses its skills and static activation rule; its Claude/OpenCode
+hooks and Cavecrew assets are intentionally not deployed.
 
-`ponytail` (DietrichGebert/ponytail) mirrors that wiring in
-`modules/home/{claude,opencode}/ponytail.nix`, gated on `znix.claude.ponytail`.
+Cursor loads the local `znix` plugin from `~/.cursor/plugins/local/znix`; reload
+or restart Cursor after a Home Manager switch. The `agent` wrapper loads that
+same plugin for Cursor Agent CLI sessions.
+
+`ponytail` mirrors that wiring in `modules/home/{claude,opencode}/ponytail.nix`
+and `modules/home/cursor.nix`. Cursor uses upstream `.cursor/rules/ponytail.mdc`
+and skill bundles; Claude/OpenCode retain their native dynamic integrations.
 It targets minimal-code behaviour (orthogonal to caveman's terse prose), so both
 can run at once. Its Claude hooks register `SessionStart`, `UserPromptSubmit` and
 `SubagentStart` (see `mkPonytailHooks` in `claude/default.nix`), and the per-addon
@@ -70,9 +79,6 @@ Add a directory entry to `vendir.yml`. Use `includePaths` / `excludePaths` to
 select what to vendor and `newRootPath` to flatten, then point a consumer at it
 (e.g. extend `extraSkillRoots`). Example exclusions in the current config:
 
-- `skills/engineering/setup-matt-pocock-skills/**` — a meta-installer that
-  git-clones skills into `~/.claude`, incompatible with this declarative,
-  read-only-symlink setup.
 - `skills/**/README.md` — category docs, not skills.
 
 ## Verify
@@ -83,4 +89,5 @@ hmf=$(nix build '.#darwinConfigurations.<host>.config.home-manager.users.<user>.
   --no-link --print-out-paths)
 ls "$hmf/.config/personal-claude/skills"     # Claude
 ls "$hmf/.config/opencode/skills"            # opencode
+ls "$hmf/.cursor/skills"                     # Cursor
 ```

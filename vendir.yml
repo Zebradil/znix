@@ -22,7 +22,7 @@ directories:
 
   - path: vendor/caveman
     contents:
-      # caveman agent skill set + hooks/plugins from JuliusBrussee/caveman.
+      # Caveman skills + hooks/plugins from JuliusBrussee/caveman.
       # Consumed by modules/home/{claude,opencode}/caveman.nix via
       # inputs.self + "/vendor/caveman/...". Only the subtrees those modules
       # read are vendored. Update with `vendir sync`; synced files are
@@ -31,22 +31,10 @@ directories:
         git:
           url: https://github.com/JuliusBrussee/caveman
           ref: origin/main
-        includePaths:
-          - src/hooks/**
-          - src/plugins/**
-          - src/rules/**
-          - skills/**
-          - commands/**
-          - agents/**
-        excludePaths:
-          # Self-installers (`curl … | bash`, fetch hooks from GitHub at
-          # runtime). The claude module symlinks all of src/hooks into the
-          # profile, so these would land there inert but misleading. The nix
-          # config never runs them — only the .js hooks + caveman-statusline.sh.
-          - src/hooks/install.*
-          - src/hooks/uninstall.*
-          - src/hooks/checksums.sha256
-          - src/hooks/README.md
+        includePaths: [ src/hooks/**, src/plugins/**, src/rules/**, skills/**, commands/** ]
+        # Self-installers (`curl … | bash`, fetch hooks from GitHub at runtime)
+        # stay out. Cavecrew is no longer deployed by any harness.
+        excludePaths: [ src/hooks/install.*, src/hooks/uninstall.*, src/hooks/checksums.sha256, src/hooks/README.md, skills/cavecrew/** ]
 
   - path: vendor/ponytail
     contents:
@@ -60,15 +48,6 @@ directories:
         git:
           url: https://github.com/DietrichGebert/ponytail
           ref: origin/main
-        includePaths:
-          - hooks/**
-          - skills/**
-          - commands/**
-          - .opencode/**
-        excludePaths:
-          # Windows-only statusline; this config is darwin/nixos.
-          - hooks/*.ps1
-          # Host hook-registration manifests — the nix module writes the Claude
-          # hook config itself, so these would land inert but misleading.
-          - hooks/claude-codex-hooks.json
-          - hooks/copilot-hooks.json
+        includePaths: [ hooks/**, skills/**, commands/**, .opencode/**, .cursor/** ]
+        # Windows-only statusline and host hook-registration manifests are inert.
+        excludePaths: [ hooks/*.ps1, hooks/claude-codex-hooks.json, hooks/copilot-hooks.json ]

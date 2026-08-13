@@ -12,10 +12,11 @@ This is a unified Nix configuration using the **dendritic pattern** with flake-p
 ### Shared AI agent assets (`ai/`)
 
 The tool-agnostic agent asset tree lives at the repo root in `ai/` (`AGENTS.md`, `skills/`, `agents/`, `commands/`,
-`statusline-command.sh`) — it is **not** owned by any single tool's module. Both the Claude and opencode home modules
-consume it via the `znix.claude.assetsRoot` option, which defaults to `inputs.self + "/ai"`. `AGENTS.md` is the global
-instructions file: the Claude module symlinks it to each profile's `CLAUDE.md`; opencode reads it as `AGENTS.md`.
-Vendored skills wire in separately via `znix.claude.extraSkillRoots` (see `docs/vendored-skills.md`).
+`statusline-command.sh`) — it is **not** owned by any single tool's module. Claude, OpenCode, and Cursor consume it via
+the `znix.claude.assetsRoot` option, which defaults to `inputs.self + "/ai"`. `AGENTS.md` is the global instructions
+file: Claude symlinks it to each profile's `CLAUDE.md`; OpenCode reads it as `AGENTS.md`; Cursor renders it as an
+always-on local-plugin rule. Vendored skills wire in separately via `znix.claude.extraSkillRoots` (see
+`docs/vendored-skills.md`).
 
 ## Key Patterns
 
@@ -70,7 +71,7 @@ weekly probe opens the removal PR once upstream is fixed. See `docs/workarounds.
 ### Claude Code profiles & marketplace independence
 
 This repo runs three Claude Code profiles: `personal`, plus the company `trv-claude` / `trv-claude-key` on host
-`trv4250` (see `modules/hosts/trv4250/claude.nix`). The company profiles **cannot use the official
+`trv4250` (see `modules/users/glashevich/home.nix`). The company profiles **cannot use the official
 `claude-plugins-official` marketplace** — they are restricted to an internal marketplace with a limited plugin set.
 
 So any Claude Code feature that depends on a marketplace must be provided in a **marketplace-independent** way, or it

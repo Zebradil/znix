@@ -68,12 +68,14 @@ in
       };
 
       znix = {
+        aiBudget.enable = true;
         kube.homelab.enable = true;
         jira = {
           enable = true;
           server = "https://trivago.atlassian.net";
           login = "german.lashevich@trivago.com";
         };
+        cursor.enable = true;
         claude = {
           caveman.enable = true;
           ponytail.enable = true;
