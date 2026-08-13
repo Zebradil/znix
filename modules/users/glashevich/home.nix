@@ -30,11 +30,14 @@ let
   ];
 
   # Company-only. Token pulled at call time via op read (never on disk); jira-cli
-  # config (server, login) comes from the znix.jira module.
+  # config (server, login) comes from the znix.jira module. The JQL must open
+  # with `project IS NOT EMPTY`: jira-cli AND-prepends `project="<config key>"`
+  # to every query, and the key is empty here, so an unguarded JQL matches
+  # nothing at all.
   jiraSource = {
     name = "Jira";
     instruction = "Assigned tickets you moved this period — can back the topics above.";
-    cmd = ''JIRA_API_TOKEN=$(op read 'op://Employee/Jira API token/credential') jira issue list --jql 'assignee = currentUser() AND updated >= "{{since}}"' --plain --no-headers --no-truncate --columns KEY,STATUS,SUMMARY'';
+    cmd = ''JIRA_API_TOKEN=$(op read 'op://Employee/Jira API token/credential') jira issue list --jql 'project IS NOT EMPTY AND assignee = currentUser() AND updated >= "{{since}}"' --plain --no-headers --no-truncate --columns KEY,STATUS,SUMMARY'';
   };
 
   mkCompanyProfile =

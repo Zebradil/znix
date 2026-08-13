@@ -34,8 +34,10 @@ _: {
         home.packages = [ pkgs.jira-cli-go ];
 
         # jira-cli reads $XDG_CONFIG_HOME/.jira/.config.yml (falls back to
-        # ~/.config, incl. on macOS). project/board are omitted on purpose:
-        # standup passes an explicit --jql, which needs neither.
+        # ~/.config, incl. on macOS). project/board are omitted on purpose —
+        # queries here span all projects. Note jira-cli still AND-prepends
+        # `project="<config key>"` to every query, so a caller passing --jql
+        # must open it with `project IS NOT EMPTY` or match nothing.
         xdg.configFile.".jira/.config.yml".source = yaml.generate "jira-config.yml" {
           installation = "Cloud";
           server = cfg.server;
