@@ -139,7 +139,8 @@ for n in $targets; do
       if $dry_run; then
         greens+=("$n	$title	would-merge")
       else
-        greens+=("$n	$title	$(merge_green "$n")")
+        if outcome=$(merge_green "$n"); then :; fi
+        greens+=("$n	$title	$outcome")
       fi ;;
     red\ *)   reds+=("$n	$title	${r#red }") ;;
     skip\ *)  skips+=("$n	$title	${r#skip }") ;;
