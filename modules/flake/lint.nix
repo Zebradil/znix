@@ -10,6 +10,7 @@
               pkgs.actionlint
               pkgs.shellcheck
               pkgs.jq
+              pkgs.python3
             ];
           }
           ''
@@ -25,6 +26,9 @@
             done
 
             bash ${inputs.self}/assets/bin/kubectl-inventory --self-test
+            # Fixtures for both transcript stores: the tripwire for the next
+            # Claude Code log change or opencode database migration.
+            python3 ${inputs.self}/modules/home/session-export/session-export.py --selftest
             bash ${inputs.self}/.github/scripts/workaround-matrix.sh --self-test
             bash ${inputs.self}/.github/scripts/workaround-propose.sh --self-test
             touch $out
