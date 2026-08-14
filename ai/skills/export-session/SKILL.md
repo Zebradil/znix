@@ -15,11 +15,15 @@ transcripts or opencode's SQLite database. Session metadata (title, model, tool 
 ```bash
 session-export                      # fzf picker over this project's sessions, both tools
 session-export <session-id|path>    # a specific session; the source follows from the id
-session-export --list               # tool / id / time / size / title for this project
+session-export --list               # profile / id / time / size / title for this project
 ```
 
 Sessions are scoped to the current directory. A session id is enough to identify the source — opencode ids start with
 `ses_`, Claude ids are UUIDs — so no flag selects the tool.
+
+Every Claude profile on the machine is searched, not just the running one: each profile is its own config dir
+(`~/.config/personal-claude`, `~/.config/trv-claude`, …) and `CLAUDE_CONFIG_DIR` names only the active one, so the
+first column shows which profile a session belongs to.
 
 ## Which mode
 

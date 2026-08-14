@@ -72,13 +72,24 @@ def opencode_ref(db, session_id):
 
 
 def project_roots():
-    """Config roots to search, in precedence order."""
+    """Every Claude config dir on this machine, not just the active one.
+
+    A profile is just a config dir (`~/.config/personal-claude`, `trv-claude`,
+    …), and `CLAUDE_CONFIG_DIR` names only whichever one is running. Outside a
+    session it is unset, so relying on it alone hides every profile's history.
+    """
     roots = []
     env = os.environ.get("CLAUDE_CONFIG_DIR")
     if env:
         roots.append(Path(env) / "projects")
     roots.append(Path.home() / ".claude" / "projects")
-    return [r for r in roots if r.is_dir()]
+    roots += sorted((Path.home() / ".config").glob("*claude*/projects"))
+    return [r for r in dict.fromkeys(roots) if r.is_dir()]
+
+
+def profile_name(path):
+    """Which profile a transcript belongs to: <config-dir>/projects/<project>/x.jsonl."""
+    return path.parent.parent.parent.name.lstrip(".") or "claude"
 
 
 def mangle(path):
@@ -90,19 +101,16 @@ def mangle(path):
     return re.sub(r"[^A-Za-z0-9]", "-", str(path))
 
 
-def project_dir_for_cwd():
+def project_dirs_for_cwd():
+    """One per profile that has seen this directory — all of them, not the first."""
     mangled = mangle(Path.cwd())
-    for root in project_roots():
-        candidate = root / mangled
-        if candidate.is_dir():
-            return candidate
-    return None
+    return [root / mangled for root in project_roots() if (root / mangled).is_dir()]
 
 
 def session_files(scope=None):
     dirs = (
-        [scope]
-        if scope
+        scope
+        if scope is not None
         else [d for r in project_roots() for d in r.iterdir() if d.is_dir()]
     )
     files = [f for d in dirs for f in d.glob("*.jsonl")]
@@ -148,13 +156,14 @@ def rows(scoped):
     """Both tools' sessions as picker rows, newest first."""
     found = []
 
-    scope = project_dir_for_cwd() if scoped else None
+    scope = project_dirs_for_cwd() if scoped else None
     if scope or not scoped:
         for path in session_files(scope):
             sid, when, size, title = summarize(path)
             found.append(
                 {
                     "tool": "claude",
+                    "label": profile_name(path),
                     "id": sid,
                     "when": when,
                     "size": size,
@@ -176,6 +185,7 @@ def rows(scoped):
                 found.append(
                     {
                         "tool": "opencode",
+                        "label": "opencode",
                         "id": row["id"],
                         "when": datetime.fromtimestamp(
                             row["time_updated"] / 1000
@@ -222,7 +232,7 @@ def resolve(arg):
 def list_sessions():
     for row in scoped_rows():
         print(
-            f"{row['tool']:8}  {row['id'][:12]}  {row['when']}  {row['size']:>6}  {row['title']}"
+            f"{row['label']:15}  {row['id'][:12]}  {row['when']}  {row['size']:>6}  {row['title']}"
         )
 
 
@@ -233,7 +243,7 @@ def pick():
         )
     found = scoped_rows()
     lines = [
-        f"{i}\t{row['tool']:8}  {row['when']}  {row['size']:>6}  {row['title']}"
+        f"{i}\t{row['label']:15}  {row['when']}  {row['size']:>6}  {row['title']}"
         for i, row in enumerate(found)
     ]
     chosen = subprocess.run(
@@ -299,6 +309,7 @@ def build_meta(records, path):
             (r["sessionId"] for r in records if r.get("sessionId")), None
         ),
         "path": str(path),
+        "profile": profile_name(path),
         "started": stamps[0] if stamps else None,
         "ended": stamps[-1] if stamps else None,
         "cwd": next((r["cwd"] for r in records if r.get("cwd")), None),
@@ -859,7 +870,7 @@ def render_header(meta, style):
             ("Effort", compact(meta["efforts"])),
             (
                 "Client",
-                f"Claude Code {compact(meta['client_version'])} · mode {compact(meta['modes'])} · permissions {compact(meta['permission_modes'])}",
+                f"Claude Code {compact(meta['client_version'])} · profile {meta['profile']} · mode {compact(meta['modes'])} · permissions {compact(meta['permission_modes'])}",
             ),
             (
                 "Tokens",
@@ -1447,6 +1458,10 @@ def selftest_opencode(tmp):
 
 def selftest():
     assert mangle("/Users/x/code/github.com/o/a_b") == "-Users-x-code-github-com-o-a-b"
+    assert profile_name(Path("/h/.config/trv-claude/projects/-a-b/s.jsonl")) == (
+        "trv-claude"
+    )
+    assert profile_name(Path("/h/.claude/projects/-a-b/s.jsonl")) == "claude"
     with tempfile.TemporaryDirectory() as tmp:
         selftest_claude(tmp)
         selftest_opencode(tmp)
