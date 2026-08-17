@@ -2,18 +2,18 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'Merge pull request #788 from mattpocock/grill-me-align...'
-      sha: 84fdeffd12f2ee307994d1eb6feb48173b6e0502
+      commitTitle: 'Merge pull request #891 from mattpocock/remove-single-writer-section-grill-with-docs...'
+      sha: 9c9f36ccd3995266cd675468af71639c8dde1ec5
       tags:
-      - v1.2.3-2-g84fdeff
+      - v1.2.3-21-g9c9f36c
     path: .
   path: vendor/mattpocock-skills
 - contents:
   - git:
-      commitTitle: Update README.md with Skills.sh badge (#338)
-      sha: 309834233183478e6fd7800d26e1fbaa6210274e
+      commitTitle: Merge remote-tracking branch 'origin/main' into optimized
+      sha: 766dce6b1394ebb56a3090748d5a0240a5aefb36
       tags:
-      - v1.10.0-5-g3098342
+      - cli-v1.2.0-2-g766dce6
     path: .
   path: vendor/caveman
 - contents:
