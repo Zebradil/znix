@@ -17,6 +17,15 @@
       "description": "Automerge all updates",
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true
+    },
+    {
+      "description": "Vendored sources land as committed trees in vendor/ and feed the agent harnesses — always review the diff",
+      "matchManagers": ["vendir"],
+      "automerge": false
     }
-  ]
+  ],
+  "vendir": {
+    "description": "Tags in vendir.yml are tracked per source, so a whole-lockfile refresh would only re-open the all-at-once PR",
+    "lockFileMaintenance": { "enabled": false }
+  }
 }

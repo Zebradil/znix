@@ -1,17 +1,20 @@
 apiVersion: vendir.k14s.io/v1alpha1
 kind: Config
+# Every source pins an upstream tag so Renovate's vendir manager can track it as
+# a real dependency and open one PR per source. A floating ref would leave
+# lockFileMaintenance as the only update path, which refreshes all sources at
+# once (one unreviewable PR). Bumps are never automerged — see renovate.json.
+# After editing a ref by hand, run `vendir sync` and commit the synced tree.
 directories:
   - path: vendor/mattpocock-skills
     contents:
       # Engineering + productivity skill sets from mattpocock/skills.
       # newRootPath strips the leading "skills/" so the tree lands as
       # vendor/mattpocock-skills/{engineering,productivity}/<skill>/.
-      # Update with `vendir sync` (re-resolves ref, rewrites vendir.lock.yml);
-      # the synced files are committed, so every update is a reviewable diff.
       - path: .
         git:
           url: https://github.com/mattpocock/skills
-          ref: origin/main
+          ref: v1.2.3
         includePaths:
           - skills/engineering/**
           - skills/productivity/**
@@ -25,12 +28,11 @@ directories:
       # Caveman skills + hooks/plugins from JuliusBrussee/caveman.
       # Consumed by modules/home/{claude,opencode}/caveman.nix via
       # inputs.self + "/vendor/caveman/...". Only the subtrees those modules
-      # read are vendored. Update with `vendir sync`; synced files are
-      # committed, so every update is a reviewable diff.
+      # read are vendored.
       - path: .
         git:
           url: https://github.com/JuliusBrussee/caveman
-          ref: origin/main
+          ref: v1.10.0
         includePaths: [ src/hooks/**, src/plugins/**, src/rules/**, skills/**, commands/** ]
         # Self-installers (`curl … | bash`, fetch hooks from GitHub at runtime)
         # stay out. Cavecrew is no longer deployed by any harness.
@@ -43,11 +45,10 @@ directories:
       # code minimisation instead of prose. The opencode plugin resolves its
       # siblings via realpath-relative requires (../../hooks, ../../skills,
       # ../command), so the whole subtree below must stay intact and co-located.
-      # Update with `vendir sync`; synced files are committed (reviewable diff).
       - path: .
         git:
           url: https://github.com/DietrichGebert/ponytail
-          ref: origin/main
+          ref: v4.9.0
         includePaths: [ hooks/**, skills/**, commands/**, .opencode/**, .cursor/** ]
         # Windows-only statusline and host hook-registration manifests are inert.
         excludePaths: [ hooks/*.ps1, hooks/claude-codex-hooks.json, hooks/copilot-hooks.json ]
