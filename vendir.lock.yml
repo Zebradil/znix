@@ -2,26 +2,26 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'Merge pull request #788 from mattpocock/grill-me-align...'
-      sha: 84fdeffd12f2ee307994d1eb6feb48173b6e0502
+      commitTitle: 'Merge pull request #782 from mattpocock/changeset-release/main...'
+      sha: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
       tags:
-      - v1.2.3-2-g84fdeff
+      - v1.2.3
     path: .
   path: vendor/mattpocock-skills
 - contents:
   - git:
-      commitTitle: Update README.md with Skills.sh badge (#338)
-      sha: 309834233183478e6fd7800d26e1fbaa6210274e
+      commitTitle: 'chore: sync SKILL.md copies [skip ci]'
+      sha: fcf7663366c217dc8f334a11028de52ed950ceab
       tags:
-      - v1.10.0-5-g3098342
+      - v1.10.0
     path: .
   path: vendor/caveman
 - contents:
   - git:
-      commitTitle: 'feat: add Grok Build native skills adapter (revive #561) (#661)...'
-      sha: 2ed6c52c9d7e5e56942508591085fd45dea277d3
+      commitTitle: 'chore: release v4.9.0 (#703)...'
+      sha: 0a4dd63ad4541f4f655c4108a295916f3c1d8fda
       tags:
-      - v4.9.0-3-g2ed6c52
+      - v4.9.0
     path: .
   path: vendor/ponytail
 kind: LockConfig
