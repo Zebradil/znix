@@ -16,7 +16,8 @@ The tool-agnostic agent asset tree lives at the repo root in `ai/` (`AGENTS.md`,
 the `znix.claude.assetsRoot` option, which defaults to `inputs.self + "/ai"`. `AGENTS.md` is the global instructions
 file: Claude symlinks it to each profile's `CLAUDE.md`; OpenCode reads it as `AGENTS.md`; Cursor renders it as an
 always-on local-plugin rule. Vendored skills wire in separately via `znix.claude.extraSkillRoots` (see
-`docs/vendored-skills.md`).
+`docs/vendored-skills.md`). Private company skill repos must never be referenced from this public repo — they are
+synced out-of-band by the `skillsync` tool with per-host config outside the repo (see `docs/private-skills.md`).
 
 ## Key Patterns
 
