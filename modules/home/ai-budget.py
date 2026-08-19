@@ -60,8 +60,8 @@ class Row:
 
 
 def money(minor: Any) -> str:
-    """Format a minor-unit amount. Both vendors send cents, sometimes with a
-    fractional part ("41280.125"), and their docs warn off binary floats."""
+    """Format a cent-equivalent amount. Vendor amounts can be fractional, and
+    their docs warn off binary floats."""
     return f"${(Decimal(str(minor)) / 100).quantize(Decimal('0.01')):,}"
 
 
@@ -184,8 +184,8 @@ def row_copilot(raw: Any) -> Row:
         raise Unavailable("seat has no premium-request quota")
     used, limit = quota["credits_used"], quota.get("entitlement")
     if quota.get("unlimited") or not limit:
-        return Row("copilot", f"{used:g} cr", None, raw.get("quota_reset_date", ""))
-    amount = f"{used:g} / {limit:g} cr"
+        return Row("copilot", money(used), None, raw.get("quota_reset_date", ""))
+    amount = f"{money(used)} / {money(limit)}"
     return Row("copilot", amount, pct(used, limit), raw.get("quota_reset_date", ""))
 
 
@@ -277,7 +277,12 @@ def self_check() -> None:
         {"quota_snapshots": {"premium_interactions": {
             "has_quota": True, "credits_used": 1178, "entitlement": 40000}},
          "quota_reset_date": "2026-09-01"}
-    ).amount == "1178 / 40000 cr"
+    ).amount == "$11.78 / $400.00"
+    assert row_copilot(
+        {"quota_snapshots": {"premium_interactions": {
+            "has_quota": True, "credits_used": 1178, "unlimited": True}},
+         "quota_reset_date": "2026-09-01"}
+    ).amount == "$11.78"
     print("ok")
 
 
