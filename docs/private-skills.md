@@ -21,7 +21,7 @@ No nix rebuild is needed for any skill change — edit the config, run `skillsyn
 ## Commands
 
 ```bash
-skillsync status              # configured/applied refs, clone revs + links; no network
+skillsync status              # configured/applied refs, remote updates, clone revs + links
 skillsync diff [source]       # fetch and show incoming commits + diff
 skillsync apply [-y] [source] # update clone(s), (re)link bundles, prune stale
 ```

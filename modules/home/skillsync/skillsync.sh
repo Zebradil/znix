@@ -3,7 +3,7 @@ usage() {
 skillsync - sync private skill repos into AI agent skill directories
 
 Usage:
-  skillsync status              clone and link state (no network)
+  skillsync status              clone, remote ref, and link state
   skillsync diff [source]       fetch and show incoming changes
   skillsync apply [-y] [source] update clone(s), link bundles, prune stale
 
@@ -64,7 +64,7 @@ build_desired() {
 
 cmd_status() {
   build_desired
-  local s t b src dest ref applied branch refs_ok=0 refs_bad=0 ok=0 bad=0
+  local s t b src dest ref applied branch url head next refs_ok=0 refs_bad=0 ok=0 bad=0
   while IFS= read -r s; do
     if [ -d "$CLONES/$s/.git" ]; then
       ref=$(src_ref "$s")
@@ -75,10 +75,23 @@ cmd_status() {
         applied=${applied#refs/heads/}
       fi
       echo "$s: $(git -C "$CLONES/$s" log -1 --format='%h %cs %s')"
-      if [ "$applied" = "$ref" ]; then
+      if [ "$applied" != "$ref" ]; then
+        echo "REF       $s: applied ${applied:-unknown}; config wants $ref (run: skillsync apply $s)"
+        refs_bad=$((refs_bad + 1))
+        continue
+      fi
+      url=$(src_url "$s")
+      if ! git -c "remote.origin.url=$url" -C "$CLONES/$s" fetch --quiet origin "$ref"; then
+        echo "FETCH     $s: unable to check $ref"
+        refs_bad=$((refs_bad + 1))
+        continue
+      fi
+      head=$(git -C "$CLONES/$s" rev-parse HEAD)
+      next=$(git -C "$CLONES/$s" rev-parse FETCH_HEAD)
+      if [ "$head" = "$next" ]; then
         refs_ok=$((refs_ok + 1))
       else
-        echo "REF       $s: applied ${applied:-unknown}; config wants $ref (run: skillsync apply $s)"
+        echo "UPDATE    $s: $(git -C "$CLONES/$s" rev-parse --short HEAD) -> $(git -C "$CLONES/$s" rev-parse --short FETCH_HEAD) (run: skillsync apply $s)"
         refs_bad=$((refs_bad + 1))
       fi
     else
