@@ -64,12 +64,26 @@ build_desired() {
 
 cmd_status() {
   build_desired
-  local s t b src dest ok=0 bad=0
+  local s t b src dest ref applied branch refs_ok=0 refs_bad=0 ok=0 bad=0
   while IFS= read -r s; do
     if [ -d "$CLONES/$s/.git" ]; then
+      ref=$(src_ref "$s")
+      applied=$(git -C "$CLONES/$s" config --get skillsync.ref || true)
+      if [ -z "$applied" ]; then
+        branch=$(git -C "$CLONES/$s" symbolic-ref --quiet --short HEAD || true)
+        applied=$(git -C "$CLONES/$s" config --get "branch.$branch.merge" || true)
+        applied=${applied#refs/heads/}
+      fi
       echo "$s: $(git -C "$CLONES/$s" log -1 --format='%h %cs %s')"
+      if [ "$applied" = "$ref" ]; then
+        refs_ok=$((refs_ok + 1))
+      else
+        echo "REF       $s: applied ${applied:-unknown}; config wants $ref (run: skillsync apply $s)"
+        refs_bad=$((refs_bad + 1))
+      fi
     else
       echo "$s: not cloned (run: skillsync apply $s)"
+      refs_bad=$((refs_bad + 1))
     fi
   done < <(list_sources)
   while IFS= read -r t; do
@@ -92,6 +106,7 @@ cmd_status() {
       fi
     done
   done < <(list_targets)
+  echo "refs: $refs_ok ok, $refs_bad need attention"
   echo "links: $ok ok, $bad need attention"
 }
 
@@ -132,6 +147,7 @@ update_clone() {
   if [ ! -d "$dir/.git" ]; then
     mkdir -p "$CLONES"
     git clone --quiet --branch "$ref" "$url" "$dir"
+    git -C "$dir" config skillsync.ref "$ref"
     echo "$s: cloned at $(git -C "$dir" log -1 --format=%h)"
     return
   fi
@@ -140,7 +156,12 @@ update_clone() {
   head=$(git -C "$dir" rev-parse HEAD)
   next=$(git -C "$dir" rev-parse FETCH_HEAD)
   if [ "$head" = "$next" ]; then
-    echo "$s: up to date"
+    if [ "$(git -C "$dir" config --get skillsync.ref || true)" = "$ref" ]; then
+      echo "$s: up to date"
+    else
+      echo "$s: ref updated to $ref"
+    fi
+    git -C "$dir" config skillsync.ref "$ref"
     return
   fi
   if git -C "$dir" merge-base --is-ancestor HEAD FETCH_HEAD; then
@@ -151,6 +172,7 @@ update_clone() {
     git -C "$dir" --no-pager log --left-right --oneline HEAD...FETCH_HEAD
   fi
   git -C "$dir" reset --hard --quiet FETCH_HEAD
+  git -C "$dir" config skillsync.ref "$ref"
   echo "$s: updated ($n)"
 }
 

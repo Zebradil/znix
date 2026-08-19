@@ -8,14 +8,17 @@
           {
             nativeBuildInputs = [
               pkgs.actionlint
+              pkgs.git
               pkgs.shellcheck
               pkgs.jq
               pkgs.python3
+              pkgs.yq-go
             ];
           }
           ''
             actionlint -color ${inputs.self}/.github/workflows/*.y*ml
             shellcheck ${inputs.self}/.github/scripts/*.sh
+            shellcheck --shell=bash ${inputs.self}/modules/home/skillsync/*.sh
 
             # assets/bin takes whatever scripts land there, so lint by shebang
             # rather than by glob -- a python helper must not break the check.
@@ -26,6 +29,7 @@
             done
 
             bash ${inputs.self}/assets/bin/kubectl-inventory --self-test
+            bash ${inputs.self}/modules/home/skillsync/test-skillsync.sh
             # Fixtures for both transcript stores: the tripwire for the next
             # Claude Code log change or opencode database migration.
             python3 ${inputs.self}/modules/home/session-export/session-export.py --selftest
