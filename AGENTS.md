@@ -49,13 +49,16 @@ Use `znix.<name>.enable` with `lib.mkEnableOption` + `lib.mkIf`.
 nix flake check                    # Validate
 nix develop                        # Dev shell
 nix fmt                            # Format with nixfmt-tree
-darwin-rebuild switch --flake .    # Apply on macOS
-nixos-rebuild switch --flake .     # Apply on NixOS
-colmena apply --on <host>          # Deploy to remote host(s) over SSH
-colmena apply --on @<tag>          # Deploy all hosts with a tag
+nix build .#darwinConfigurations.trv4250.system  # Build macOS system
+nh home switch . -c glashevich@trv4250           # Activate this host's home
 ```
 
-Remote deploys use colmena (`nix develop` provides the CLI). Hosts are registered in `modules/flake/colmena.nix`. See
+### Activation
+
+Builds and evaluations are allowed. Run an activation command only after the user explicitly requests it in the current
+conversation. Activation includes `nh home switch`, `home-manager switch`, `darwin-rebuild switch`, `nixos-rebuild
+switch`, and `colmena apply`; do not infer consent from a configuration change or a successful build. Remote deploys
+use colmena (`nix develop` provides the CLI). Hosts are registered in `modules/flake/colmena.nix`. See
 `docs/adr/0003-colmena-deploy.md`.
 
 ## Secrets

@@ -51,14 +51,14 @@ nix build .#nixosConfigurations.tuxedo.config.system.build.toplevel
 # /persist/$HOME, chowns it, and sets programs.fuse.userAllowOther, which the
 # home persistence bind-mounts depend on.
 darwin-rebuild switch --flake .#trv4250            # macOS system
-home-manager switch --flake .#glashevich@trv4250   # macOS home
+nh home switch . -c glashevich@trv4250             # macOS home
 
 nixos-rebuild switch --flake .#tuxedo              # NixOS system
-home-manager switch --flake .#zebradil@tuxedo      # NixOS home
+nh home switch . -c zebradil@tuxedo                # NixOS home
 ```
 
 Home is deployed standalone (see `docs/adr/0002-standalone-home-manager.md`):
-edit user-tool config and re-run only the `home-manager switch` — no
+edit user-tool config and re-run only the `nh home switch` — no
 `nixos-rebuild`. A system switch is needed only when the *set* of persisted
 directories changes.
 
