@@ -79,8 +79,8 @@ _: {
       tuiSettings = {
         "$schema" = "https://opencode.ai/tui.json";
         keybinds = {
-          input_submit = "ctrl+return";
-          input_newline = "return,shift+return,alt+return,ctrl+j";
+          input_submit = "shift+return";
+          input_newline = "return";
         };
       };
       ocSettingsFile = pkgs.writeText "opencode.json" (builtins.toJSON ocSettings);
