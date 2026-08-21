@@ -76,7 +76,15 @@ _: {
         permission.external_directory."/nix/store/**" = "allow";
       }
       // lib.optionalAttrs (lspServers != { }) { lsp = lib.mapAttrs (_: mkOcLsp) lspServers; };
+      tuiSettings = {
+        "$schema" = "https://opencode.ai/tui.json";
+        keybinds = {
+          input_submit = "ctrl+return";
+          input_newline = "return,shift+return,alt+return,ctrl+j";
+        };
+      };
       ocSettingsFile = pkgs.writeText "opencode.json" (builtins.toJSON ocSettings);
+      tuiSettingsFile = pkgs.writeText "tui.json" (builtins.toJSON tuiSettings);
     in
     lib.mkMerge [
       {
@@ -111,6 +119,7 @@ _: {
         home.activation.copyOpencodeSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
           $DRY_RUN_CMD mkdir -p "$HOME/.config/opencode"
           $DRY_RUN_CMD install -m 0644 ${ocSettingsFile} "$HOME/.config/opencode/opencode.json"
+          $DRY_RUN_CMD install -m 0644 ${tuiSettingsFile} "$HOME/.config/opencode/tui.json"
         '';
       })
     ];
