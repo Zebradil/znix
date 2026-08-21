@@ -24,13 +24,17 @@ covers it.
 ## 1 — Prep (deterministic; the script does it all)
 
 ```bash
-prep="$CLAUDE_CONFIG_DIR/hooks/worklog-prep"
 # add --dry-run only when the invocation asked for a dry-run / preview:
-"$prep" standup            # or: "$prep" standup --dry-run
+worklog-prep standup            # or: worklog-prep standup --dry-run
 ```
 
-If the helper errors that config is missing, worklog isn't enabled for this
-profile — tell the user and stop.
+The helper picks the right worklog itself (the invoking claude profile, else
+the host default). Only when the user explicitly names a worklog in the
+invocation, pass `--profile <name>` before the subcommand — and reuse the SAME
+`--profile` on the commit call below, or the wrong marker advances.
+
+If `worklog-prep` is not found or errors that config is missing, worklog isn't
+set up on this machine — tell the user and stop.
 
 Read the JSON it prints:
 
@@ -70,7 +74,7 @@ nothing saved, worklog not rotated, marker not moved.
 Otherwise advance the marker (this bounds the next run's source window):
 
 ```bash
-"$CLAUDE_CONFIG_DIR/hooks/worklog-prep" commit standup
+worklog-prep commit standup     # same --profile as step 1, if one was used
 ```
 
 Print the report and tell the user it was saved to `report_path`.

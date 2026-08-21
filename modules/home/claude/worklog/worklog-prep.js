@@ -13,7 +13,8 @@
 //                         before today; or the given date/datetime), emit JSON.
 //   commit  standup       advance the last-standup marker to now. (weekly: n/a)
 //
-// Config comes from --config <path>, else $CLAUDE_CONFIG_DIR/worklog-sources.json.
+// Config comes from --config <path>; the Nix wrapper always passes it after
+// resolving --profile / the invoking claude profile / the host default.
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
@@ -27,9 +28,8 @@ function has(name) {
 }
 
 function loadCfg() {
-  const p =
-    flag("--config") ||
-    path.join(process.env.CLAUDE_CONFIG_DIR || "", "worklog-sources.json");
+  const p = flag("--config");
+  if (!p) throw new Error("--config <path> required (run via the worklog-prep wrapper)");
   const cfg = JSON.parse(fs.readFileSync(p, "utf8"));
   if (!cfg.worklog_dir) throw new Error("worklog_dir missing from " + p);
   return cfg;
@@ -185,7 +185,7 @@ function weekly(cfg) {
   const ts = tsCompact(now);
   fs.mkdirSync(path.join(dir, "weekly"), { recursive: true });
 
-  const arg = firstPositional(3); // after "weekly"
+  const arg = positionals()[1]; // after "weekly"
   const startDt = arg ? new Date(arg) : lastFriday1300();
   if (isNaN(startDt)) throw new Error("unparseable since-date: " + arg);
   const start = startDt.toISOString();
@@ -214,7 +214,7 @@ function weekly(cfg) {
 }
 
 function commit(cfg) {
-  const which = firstPositional(3);
+  const which = positionals()[1];
   if (which !== "standup") throw new Error("commit only supports: standup");
   fs.writeFileSync(
     path.join(cfg.worklog_dir, "last-standup"),
@@ -244,22 +244,23 @@ function latestReport(dir) {
   return files.length ? path.join(rd, files[files.length - 1]) : null;
 }
 
-// Nth argv token that isn't a flag or a flag's value, counting from `from`.
-function firstPositional(from) {
-  for (let i = from; i < process.argv.length; i++) {
+// argv tokens that aren't a flag or a flag's value: [subcommand, arg, ...].
+function positionals() {
+  const out = [];
+  for (let i = 2; i < process.argv.length; i++) {
     const a = process.argv[i];
     if (a === "--config") {
       i++;
       continue;
     }
     if (a.startsWith("--")) continue;
-    return a;
+    out.push(a);
   }
-  return undefined;
+  return out;
 }
 
 function main() {
-  const sub = process.argv[2];
+  const sub = positionals()[0];
   const cfg = loadCfg();
   let result;
   if (sub === "standup") result = standup(cfg);

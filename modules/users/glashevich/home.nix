@@ -97,7 +97,13 @@ in
         claude = {
           caveman.enable = true;
           ponytail.enable = true;
-          worklog.enable = true;
+          worklog = {
+            enable = true;
+            # Env-less tools (opencode, cursor) target the company worklog;
+            # personal claude keeps its own via CLAUDE_CONFIG_DIR — company
+            # data must never flow through the personal Anthropic account.
+            default = "trv";
+          };
 
           profiles = {
             personal = self.lib.claude.mkPersonalProfile { } // {

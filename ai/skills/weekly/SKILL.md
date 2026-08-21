@@ -24,13 +24,16 @@ different span, pass a date or datetime in the invocation args (e.g.
 ## 1 — Prep
 
 ```bash
-prep="$CLAUDE_CONFIG_DIR/hooks/worklog-prep"
-"$prep" weekly                 # default: since last Friday 13:00
-# "$prep" weekly 2026-07-01     # arbitrary start, if the args gave one
+worklog-prep weekly                 # default: since last Friday 13:00
+# worklog-prep weekly 2026-07-01    # arbitrary start, if the args gave one
 ```
 
-If the helper errors that config is missing, worklog isn't enabled for this
-profile — tell the user and stop.
+The helper picks the right worklog itself (the invoking claude profile, else
+the host default). Only when the user explicitly names a worklog in the
+invocation, pass `--profile <name>` before the subcommand.
+
+If `worklog-prep` is not found or errors that config is missing, worklog isn't
+set up on this machine — tell the user and stop.
 
 Read the JSON:
 
