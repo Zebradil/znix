@@ -53,7 +53,16 @@
       # and on Apple Silicon runs aarch64-linux at native speed via apple-virt.
       # (Also distinct from vanilla nix-darwin `nix.linux-builder`, which fights
       # Determinate — this is Determinate's own integrated option.)
-      nixosVmBasedLinuxBuilder.enable = true;
+      nixosVmBasedLinuxBuilder = {
+        enable = true;
+        # nixpkgs' `nixos/lib/qemu-common.nix` pins `gic-version=2` for
+        # aarch64-linux guests on darwin hosts, but HVF only emulates GICv3, so
+        # qemu aborts with "HVF does not support GICv2 emulation" and launchd's
+        # KeepAlive respawns it in a loop (each respawn re-tars the whole store
+        # into an erofs image, burning a core). Repeating `-machine` merges into
+        # the earlier one, so this overrides only the GIC version and keeps HVF.
+        config.virtualisation.qemu.options = [ "-machine gic-version=3" ];
+      };
     };
 
     programs.zsh.enable = true;
