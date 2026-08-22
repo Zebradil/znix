@@ -10,10 +10,10 @@ directories:
   path: vendor/mattpocock-skills
 - contents:
   - git:
-      commitTitle: 'chore: sync SKILL.md copies [skip ci]'
-      sha: fcf7663366c217dc8f334a11028de52ed950ceab
+      commitTitle: 'release: caveman v2.2.0, cli 1.2.3 on bin-v1.1.2 runtime...'
+      sha: 9aa63945a349bef17206540650db48c30fafbdf2
       tags:
-      - v1.10.0
+      - cli-v1.2.3
     path: .
   path: vendor/caveman
 - contents:

@@ -135,6 +135,14 @@ function getDefaultMode(startDir) {
 // Set CAVEMAN_DEBUG=1 to emit stderr diagnostics when flag writes are refused.
 //
 // Silent-fails on any filesystem error — the flag is best-effort.
+// Blocking sleep with no child process and no busy-wait. Used only to space
+// out rename retries under Windows lock contention.
+function sleepMs(ms) {
+  try {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+  } catch (e) { /* SharedArrayBuffer unavailable — skip the backoff */ }
+}
+
 function safeWriteFlag(flagPath, content) {
   const debug = process.env.CAVEMAN_DEBUG === '1';
   try {
@@ -204,9 +212,13 @@ function safeWriteFlag(flagPath, content) {
         if (fd !== undefined) fs.closeSync(fd);
       }
 
-      // Retry brief lock contention a few times. A missed write is harmless
-      // (concurrent writers publish the same mode value); a leaked temp file
-      // is not, so the finally below always sweeps it regardless of outcome.
+      // Retry brief lock contention a few times, backing off between attempts.
+      // Three synchronous attempts with no delay all complete inside a few
+      // microseconds, so whichever handle blocked the first (a statusline read,
+      // a concurrent session's hook, an AV scan) is still held for the other
+      // two — effectively one attempt with two extra syscalls. Sleep for real:
+      // Atomics.wait blocks this thread without pulling in a child process,
+      // which is what a hook budget can least afford.
       let renamed = false;
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
@@ -217,13 +229,22 @@ function safeWriteFlag(flagPath, content) {
           const transient = e.code === 'EPERM' || e.code === 'EBUSY' ||
                              e.code === 'EACCES' || e.code === 'EEXIST';
           if (!transient) throw e;
+          if (attempt < 2) sleepMs(10 * (attempt + 1));
         }
       }
       if (!renamed && debug) {
         process.stderr.write('[caveman] safeWriteFlag: rename contended after 3 attempts; flag not updated this write\n');
       }
     } finally {
-      if (tempPath) { try { fs.unlinkSync(tempPath); } catch (e) { /* renamed already, or never created */ } }
+      if (tempPath) {
+        try {
+          fs.unlinkSync(tempPath);
+        } catch (error) {
+          if (debug && error.code !== 'ENOENT') {
+            process.stderr.write(`[caveman] safeWriteFlag: failed to remove temp flag ${tempPath}: ${error.message}\n`);
+          }
+        }
+      }
     }
   } catch (e) {
     // Silent fail — flag is best-effort

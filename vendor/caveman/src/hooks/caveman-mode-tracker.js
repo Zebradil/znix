@@ -6,8 +6,73 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { execFileSync } = require('child_process');
-const { getDefaultMode, safeWriteFlag, readFlag, recordModeChange } = require('./caveman-config');
-const { parseModeChange, INDEPENDENT_MODES } = require('./caveman-parse');
+// caveman-config.js and caveman-parse.js are mandatory siblings, but an
+// incomplete install leaves one absent. A bare top-level require turns that
+// into an uncaught MODULE_NOT_FOUND on EVERY prompt, which the harness
+// surfaces only as an opaque loader stack trace (#848). Resolve defensively.
+//
+// Deliberately inlined rather than extracted into a shared helper: a shared
+// loader would itself be one more sibling that can go missing, which is the
+// exact failure this guards against.
+function requireSibling(name, isUsable) {
+  let mod;
+  try {
+    mod = require('./' + name);
+  } catch (primary) {
+    // The opencode install layout renames siblings to `.cjs` (its plugin dir
+    // is "type": "module"), same fallback caveman-parse.js already does. Gate
+    // the retry on the error naming THIS module: a MODULE_NOT_FOUND thrown by
+    // a require *inside* a sibling that loaded fine must not be re-reported as
+    // "./<name>.cjs is missing", blaming a file never meant to exist.
+    const message = String((primary && primary.message) || primary);
+    if (primary && primary.code === 'MODULE_NOT_FOUND' && message.includes("'./" + name + "'")) {
+      try { return require('./' + name + '.cjs'); } catch (e) { /* report primary */ }
+    }
+    const absent = !fs.existsSync(path.join(__dirname, name + '.js'))
+                && !fs.existsSync(path.join(__dirname, name + '.cjs'));
+    // Distinguish "the sibling is absent" from "the sibling loaded but its own
+    // require failed" — naming the wrong cause is worse than no message. Only
+    // the first line of error.message: Node appends a multi-line "Require
+    // stack:" block, the very noise this guard exists to remove.
+    process.stderr.write('caveman: ' + (absent
+      ? name + '.js is missing from ' + __dirname + ' — the install is incomplete.'
+      : name + ' could not load — ' + message.split('\n')[0]) + '\n'
+      + 'Run `/plugin update caveman`, or rerun install.sh for standalone hooks. '
+      + 'Continuing with reduced functionality.\n');
+    return null;
+  }
+  // A module that LOADS but exports the wrong shape is the plugin-cache-drift
+  // case #848 describes. Without this check the first use dereferences
+  // undefined — the raw stack trace this guard exists to remove.
+  if (!isUsable(mod)) {
+    process.stderr.write('caveman: ' + name + ' loaded but is missing expected exports — the install is inconsistent.\n'
+      + 'Run `/plugin update caveman`, or rerun install.sh for standalone hooks. '
+      + 'Continuing with reduced functionality.\n');
+    return null;
+  }
+  return mod;
+}
+
+// Degraded stubs make this hook a clean no-op when a sibling is unusable: no
+// mode change is parsed, readFlag reports nothing active, so nothing is emitted
+// and the process still exits 0 with stdin drained (never a broken pipe, #397).
+// getDefaultMode's stub value is never consulted in that state — the only call
+// site is gated behind an activeMode that readFlag can no longer produce.
+const { getDefaultMode, safeWriteFlag, readFlag, recordModeChange, VALID_MODES } = requireSibling('caveman-config', (m) =>
+  m && typeof m.getDefaultMode === 'function' && typeof m.safeWriteFlag === 'function'
+    && typeof m.readFlag === 'function' && typeof m.recordModeChange === 'function'
+    && Array.isArray(m.VALID_MODES)) || {
+  getDefaultMode: () => 'full',
+  safeWriteFlag: () => {},
+  readFlag: () => null,
+  recordModeChange: () => {},
+  VALID_MODES: [],
+};
+const { parseModeChange, INDEPENDENT_MODES } = requireSibling('caveman-parse', (m) =>
+  m && typeof m.parseModeChange === 'function' && m.INDEPENDENT_MODES instanceof Set) || {
+  parseModeChange: () => null,
+  INDEPENDENT_MODES: new Set(['commit', 'review', 'compress']),
+};
 
 const claudeDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
 const flagPath = path.join(claudeDir, '.caveman-active');
@@ -15,15 +80,30 @@ const flagPath = path.join(claudeDir, '.caveman-active');
 // (/caveman-commit etc.) so the next ordinary prompt can restore it (#599).
 const prevPath = path.join(claudeDir, '.caveman-active.prev');
 
-let input = '';
-process.stdin.on('data', chunk => { input += chunk; });
-// Abnormal stdin close (broken pipe, parent crash) emits 'error'; without a
-// listener Node throws it as an uncaught exception and the hook exits
-// non-zero — a spurious hook failure (#538). Hooks must always exit 0.
-process.stdin.on('error', () => process.exit(0));
-process.stdin.on('end', () => {
+function removeFlag(path) {
   try {
-    const data = JSON.parse(input);
+    fs.unlinkSync(path);
+  } catch (error) {
+    if (process.env.CAVEMAN_DEBUG === '1' && error.code !== 'ENOENT') {
+      console.error(`caveman: failed to remove flag ${path}: ${error.message}`);
+    }
+  }
+}
+
+let input = '';
+let handled = false;
+
+// Act on the first COMPLETE JSON payload rather than waiting for EOF. The host
+// writes one object and closes, but under the Windows pipe implementation that
+// close can lag arbitrarily (#729/#833) — and this hook is registered with a 5s
+// budget, so a lagging EOF spends the whole budget and the host kills us before
+// the flag is ever written. Parsing per chunk costs one JSON.parse of a payload
+// we are about to parse anyway.
+function handle(raw) {
+  if (handled) return;
+  handled = true;
+  try {
+    const data = JSON.parse(raw);
     // Collapse whitespace so phrase triggers still match multiline prompts —
     // every regex below sees a single-line prompt (#598).
     let prompt = (data.prompt || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -81,7 +161,12 @@ process.stdin.on('end', () => {
         if (sinceIdx !== -1 && tailArgs[sinceIdx + 1]) {
           argv.push('--since', tailArgs[sinceIdx + 1]);
         }
-        block = execFileSync(process.execPath, argv, { encoding: 'utf8', timeout: 5000 }).trim();
+        // 2.5s, not 5s. This hook is registered with timeout: 5 and has
+        // already spent its own Node startup; giving the child the host's
+        // entire budget means the host kills the hook before the child's own
+        // timeout can fire and produce the fallback message. Windows process
+        // spawn is ~10x macOS before antivirus (#819), so the margin is real.
+        block = execFileSync(process.execPath, argv, { encoding: 'utf8', timeout: 2500 }).trim();
       } catch (e) {
         block = 'caveman-stats: could not run stats script.\nTry manually: node hooks/caveman-stats.js';
       }
@@ -98,6 +183,33 @@ process.stdin.on('end', () => {
     // opencode plugin for slash commands, namespaced /caveman:caveman-*,
     // natural-language activation/deactivation, and brevity triggers.
     const change = parseModeChange(prompt, { getDefaultMode, skipNaturalLanguage });
+
+    // A /caveman argument that resolves to no mode used to leave the level
+    // untouched and say nothing, so a typo or punctuation glued to the level
+    // ("/caveman ultra;") looked like it worked. Build a notice instead — but
+    // do NOT return here: an early exit would skip the #599 one-shot restore
+    // below, stranding the user in /caveman-commit for an extra turn because
+    // they made a typo, and would also drop that turn's reinforcement.
+    let notice = null;
+    if (change && change.action === 'unresolved') {
+      if (change.independentMode) {
+        // A real mode, just not reachable via /caveman <arg>. Denying it exists
+        // would contradict the docs.
+        notice = 'Tell the user ' + change.independentMode + ' mode is set with its own command, '
+          + '/caveman-' + change.independentMode + ', not /caveman ' + change.independentMode
+          + '. The level is unchanged.';
+      } else {
+        // Levels are derived from VALID_MODES so they cannot drift from the
+        // parser, minus 'off', the independent modes, and 'wenyan' — that is
+        // the storage alias for wenyan-full, and listing both would advertise
+        // seven levels for a product documented as having six. The rejected
+        // argument is never echoed: it is untrusted input headed for model
+        // context.
+        const levels = VALID_MODES.filter(m => m !== 'off' && m !== 'wenyan' && !INDEPENDENT_MODES.has(m));
+        notice = 'Tell the user their /caveman level was not recognized and the level is '
+          + 'unchanged. Valid levels: ' + levels.join(', ') + '. Use /caveman off to deactivate.';
+      }
+    }
 
     // Independent one-shot modes remember the prose mode active before them
     // so the next ordinary prompt restores it (#599) — SKILL.md promises
@@ -120,8 +232,8 @@ process.stdin.on('end', () => {
       safeWriteFlag(flagPath, mode);
     } else if (change && change.action === 'clear') {
       recordModeChange(claudeDir, null); // #601
-      try { fs.unlinkSync(flagPath); } catch (e) {}
-      try { fs.unlinkSync(prevPath); } catch (e) {}
+      removeFlag(flagPath);
+      removeFlag(prevPath);
     }
 
     // Per-turn reinforcement: emit a short reminder when caveman is active.
@@ -142,14 +254,14 @@ process.stdin.on('end', () => {
     // it, or deactivate if caveman wasn't active then.
     if (activeMode && INDEPENDENT_MODES.has(activeMode) && !setIndependentThisTurn) {
       const prev = readFlag(prevPath);
-      try { fs.unlinkSync(prevPath); } catch (e) {}
+      removeFlag(prevPath);
       if (prev && !INDEPENDENT_MODES.has(prev)) {
         recordModeChange(claudeDir, prev); // #601
         safeWriteFlag(flagPath, prev);
         activeMode = prev;
       } else {
         recordModeChange(claudeDir, null); // #601
-        try { fs.unlinkSync(flagPath); } catch (e) {}
+        removeFlag(flagPath);
         activeMode = null;
       }
     }
@@ -159,15 +271,50 @@ process.stdin.on('end', () => {
     // hook stdin's cwd through so that check resolves for the session's
     // directory, not this hook process's own cwd. This gates ONLY the
     // reinforcement output below — it never deletes or writes the flag file.
-    if (activeMode && !INDEPENDENT_MODES.has(activeMode) && getDefaultMode(data.cwd) !== 'off') {
+    const reinforce = activeMode && !INDEPENDENT_MODES.has(activeMode)
+      && getDefaultMode(data.cwd) !== 'off'
+      ? `CAVEMAN MODE ACTIVE (${activeMode}) — session ruleset applies.`
+      : null;
+
+    // One write, so an unresolved-level notice and the per-turn reinforcement
+    // can both land on the same turn. Only one hookSpecificOutput per hook run
+    // is read, so emitting them separately would drop whichever came second.
+    const context = [notice, reinforce].filter(Boolean).join('\n\n');
+    if (context) {
       process.stdout.write(JSON.stringify({
         hookSpecificOutput: {
           hookEventName: "UserPromptSubmit",
-          additionalContext: `CAVEMAN MODE ACTIVE (${activeMode}) — session ruleset applies.`
+          additionalContext: context
         }
       }));
     }
   } catch (e) {
     // Silent fail
   }
+}
+
+// StringDecoder semantics: a multi-byte character split across two chunks is
+// held until it is complete, instead of each half being coerced to a lone
+// replacement char by `'' + buffer`. Matters more now that the payload is
+// parsed per chunk rather than once at EOF.
+process.stdin.setEncoding('utf8');
+process.stdin.on('data', chunk => {
+  input += chunk;
+  // A partial payload throws here and we simply wait for more bytes.
+  try { JSON.parse(input); } catch (e) { return; }
+  handle(input);
+  // pause() stops the flow but the 'data' listener has REFERENCED the stdin
+  // handle, so the event loop stays alive until the host closes the write end.
+  // On Windows that close lags arbitrarily (#729/#833), so the hook sat idle
+  // with its work already done until the 5s budget expired and the host killed
+  // it — the shape of #819 (timeouts on turns that measure ~56ms of real work).
+  // unref() drops the handle from the loop without closing the fd, so we exit
+  // as soon as stdout has flushed.
+  process.stdin.pause();
+  try { process.stdin.unref(); } catch (e) {}
 });
+// Abnormal stdin close (broken pipe, parent crash) emits 'error'; without a
+// listener Node throws it as an uncaught exception and the hook exits
+// non-zero — a spurious hook failure (#538). Hooks must always exit 0.
+process.stdin.on('error', () => process.exit(0));
+process.stdin.on('end', () => handle(input));
