@@ -78,6 +78,22 @@
       agent = pkgs.writeShellScriptBin "agent" ''
         exec ${pkgs.cursor-cli}/bin/cursor-agent --plugin-dir "$HOME/${pluginDir}" "$@"
       '';
+      # Copy just this file into the store: embedding a subpath of assetsRoot
+      # would pin the whole flake source. Wrap PATH so Cursor's spawn (no login
+      # shell) still finds jq and git.
+      znixStatusline = builtins.path {
+        path = assetsRoot + "/statusline-command.sh";
+        name = "znix-statusline-command.sh";
+      };
+      statusline = pkgs.writeShellScript "cursor-statusline" ''
+        export PATH="${
+          lib.makeBinPath [
+            pkgs.git
+            pkgs.jq
+          ]
+        }:$PATH"
+        exec ${pkgs.bash}/bin/bash ${znixStatusline}
+      '';
     in
     {
       options.znix.cursor.enable = lib.mkEnableOption "Cursor agent configuration";
@@ -114,8 +130,31 @@
             "${pluginDir}/commands/renovate-sweep.md".source = mkCursorMd (
               assetsRoot + "/commands/renovate-sweep.md"
             );
+            ".cursor/statusline-command.sh".source = statusline;
           }
         ];
+
+        # cli-config.json is Cursor-owned (auth, model picker). Merge only
+        # statusLine so a home switch keeps pointing at the wrapped script.
+        home.activation.cursorStatusLine = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          cfg="$HOME/.cursor/cli-config.json"
+          cmd="$HOME/.cursor/statusline-command.sh"
+          if [[ -f "$cfg" ]]; then
+            if current=$(${pkgs.jq}/bin/jq -r '.statusLine.command // empty' "$cfg" 2>/dev/null); then
+              if [[ "$current" != "$cmd" ]]; then
+                echo "setting Cursor CLI statusLine.command to $cmd"
+                if [[ ! -v DRY_RUN ]]; then
+                  tmp=$(mktemp)
+                  ${pkgs.jq}/bin/jq --arg cmd "$cmd" \
+                    '.statusLine = {type: "command", command: $cmd}' "$cfg" > "$tmp"
+                  mv "$tmp" "$cfg"
+                fi
+              fi
+            else
+              echo "skipping Cursor statusLine merge: $cfg is not valid JSON"
+            fi
+          fi
+        '';
 
         home.persistence."/persist" = lib.mkIf (config.znix.impermanence.enable or false) {
           directories = [ ".cursor" ];

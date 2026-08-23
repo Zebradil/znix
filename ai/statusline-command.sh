@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code status line — Starship-inspired style
+# Agent status line (Claude Code / Cursor CLI) — Starship-inspired style
 
 set -euo pipefail
 
@@ -7,6 +7,7 @@ input=$(cat)
 cwd=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // ""')
 model=$(echo "$input" | jq -r '.model.display_name // ""')
 effort=$(echo "$input" | jq -r '.effort.level // ""')
+param_summary=$(echo "$input" | jq -r '.model.param_summary // empty')
 used_pct=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
 remaining_pct=$(echo "$input" | jq -r '.context_window.remaining_percentage // empty')
 total_cost=$(echo "$input" | jq -r '.cost.total_cost_usd // empty')
@@ -74,7 +75,7 @@ function pct() {
 pp "$bold$blue" "$short_cwd"
 
 [[ -n "$git_branch" ]] && pp "$bold$cyan" " $git_branch"
-[[ -n "$model" ]] && pp "$bold$magenta" " $model${effort:+ $effort}"
+[[ -n "$model" ]] && pp "$bold$magenta" " $model${effort:+ $effort}${param_summary:+ $param_summary}"
 [[ -n "$ctx_label" ]] && pp "$bold$ctx_color" " $ctx_label"
 [[ -n "$total_cost" ]] && pp "$bold$white" " $(printf '$%.4f' "$total_cost" 2>/dev/null)"
 [[ -n "$five_hour_pct" ]] && pct '5h' "$five_hour_pct"
