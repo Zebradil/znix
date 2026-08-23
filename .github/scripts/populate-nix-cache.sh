@@ -14,23 +14,25 @@ set -euo pipefail
 #   AWS_ACCESS_KEY_ID
 #   AWS_SECRET_ACCESS_KEY     S3 credentials                    (skip push when empty)
 #
+# kasha generation-manifest emission runs after a successful push, and only
+# when both of the first two are set:
+#   KASHA_FLAKE               flake id the manifest is filed under (roots/<flake>/)
+#   KASHA_BIN                 path to the `kasha` binary that emits the manifest
+#   KASHA_GEN                 generation id  ┐
+#   KASHA_BRANCH              retention tier ├ --paths-file mode only; derived
+#   KASHA_ATTR                retention group┘ from git + the attr otherwise
+#
 # Store paths come from exactly one source:
 #   --paths-file FILE   newline-separated, pre-resolved store paths (the CI path)
 #   ATTR...             flake attrs to resolve, e.g. checks.aarch64-darwin.foo-build
 #   (no args)           every output of `.#checks.<current-system>`
 
 paths_file=""
-roots_file=""
 attrs=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --paths-file) paths_file="$2"; shift 2 ;;
     --paths-file=*) paths_file="${1#*=}"; shift ;;
-    # Top-level output paths (roots) for kasha manifest emission in --paths-file
-    # mode, where a root can't be recovered from the expanded closure. Paired
-    # with KASHA_GEN from the caller. See the emit block below.
-    --roots-file) roots_file="$2"; shift 2 ;;
-    --roots-file=*) roots_file="${1#*=}"; shift ;;
     --) shift; attrs+=("$@"); break ;;
     *) attrs+=("$1"); shift ;;
   esac
@@ -58,7 +60,14 @@ else
   fi
   candidates="$workdir/candidates.txt"
   : > "$candidates"
+  attr_index=0
   for attr in "${attrs[@]}"; do
+    attr_index=$((attr_index + 1))
+    # Per-attr closure kept in its own file: a v3 manifest lists exactly the
+    # paths that attr contributed, so it cannot be recovered from the merged
+    # candidate list later. Indexed by position — attr names are not filenames.
+    attr_paths="$workdir/attr-${attr_index}.txt"
+    : > "$attr_paths"
     echo "Resolving store paths for .#${attr}"
     # Instantiate the derivation without building, then take its build closure
     # (outputs included, .drv files excluded).
@@ -68,11 +77,13 @@ else
       continue
     fi
     nix-store --query --requisites --include-outputs "$drv" \
-      | { grep -v '\.drv$' || true; } >> "$candidates"
-    # Also publish the .drv recipe closure (text, KB-scale). A v2 root manifest
-    # advertises this attr's drvPath; the box copies that recipe and realises
-    # its input drvs, so the recipe closure must live in the cache too.
-    nix-store --query --requisites "$drv" >> "$candidates"
+      | { grep -v '\.drv$' || true; } >> "$attr_paths"
+    # Also publish the .drv recipe closure (text, KB-scale). The box is a NAR
+    # mirror and never realizes anything; the recipe is what lets the consuming
+    # host realize the top-level output from the pushed inputs.
+    nix-store --query --requisites "$drv" >> "$attr_paths"
+    sort -u -o "$attr_paths" "$attr_paths"
+    cat "$attr_paths" >> "$candidates"
   done
   sort -u -o "$candidates" "$candidates"
   # Keep only paths valid in the store, so a partial build still contributes its
@@ -120,27 +131,27 @@ else
   pushed=1
 fi
 
-# ── Publish kasha root manifests ───────────────────────────────────────────
+# ── Publish kasha generation manifests ─────────────────────────────────────
 # Only after a successful push, and only when configured (KASHA_FLAKE +
-# KASHA_EMIT_SCRIPT). A NAR in the remote cache without a roots/<flake>/<gen>.json
-# is invisible to the box's mirror-down, so the push would be wasted. Requires
-# jq + aws on PATH (local: cache-push runtimeInputs; CI: nix-shell wrap). Roots
-# are top-level outputs ONLY — never closures; kasha expands them via nix copy.
-if [[ "${pushed:-}" == 1 && -n "${KASHA_FLAKE:-}" && -n "${KASHA_EMIT_SCRIPT:-}" ]]; then
+# KASHA_BIN). A NAR in the remote cache without a roots/<flake>/<gen>.json is
+# invisible to the box's mirror-down, so the push would be wasted. A v3
+# manifest lists the full closure that was pushed — the box mirrors exactly
+# those paths, it never expands or realizes anything itself.
+if [[ "${pushed:-}" == 1 && -n "${KASHA_FLAKE:-}" && -n "${KASHA_BIN:-}" ]]; then
   sanitize() { printf '%s' "$1" | tr -c 'A-Za-z0-9_.-' '-'; }
-  emit_manifest() { # $1=gen id; stdin=root paths, one per line
-    KASHA_FLAKE="$KASHA_FLAKE" KASHA_GEN="$1" KASHA_TARGET="$CACHE_S3_URL" \
-      bash "$KASHA_EMIT_SCRIPT"
+  emit_manifest() { # $1=gen id, $2=branch, $3=attr; stdin=closure paths
+    "$KASHA_BIN" emit --flake "$KASHA_FLAKE" --gen "$1" --branch "$2" --attr "$3" \
+      --to "$CACHE_S3_URL" > /dev/null
   }
 
   if [[ -n "$paths_file" ]]; then
-    # --paths-file mode (CI): the caller resolved the attr's top-level root and
-    # the gen id, since neither is recoverable from an expanded closure here.
-    if [[ -n "$roots_file" && -n "${KASHA_GEN:-}" ]]; then
-      echo "Emitting root manifest ${KASHA_FLAKE}/${KASHA_GEN}…"
-      emit_manifest "$KASHA_GEN" < "$roots_file"
+    # --paths-file mode (CI): the caller owns the provenance fields; the pushed
+    # path list is the closure.
+    if [[ -n "${KASHA_GEN:-}" && -n "${KASHA_BRANCH:-}" && -n "${KASHA_ATTR:-}" ]]; then
+      echo "Emitting manifest ${KASHA_FLAKE}/${KASHA_GEN}…"
+      emit_manifest "$KASHA_GEN" "$KASHA_BRANCH" "$KASHA_ATTR" < "$paths"
     else
-      echo "::warning::kasha emit skipped — --roots-file and KASHA_GEN are required in --paths-file mode." >&2
+      echo "::warning::kasha emit skipped — KASHA_GEN, KASHA_BRANCH and KASHA_ATTR are required in --paths-file mode." >&2
     fi
   else
     # attrs mode (local): one manifest per attr, keyed by commit provenance.
@@ -150,25 +161,22 @@ if [[ "${pushed:-}" == 1 && -n "${KASHA_FLAKE:-}" && -n "${KASHA_EMIT_SCRIPT:-}"
     sha="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
     dirty=""
     git diff --quiet 2>/dev/null && git diff --cached --quiet 2>/dev/null || dirty="-dirty"
+    attr_index=0
     for attr in "${attrs[@]}"; do
-      # A v2 root is this attr's top-level {outPath, drvPath}. Resolve the drv
-      # (always store-valid — instantiated above) and pair each of its outputs
-      # with it as a tab-separated `<outPath>\t<drvPath>` line. Every query is
-      # guarded so a non-zero exit can't trip `set -e` mid-loop.
-      roots=""
-      drv="$(nix path-info --derivation ".#${attr}" 2>/dev/null || true)"
-      if [[ -n "$drv" ]]; then
-        for out in $(nix-store --query --outputs "$drv" 2>/dev/null || true); do
-          roots+="${out}"$'\t'"${drv}"$'\n'
-        done
-      fi
-      if [[ -z "$roots" ]]; then
-        echo "::warning::kasha emit skipped for '${attr}' — no top-level output/drv resolved." >&2
+      attr_index=$((attr_index + 1))
+      # This attr's closure minus whatever failed the validity check above.
+      closure="$workdir/closure-${attr_index}.txt"
+      comm -12 "$workdir/attr-${attr_index}.txt" "$paths" > "$closure"
+      if [[ ! -s "$closure" ]]; then
+        echo "::warning::kasha emit skipped for '${attr}' — no valid store paths." >&2
         continue
       fi
       gen="${ref}-${sha}${dirty}-$(sanitize "$attr")"
-      echo "Emitting root manifest ${KASHA_FLAKE}/${gen}…"
-      printf '%s' "$roots" | emit_manifest "$gen"
+      echo "Emitting manifest ${KASHA_FLAKE}/${gen}…"
+      # `-dirty` rides along in the branch too: kasha's retention gives the
+      # literal branch `main` the long tier (keep 5 / 4wk), so an unreproducible
+      # local push would otherwise displace reviewed main history.
+      emit_manifest "$gen" "${ref}${dirty}" "$attr" < "$closure"
     done
   fi
 fi

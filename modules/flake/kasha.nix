@@ -1,18 +1,21 @@
 { inputs, ... }:
 {
-  # kasha is pulled source-only (flake = false): we consume a single script from
-  # its tree, not its flake outputs. This pins it via flake.lock (renovate bumps
-  # it) so the vendored-copy drift problem never arises. The consumer side reads
-  # from the box via nix-settings' extra-substituters, not kasha's modules, so
-  # its nixosModules are intentionally out of reach.
+  # kasha is pulled as a flake for its binary: `kasha emit` is the single source
+  # of truth for the generation-manifest format, so nothing here vendors a copy
+  # that could drift. Pinned via flake.lock (renovate bumps it). The consumer
+  # side reads from the box via nix-settings' extra-substituters, not kasha's
+  # modules, so its nixosModules are intentionally out of reach.
   flake-file.inputs.kasha = {
     url = "github:Zebradil/kasha";
-    flake = false;
+    inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  # Root-manifest emitter, resolved to a store path by callers that publish to
-  # the cache (CI build job via `nix eval --raw .#lib.kashaEmitScript`, and the
-  # local cache-push app which bakes it in). Publishing NARs without emitting a
-  # root manifest leaves them undiscoverable to the box's mirror-down.
-  flake.lib.kashaEmitScript = inputs.kasha + "/scripts/emit-root-manifest.sh";
+  perSystem =
+    { system, ... }:
+    {
+      # Resolved by the CI publish job (`nix build .#kasha`) and baked into the
+      # local cache-push app. Publishing NARs without emitting a generation
+      # manifest leaves them undiscoverable to the box's mirror-down.
+      packages.kasha = inputs.kasha.packages.${system}.kasha;
+    };
 }

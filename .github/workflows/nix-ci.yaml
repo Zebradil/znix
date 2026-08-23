@@ -38,7 +38,7 @@ on:
         default: false
       kasha-flake:
         description: >
-          kasha flake id to publish root manifests under (roots/<flake>/) after each cache push.
+          kasha flake id to publish generation manifests under (roots/<flake>/) after each cache push.
           Empty (default) skips manifest emission.
         type: string
         required: false

@@ -1,7 +1,7 @@
-{ inputs, ... }:
+{ ... }:
 {
   perSystem =
-    { pkgs, ... }:
+    { pkgs, config, ... }:
     {
       # `nix run .#cache-push -- <attr>...` — decrypt the cache secrets from
       # secrets/cache.yaml and sign + push the resolved store paths to the S3
@@ -18,17 +18,14 @@
               gnugrep
               gnused
               findutils
-              # For kasha root-manifest emission (emit-root-manifest.sh).
-              awscli2
-              jq
             ];
-            # Emit kasha root manifests for locally-pushed generations, so they
-            # are discoverable by the box's mirror-down. The emit script is
-            # pinned via the kasha source input (no drift). Exports precede the
+            # Emit kasha generation manifests for locally-pushed closures, so
+            # they are discoverable by the box's mirror-down. The emitter is
+            # pinned via the kasha flake input (no drift). Exports precede the
             # readFile body; the body's shebang line is then just a comment.
             text = ''
               export KASHA_FLAKE=znix
-              export KASHA_EMIT_SCRIPT=${inputs.kasha}/scripts/emit-root-manifest.sh
+              export KASHA_BIN=${config.packages.kasha}/bin/kasha
             ''
             + builtins.readFile ./scripts/cache-push-local.sh;
           }

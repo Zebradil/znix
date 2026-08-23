@@ -1,7 +1,7 @@
 name: Build and Publish
 description: >
   Build the uncached derivations of a single flake attr, resolve the built store paths and the
-  kasha root manifest, then sign and push everything to the binary cache. This is the build-job
+  kasha generation manifest, then sign and push everything to the binary cache. This is the build-job
   tail shared by nix-ci.yaml (PR gate) and nix-update.yaml (push/publish) — extracted so a fix
   lands in one place instead of drifting between two copies.
 
@@ -20,8 +20,9 @@ inputs:
     default: 'false'
   kasha-flake:
     description: >
-      kasha flake id to publish root manifests under (roots/<flake>/) after the cache push.
-      Empty skips manifest emission. Only honoured when push-to-cache is 'true'.
+      kasha flake id to publish generation manifests under (roots/<flake>/) after the cache push.
+      Empty skips manifest emission. Only honoured when push-to-cache is 'true'. The target repo's
+      flake must expose the emitter as `.#kasha` (see znix's modules/flake/kasha.nix).
     required: false
     default: ''
   cache-pull-url:
@@ -135,50 +136,35 @@ runs:
         comm -23 "$RUNNER_TEMP/candidates.txt" "$RUNNER_TEMP/invalid.txt" \
           > "$RUNNER_TEMP/store-paths.txt"
         # Also publish the top-level's .drv recipe closure (its input drvs +
-        # source paths — text, KB-scale). The box has no flake evaluator, so
-        # this is the only way it can realize the top-level: `nix-store -r`
-        # the pushed .drv, substituting the inputs and building just the link
-        # step. These paths are always store-valid here (instantiated above).
+        # source paths — text, KB-scale). The box is a NAR mirror and never
+        # realizes anything; the recipe is what lets the consuming host run
+        # `nix-store -r` on it, substituting the inputs from the box and
+        # building just the link step. These paths are always store-valid here
+        # (instantiated above).
         if [[ -n "$drv" ]]; then
           nix-store --query --requisites "$drv" >> "$RUNNER_TEMP/store-paths.txt"
         fi
         sort -u -o "$RUNNER_TEMP/store-paths.txt" "$RUNNER_TEMP/store-paths.txt"
         echo "path-file=$RUNNER_TEMP/store-paths.txt" >> "$GITHUB_OUTPUT"
 
-    - name: Resolve kasha root manifest
+    - name: Resolve kasha emitter
       id: kasha
       shell: bash
-      # A v2 root is this attr's top-level {outPath, drvPath}. The build job
-      # never realizes the top-level output (build-set.sh skips the assembly
-      # tower), so gate on the DRV, not the output: the drv is always
-      # store-valid here (instantiated in "Resolve built store paths") and its
-      # recipe closure — pushed above — is what the box needs. mirror-down
-      # copies the drvPath and substitutes its input closure, never the top
-      # output. outPath is recorded for the consumer's future GC only.
+      # `kasha emit` (from the pinned kasha flake input) writes the v3
+      # generation manifest for the closure pushed below — no roots to resolve:
+      # a v3 manifest lists the pushed closure itself, and the box mirrors
+      # exactly those paths instead of realizing a drv.
+      #
+      # The emitter build + publish + gen-id construction is shared with
+      # nix-update-pr.yaml; see resolve-kasha-emitter.sh.
       if: ${{ always() && inputs.push-to-cache == 'true' && inputs.kasha-flake != '' }}
+      env:
+        CACHE_SIGNING_KEY_FILE: ${{ steps.cache-secrets.outputs.signing-key-file }}
+        CACHE_S3_URL: ${{ steps.cache-secrets.outputs.s3-url }}
+        AWS_ACCESS_KEY_ID: ${{ steps.cache-secrets.outputs.aws-access-key-id }}
+        AWS_SECRET_ACCESS_KEY: ${{ steps.cache-secrets.outputs.aws-secret-access-key }}
       run: |
-        attr='${{ inputs.attr }}'
-        # One tab-separated `<outPath>\t<drvPath>` line per top-level output.
-        # Guarded so a non-zero query can't trip the shell's `set -e`.
-        roots=""
-        drv="$(nix path-info --derivation ".#${attr}" 2>/dev/null || true)"
-        if [[ -n "$drv" ]]; then
-          for out in $(nix-store --query --outputs "$drv" 2>/dev/null || true); do
-            roots+="${out}"$'\t'"${drv}"$'\n'
-          done
-        fi
-        if [[ -z "$roots" ]]; then
-          echo "No top-level outputs for ${attr}; skipping root manifest."
-          exit 0
-        fi
-        printf '%s' "$roots" > "$RUNNER_TEMP/kasha-roots.txt"
-        san() { printf '%s' "$1" | tr -c 'A-Za-z0-9_.-' '-'; }
-        gen="$(san "${{ github.ref_name }}")-$(git rev-parse --short HEAD)-$(san "$attr")"
-        {
-          echo "roots-file=$RUNNER_TEMP/kasha-roots.txt"
-          echo "gen=$gen"
-          echo "emit-script=$(nix eval --raw .#lib.kashaEmitScript)"
-        } >> "$GITHUB_OUTPUT"
+        bash "$GITHUB_ACTION_PATH/../../scripts/resolve-kasha-emitter.sh" '${{ inputs.attr }}'
 
     - name: Publish built path
       if: ${{ always() && inputs.push-to-cache == 'true' }}
@@ -189,12 +175,13 @@ runs:
         s3-url: ${{ steps.cache-secrets.outputs.s3-url }}
         aws-access-key-id: ${{ steps.cache-secrets.outputs.aws-access-key-id }}
         aws-secret-access-key: ${{ steps.cache-secrets.outputs.aws-secret-access-key }}
-        # Emit a root manifest only when a root resolved (empty otherwise ->
-        # push proceeds, emission is skipped).
-        kasha-flake: ${{ steps.kasha.outputs.emit-script != '' && inputs.kasha-flake || '' }}
-        kasha-emit-script: ${{ steps.kasha.outputs.emit-script }}
-        roots-file: ${{ steps.kasha.outputs.roots-file }}
+        # Emission is skipped when the emitter step did not run (empty bin ->
+        # push proceeds without a manifest).
+        kasha-flake: ${{ inputs.kasha-flake }}
+        kasha-bin: ${{ steps.kasha.outputs.bin }}
         kasha-gen: ${{ steps.kasha.outputs.gen }}
+        kasha-branch: ${{ steps.kasha.outputs.branch }}
+        kasha-attr: ${{ inputs.attr }}
 
     - name: Clean up signing key
       shell: bash

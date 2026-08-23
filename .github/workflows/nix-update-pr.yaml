@@ -56,7 +56,7 @@ on:
         default: ''
       kasha-flake:
         description: >
-          kasha flake id to publish a root manifest under (roots/<flake>/) after pushing the
+          kasha flake id to publish a generation manifest under (roots/<flake>/) after pushing the
           post-update builds. Empty (default) skips manifest emission.
         type: string
         required: false
@@ -282,6 +282,13 @@ jobs:
         # always(): collect even when a build step failed, so successfully built
         # paths still get pushed and are not rebuilt on the next run.
         if: ${{ always() && steps.check.outputs.has_changes == 'true' && env.CAN_DIFF == 'true' }}
+        # Cache credentials are for the kasha emitter publish below; each is
+        # skipped when empty, so a credential-less run still resolves the gen id.
+        env:
+          CACHE_SIGNING_KEY_FILE: ${{ steps.setup.outputs.signing-key-file }}
+          CACHE_S3_URL: ${{ secrets.cache-s3-url }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.aws-secret-access-key }}
         run: |
           : > "$RUNNER_TEMP/post-update-paths.txt"
           while IFS= read -r target; do
@@ -311,32 +318,12 @@ jobs:
             # matching the store-paths-file the push action expects.
             echo "path-file=$RUNNER_TEMP/post-update-paths.txt" >> "$GITHUB_OUTPUT"
             echo "has_paths=true" >> "$GITHUB_OUTPUT"
-            # kasha roots: the diff-targets' TOP-LEVEL outputs (not the closure
-            # pushed above). One manifest per update lists them all.
+            # kasha: one v3 manifest per update run, listing the closure
+            # pushed above. Its attr is the fixed group name `update` — the
+            # diff targets vary from run to run, so they cannot name the
+            # retention group.
             if [[ -n '${{ inputs.kasha-flake }}' ]]; then
-              : > "$RUNNER_TEMP/kasha-roots.txt"
-              while IFS= read -r target; do
-                [[ -z "$target" ]] && continue
-                # A v2 root is one tab-separated `<outPath>\t<drvPath>` line per
-                # top-level output. The drv is store-valid here (instantiated
-                # above); mirror-down realizes the drvPath, the outPath is only
-                # recorded for the consumer's GC. Guarded so a non-zero query
-                # can't trip `set -e`.
-                drv="$(nix path-info --derivation ".#${target}" 2>/dev/null || true)"
-                [[ -n "$drv" ]] || continue
-                for out in $(nix-store --query --outputs "$drv" 2>/dev/null || true); do
-                  printf '%s\t%s\n' "$out" "$drv" >> "$RUNNER_TEMP/kasha-roots.txt"
-                done
-              done < "$RUNNER_TEMP/diff-targets.txt"
-              sort -u "$RUNNER_TEMP/kasha-roots.txt" -o "$RUNNER_TEMP/kasha-roots.txt"
-              if [[ -s "$RUNNER_TEMP/kasha-roots.txt" ]]; then
-                san() { printf '%s' "$1" | tr -c 'A-Za-z0-9_.-' '-'; }
-                {
-                  echo "roots-file=$RUNNER_TEMP/kasha-roots.txt"
-                  echo "gen=$(san '${{ github.ref_name }}')-$(git rev-parse --short HEAD)"
-                  echo "emit-script=$(nix eval --raw .#lib.kashaEmitScript)"
-                } >> "$GITHUB_OUTPUT"
-              fi
+              bash .znix-ci/.github/scripts/resolve-kasha-emitter.sh
             fi
           else
             echo "has_paths=false" >> "$GITHUB_OUTPUT"
@@ -351,11 +338,12 @@ jobs:
           s3-url: ${{ secrets.cache-s3-url }}
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
-          # Emit one root manifest for the update's targets when a root resolved.
-          kasha-flake: ${{ steps.post-paths.outputs.emit-script != '' && inputs.kasha-flake || '' }}
-          kasha-emit-script: ${{ steps.post-paths.outputs.emit-script }}
-          roots-file: ${{ steps.post-paths.outputs.roots-file }}
+          # Emission is skipped when kasha is not wired (empty bin).
+          kasha-flake: ${{ inputs.kasha-flake }}
+          kasha-bin: ${{ steps.post-paths.outputs.bin }}
           kasha-gen: ${{ steps.post-paths.outputs.gen }}
+          kasha-branch: ${{ steps.post-paths.outputs.branch }}
+          kasha-attr: update
 
       - name: Create or update PR
         if: ${{ steps.check.outputs.has_changes == 'true' }}

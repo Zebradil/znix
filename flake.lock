@@ -559,13 +559,17 @@
       }
     },
     "kasha": {
-      "flake": false,
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
       "locked": {
-        "lastModified": 1787182159,
-        "narHash": "sha256-fmeh6HJcoJ332SNxN4NQzjRcFYarvG1rOl/W/0hdjBE=",
+        "lastModified": 1787438679,
+        "narHash": "sha256-7NSG3PgMnjZ+Etkq0X1B+qlK2/g530BfHDsL4evf3c4=",
         "owner": "Zebradil",
         "repo": "kasha",
-        "rev": "7be4326905093123ce0e3f8f432b3bf63dc3b82d",
+        "rev": "f4a50b2bc6ef5c1295332e23f44d82cb2d7bbf5a",
         "type": "github"
       },
       "original": {

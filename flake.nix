@@ -48,7 +48,7 @@
     import-tree.url = "github:vic/import-tree";
     kasha = {
       url = "github:Zebradil/kasha";
-      flake = false;
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     nix-darwin = {
       url = "github:LnL7/nix-darwin";
