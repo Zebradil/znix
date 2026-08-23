@@ -75,19 +75,20 @@ if lib::check_commands rsync; then
   alias cp="rsync --archive --human-readable --partial --progress"
 fi
 
-if lib::check_commands trans; then
-  alias tru='trans -j en:ru'
-  alias ten='trans -j ru:en'
-  alias пер='trans -j ru:en'
+if lib::check_commands tl; then
+  # For single words prefer `def` / `defde`: offline, instant, with definitions.
+  alias tru='tl en:ru'
+  alias ten='tl ru:en'
+  alias пер='tl ru:en'
 
-  alias truen='trans -j ru:en'
-  alias tenru='trans -j en:ru'
+  alias truen='tl ru:en'
+  alias tenru='tl en:ru'
 
-  alias tende='trans -j en:de'
-  alias tdeen='trans -j de:en'
+  alias tende='tl en:de'
+  alias tdeen='tl de:en'
 
-  alias trude='trans -j ru:de'
-  alias tderu='trans -j de:ru'
+  alias trude='tl ru:de'
+  alias tderu='tl de:ru'
 fi
 
 if lib::check_commands timew; then

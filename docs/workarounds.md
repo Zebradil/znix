@@ -58,7 +58,7 @@ Options (see `modules/flake/workarounds.nix` for the full set):
 
 | option | default | meaning |
 | --- | --- | --- |
-| `package` | the attribute name | nixpkgs attribute being replaced |
+| `package` | the attribute name | nixpkgs attribute being replaced; may be nested one level, as in `dictdDBs.eng2rus` |
 | `systems` | `null` (all) | systems the breakage affects |
 | `reason` | required | one line, quoted in the removal PR |
 | `pin` | `null` | flake input holding a working nixpkgs revision |

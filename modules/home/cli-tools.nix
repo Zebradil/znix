@@ -41,7 +41,6 @@ _: {
         k9s
         lazygit
         tmux
-        translate-shell
 
         # CLI tools
         ghRenovateTriage

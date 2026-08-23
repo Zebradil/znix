@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# dict-lookup — offline dictionary lookup against local dictd databases.
+# Requires: dictd, perl, gnused, gnugrep, coreutils
+#
+# Usage:
+#   dict-lookup <dictd.conf> "<db> [db...]" <word>...
+#
+# dictd's --inetd mode speaks the DICT protocol on stdin/stdout and exits, so a
+# lookup needs neither a listening daemon nor a TCP port — concurrent lookups
+# cannot collide, and the whole round trip costs ~60ms.
+#
+# With no definition found, retries as a prefix match and lists nearby headwords,
+# which is what dictd's own client would have done via spelling correction.
+
+conf=$1
+dbs=$2
+shift 2
+word="$*"
+
+if [[ -z $word ]]; then
+  echo "usage: ${0##*/} <word>" >&2
+  exit 2
+fi
+
+read -ra db_list <<<"$dbs"
+
+# The protocol terminates lines with CRLF; strip the CR so anchored patterns
+# below can match end-of-line.
+ask() {
+  local db
+  for db in "${db_list[@]}"; do
+    case $1 in
+      DEFINE)
+        printf 'DEFINE %s "%s"\r\n' "$db" "$word"
+        # WordNet joins multi-word headwords with underscores (give_up) while
+        # FreeDict keeps the spaces, so ask for both spellings.
+        if [[ $word == *" "* ]]; then
+          printf 'DEFINE %s "%s"\r\n' "$db" "${word// /_}"
+        fi
+        ;;
+      MATCH) printf 'MATCH %s prefix "%s"\r\n' "$db" "$word" ;;
+    esac
+  done
+  printf 'QUIT\r\n'
+}
+
+speak() {
+  ask "$1" | dictd --inetd -c "$conf" 2>/dev/null | tr -d '\r'
+}
+
+# Mueller predates Unicode IPA and stored phonetic symbols as whatever glyphs its
+# display font carried at those codepoints: /kæt/ was written [kЭt]. The mapping
+# is 1:1 and total, so decode it.
+#
+# Applied to the mueller section only. The FreeDict databases already carry real
+# IPA ([wɔːtər]), which survives this mapping today purely because IPA ɛ/ɔ/ð are
+# different codepoints from ASCII E/O — not a property worth relying on.
+#
+# Scoped to [...] because the same Cyrillic letters fill the Russian definitions.
+# `-Mutf8` is required on top of `-CSD`: without it the literals below stay raw
+# bytes and the substitution silently does nothing at all.
+ipa() {
+  perl -Mutf8 -CSD -ne '
+    $mueller = /^── mueller:/ ? 1 : /^── / ? 0 : $mueller;
+    if ($mueller) {
+      s/\[([^\]]*)\]/"[".($1=~tr|эЭзЗФNSIOAE'\'':|əæʒðθŋʃɪɔʌɛˈː|r)."]"/ge;
+      s/aː/ɑː/g;
+    }
+    print;
+  '
+}
+
+definitions=$(speak DEFINE)
+
+if grep -q '^151 ' <<<"$definitions"; then
+  sed -E \
+    -e 's/^151 "[^"]*" ([^ ]+) "(.*)"$/\
+── \1: \2 ──/' \
+    -e '/^(220|150|221|250|552) /d' \
+    -e '/^\.$/d' \
+    <<<"$definitions" | ipa
+  exit 0
+fi
+
+near=$(speak MATCH |
+  sed -nE 's/^[a-z0-9_-]+ "(.*)"$/\1/p' |
+  sort -u |
+  head -20)
+
+echo "no definition for '$word'" >&2
+if [[ -n $near ]]; then
+  echo "did you mean:" >&2
+  while IFS= read -r headword; do
+    echo "  $headword" >&2
+  done <<<"$near"
+fi
+exit 1

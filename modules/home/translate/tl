@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# tl — translate a phrase, printing only the translation.
+# Requires: mozhi, jq
+#
+# Usage:
+#   tl [-e engine] <src>:<dst> <text>...
+#   tl [-e engine] :<dst> <text>...      source auto-detected
+#
+# Engines are tried in order until one answers. That fallback is the whole point
+# of going through mozhi: these are all scrapers of free web endpoints, and they
+# rot one at a time rather than together. For single words prefer `def`, which is
+# offline and carries definitions.
+
+engines=(google yandex duckduckgo deepl)
+
+if [[ ${1:-} == -e ]]; then
+  engines=("$2")
+  shift 2
+fi
+
+pair=${1:-}
+shift || true
+text="$*"
+
+if [[ -z $pair || -z $text ]]; then
+  echo "usage: ${0##*/} [-e engine] <src>:<dst> <text>..." >&2
+  exit 2
+fi
+
+src=${pair%%:*}
+dst=${pair#*:}
+if [[ -z $src ]]; then
+  src=auto
+fi
+
+for engine in "${engines[@]}"; do
+  out=$(mozhi translate -e "$engine" -s "$src" -t "$dst" -q "$text" -r 2>/dev/null |
+    jq -r '."translated-text" // empty' 2>/dev/null) || out=""
+  if [[ -n $out ]]; then
+    printf '%s\n' "$out"
+    exit 0
+  fi
+done
+
+echo "${0##*/}: no engine answered (tried: ${engines[*]})" >&2
+exit 1
