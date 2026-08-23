@@ -4,8 +4,8 @@ set -euo pipefail
 # Local entrypoint for `nix run .#cache-push -- <attr>...`.
 #
 # Decrypts the binary-cache secrets from secrets/cache.yaml (using your personal
-# sops/age key) and hands off to the shared resolve -> sign -> push core that CI
-# also uses. Run from a checkout of this flake.
+# sops/age key) and hands off to kasha-cache-push, the resolve -> sign -> push
+# core that CI also uses. Run from a checkout of this flake.
 #
 # Usage:
 #   nix run .#cache-push                  # publish every checks.<system>.* output
@@ -15,13 +15,10 @@ flake="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 flake="${flake:-$PWD}"
 
 sops_file="$flake/secrets/cache.yaml"
-core="$flake/.github/scripts/populate-nix-cache.sh"
-for f in "$sops_file" "$core"; do
-  if [[ ! -f "$f" ]]; then
-    echo "error: $f not found — run this from a checkout of the flake." >&2
-    exit 1
-  fi
-done
+if [[ ! -f "$sops_file" ]]; then
+  echo "error: $sops_file not found — run this from a checkout of the flake." >&2
+  exit 1
+fi
 
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
@@ -35,4 +32,4 @@ AWS_SECRET_ACCESS_KEY="$(sops decrypt --extract '["aws-secret-access-key"]' "$so
 export CACHE_S3_URL AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
 export CACHE_SIGNING_KEY_FILE="$key_file"
 
-exec bash "$core" "$@"
+exec kasha-cache-push "$@"

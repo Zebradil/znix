@@ -10,7 +10,7 @@ set -euo pipefail
 #   $1  optional attr; appended to the gen id as a retention-group suffix.
 #
 # Reads CACHE_S3_URL / CACHE_SIGNING_KEY_FILE / AWS_* (forwarded to
-# populate-nix-cache.sh, which owns the sign + push + URL-shape checks) and
+# kasha-cache-push, which owns the sign + push + URL-shape checks) and
 # GITHUB_REF_NAME. Writes bin=, branch= and gen= to $GITHUB_OUTPUT.
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,8 +27,9 @@ out="$(nix build --no-link --print-out-paths '.#kasha^out')"
 # it instead of rebuilding it. The remote GC sweep drops it again (no manifest
 # references it), which only costs one rebuild per sweep.
 printf '%s\n' "$out" > "${RUNNER_TEMP:-/tmp}/kasha-emitter-path.txt"
+core="$(bash "$here/resolve-cache-push.sh")"
 KASHA_FLAKE='' KASHA_BIN='' \
-  bash "$here/populate-nix-cache.sh" --paths-file "${RUNNER_TEMP:-/tmp}/kasha-emitter-path.txt"
+  "$core" --paths-file "${RUNNER_TEMP:-/tmp}/kasha-emitter-path.txt"
 
 branch="$(san "$GITHUB_REF_NAME")"
 gen="${branch}-$(git rev-parse --short HEAD)"

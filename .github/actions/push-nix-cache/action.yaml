@@ -71,6 +71,8 @@ runs:
         KASHA_BRANCH: ${{ inputs.kasha-branch }}
         KASHA_ATTR: ${{ inputs.kasha-attr }}
       run: |
-        # Shared resolve -> sign -> push core, also used by `nix run .#cache-push`.
-        bash "$GITHUB_ACTION_PATH/../../scripts/populate-nix-cache.sh" \
-          --paths-file "$STORE_PATHS_FILE"
+        # Resolve -> sign -> push core, owned by kasha and also used by
+        # `nix run .#cache-push`. See resolve-cache-push.sh for how it is
+        # located.
+        core="$(bash "$GITHUB_ACTION_PATH/../../scripts/resolve-cache-push.sh")"
+        "$core" --paths-file "$STORE_PATHS_FILE"

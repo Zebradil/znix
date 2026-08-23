@@ -2,8 +2,13 @@
 
 The `znix.zebradil.dev` S3 binary cache is populated by **CI** on every build, and can be
 populated **manually** from a local machine with a single command. Both paths share one
-implementation (`.github/scripts/populate-nix-cache.sh`: resolve → sign → push) and one set
-of secrets (`secrets/cache.yaml`).
+implementation and one set of secrets (`secrets/cache.yaml`).
+
+The implementation lives in **kasha**, not here: `kasha-cache-push` (resolve → sign → push,
+then emit the generation manifest) ships as `packages.cache-push` from the pinned `kasha`
+flake input, re-exported as `.#cache-push` by `modules/flake/kasha.nix`. It is the same
+input that provides `kasha emit`, so the push and the manifest format it produces cannot
+drift apart. Fixes arrive here through a `flake.lock` bump.
 
 ## Secrets
 
@@ -40,8 +45,8 @@ nix run .#cache-push -- checks.aarch64-darwin.trv4250-build
 nix run .#cache-push
 ```
 
-`cache-push` decrypts `secrets/cache.yaml` with your personal age key, then signs and pushes
-via the shared core script. Partial builds are fine — only store-valid paths are published.
+`cache-push` decrypts `secrets/cache.yaml` with your personal age key, then hands off to
+`kasha-cache-push`. Partial builds are fine — only store-valid paths are published.
 
 ## CI
 
@@ -50,7 +55,8 @@ Workflows `.github/workflows/{test,update}.yaml` pass `SOPS_AGE_KEY` into the re
 
 1. Resolves the built store paths for its matrix attr.
 2. `decrypt-cache-secrets` action: resolves the publishing credentials (see below).
-3. `push-nix-cache` action: signs and pushes via `populate-nix-cache.sh --paths-file`.
+3. `push-nix-cache` action: signs and pushes via `kasha-cache-push --paths-file`, located by
+   `.github/scripts/resolve-cache-push.sh`.
 
 ### Two ways to supply CI credentials
 
