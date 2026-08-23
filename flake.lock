@@ -565,11 +565,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1787438679,
-        "narHash": "sha256-7NSG3PgMnjZ+Etkq0X1B+qlK2/g530BfHDsL4evf3c4=",
+        "lastModified": 1787490669,
+        "narHash": "sha256-UX9kRIYTue0jR9+yPc/d70oLkvWJT4FgO152MZjFeYU=",
         "owner": "Zebradil",
         "repo": "kasha",
-        "rev": "f4a50b2bc6ef5c1295332e23f44d82cb2d7bbf5a",
+        "rev": "dcebbb7fefe727730c7daec53be023a76b7fc52b",
         "type": "github"
       },
       "original": {

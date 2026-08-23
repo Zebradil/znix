@@ -5,8 +5,8 @@ populated **manually** from a local machine with a single command. Both paths sh
 implementation and one set of secrets (`secrets/cache.yaml`).
 
 The implementation lives in **kasha**, not here: `kasha-cache-push` (resolve → sign → push,
-then emit the generation manifest) ships as `packages.cache-push` from the pinned `kasha`
-flake input, re-exported as `.#cache-push` by `modules/flake/kasha.nix`. It is the same
+then emit the generation manifest) ships as `packages.kasha-cache-push` from the pinned
+`kasha` flake input, re-exported under the same attr by `modules/flake/kasha.nix`. It is the same
 input that provides `kasha emit`, so the push and the manifest format it produces cannot
 drift apart. Fixes arrive here through a `flake.lock` bump.
 

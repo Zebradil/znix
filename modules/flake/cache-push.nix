@@ -17,7 +17,7 @@
               pkgs.sops
               pkgs.git
               pkgs.coreutils
-              config.packages.cache-push
+              config.packages.kasha-cache-push
             ];
             # Emit kasha generation manifests for locally-pushed closures, so
             # they are discoverable by the box's mirror-down. Both the emitter
