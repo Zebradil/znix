@@ -101,6 +101,20 @@ def mangle(path):
     return re.sub(r"[^A-Za-z0-9]", "-", str(path))
 
 
+def project_label(mangled):
+    """A project's mangled dir name, shortened against $HOME so the distinctive
+    tail fits a column: `-Users-me-code-github-com-o-repo` -> `code-github-com-o-repo`.
+    """
+    home = mangle(Path.home())
+    trimmed = mangled[len(home) :] if mangled.startswith(home) else mangled
+    return trimmed.strip("-") or mangled.strip("-")
+
+
+def column(text, width):
+    """Left-truncated so the tail — the part that identifies a project — survives."""
+    return (text if len(text) <= width else "\u2026" + text[-(width - 1) :]).ljust(width)
+
+
 def project_dirs_for_cwd():
     """One per profile that has seen this directory — all of them, not the first."""
     mangled = mangle(Path.cwd())
@@ -164,6 +178,7 @@ def rows(scoped):
                 {
                     "tool": "claude",
                     "label": profile_name(path),
+                    "project": project_label(path.parent.name),
                     "id": sid,
                     "when": when,
                     "size": size,
@@ -177,7 +192,10 @@ def rows(scoped):
     for db in opencode_dbs():
         # Child sessions are subagent runs; their substance already rides on the
         # parent's `task` call, so they are not offered as separate transcripts.
-        query = "select id, title, time_updated from session where parent_id is null"
+        query = (
+            "select id, title, time_updated, directory from session "
+            "where parent_id is null"
+        )
         if scoped:
             query += " and directory = ?"
         with closing(connect(db)) as conn:
@@ -186,6 +204,7 @@ def rows(scoped):
                     {
                         "tool": "opencode",
                         "label": "opencode",
+                        "project": project_label(mangle(row["directory"])),
                         "id": row["id"],
                         "when": datetime.fromtimestamp(
                             row["time_updated"] / 1000
@@ -200,14 +219,17 @@ def rows(scoped):
     return sorted(found, key=lambda r: r["sort"], reverse=True)
 
 
-def scoped_rows():
+def scoped_rows(everywhere=False):
+    """This project's sessions, falling back to every project when it has none."""
+    if everywhere:
+        return rows(False)
     return rows(True) or rows(False)
 
 
-def resolve(arg):
+def resolve(arg, everywhere=False):
     """A path, or a bare session id looked up in either store."""
     if not arg:
-        return pick()
+        return pick(everywhere)
 
     candidate = Path(arg)
     if candidate.is_file():
@@ -229,21 +251,24 @@ def resolve(arg):
     sys.exit(f"no session matching {arg!r} under {searched}")
 
 
-def list_sessions():
-    for row in scoped_rows():
+def list_sessions(everywhere=False):
+    for row in scoped_rows(everywhere):
+        where = f"{column(row['project'], 34)}  " if everywhere else ""
         print(
-            f"{row['label']:15}  {row['id'][:12]}  {row['when']}  {row['size']:>6}  {row['title']}"
+            f"{row['label']:15}  {where}{row['id'][:12]}  {row['when']}  {row['size']:>6}  {row['title']}"
         )
 
 
-def pick():
+def pick(everywhere=False):
     if not shutil.which("fzf"):
         sys.exit(
             "no session given and fzf is not installed — pass a path or session id"
         )
-    found = scoped_rows()
+    found = scoped_rows(everywhere)
     lines = [
-        f"{i}\t{row['label']:15}  {row['when']}  {row['size']:>6}  {row['title']}"
+        f"{i}\t{row['label']:15}  "
+        f"{column(row['project'], 34) + '  ' if everywhere else ''}"
+        f"{row['when']}  {row['size']:>6}  {row['title']}"
         for i, row in enumerate(found)
     ]
     chosen = subprocess.run(
@@ -1462,6 +1487,10 @@ def selftest():
         "trv-claude"
     )
     assert profile_name(Path("/h/.claude/projects/-a-b/s.jsonl")) == "claude"
+    assert project_label(mangle(Path.home() / "code/o/repo")) == "code-o-repo"
+    assert project_label("-etc-nixos") == "etc-nixos"
+    assert column("abc", 5) == "abc  "
+    assert column("abcdef", 4) == "\u2026def"
     with tempfile.TemporaryDirectory() as tmp:
         selftest_claude(tmp)
         selftest_opencode(tmp)
@@ -1489,13 +1518,18 @@ def main():
     parser.add_argument(
         "--list", action="store_true", help="list sessions for the current project"
     )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="search every project on this machine, not just the current directory",
+    )
     parser.add_argument("--selftest", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
 
     if args.selftest:
         return selftest()
     if args.list:
-        return list_sessions()
+        return list_sessions(args.all)
 
     level, header = "brief", "table"
     if args.full:
@@ -1505,7 +1539,7 @@ def main():
     elif args.llm:
         level, header = "llm", "minimal"
 
-    sys.stdout.write(export(resolve(args.session), level, header, args.json))
+    sys.stdout.write(export(resolve(args.session, args.all), level, header, args.json))
 
 
 if __name__ == "__main__":

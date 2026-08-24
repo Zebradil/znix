@@ -16,10 +16,17 @@ transcripts or opencode's SQLite database. Session metadata (title, model, tool 
 session-export                      # fzf picker over this project's sessions, both tools
 session-export <session-id|path>    # a specific session; the source follows from the id
 session-export --list               # profile / id / time / size / title for this project
+session-export --all                # picker over every project on this machine
+session-export --list --all         # same, as a list; adds a project column
 ```
 
-Sessions are scoped to the current directory. A session id is enough to identify the source — opencode ids start with
-`ses_`, Claude ids are UUIDs — so no flag selects the tool.
+Sessions are scoped to the current directory, unless `--all` widens the picker and `--list` to every project the
+machine has ever run a session in — that is the flag for "which session was it, in some other repo". `--all` adds a
+project column derived from the transcript's directory, shortened against `$HOME` and left-truncated so the
+distinctive tail survives. Passing an explicit session id or path never needs `--all`: id lookup is already global.
+
+A session id is enough to identify the source — opencode ids start with `ses_`, Claude ids are UUIDs — so no flag
+selects the tool.
 
 Every Claude profile on the machine is searched, not just the running one: each profile is its own config dir
 (`~/.config/personal-claude`, `~/.config/trv-claude`, …) and `CLAUDE_CONFIG_DIR` names only the active one, so the
