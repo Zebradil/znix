@@ -2,6 +2,47 @@
 
 If your statement is not supported by any evidence, mark it as such. Avoid presenting assumptions as facts.
 
+## Data boundaries
+
+Personal and employer-internal work are separate worlds and never mix.
+
+- The personal knowledge base never receives employer-internal information: internal systems, tickets, incidents,
+  colleagues, unreleased plans, or anything that would not be safe in a public repository with secrets removed.
+- Classify by path first, content second. Anything under `~/code/github.com/trivago/` or another path with `trivago` in
+  it is employer work. Elsewhere, classify by what the content is — employer work living in a personal repository
+  (company-related scripts, an internal fork, an OSS project touched for work) is still employer work.
+- When the classification is not obvious, ask the user.
+
+## Knowledge base capture
+
+Most sessions produce nothing worth keeping: routine edits, review passes, one-shot questions, anything whose whole
+content is the diff. A few produce a durable fact — a decision with its rationale, a root cause, a researched trade-off,
+a recipe that works. Those should be captured using the tools of kb-mcp.
+
+Test: **would this be worth having in a few months, and is it unrecoverable from git history or the worklog?** Evaluate
+from the end of the first exchange onward; a single research reply can qualify.
+
+When it passes, append one line to the end of the response — never a blocking question:
+
+> Worth keeping in the knowledge base? **yes** / **no** / **continuous** — personal because <one clause>.
+
+- **yes** — capture once, now, with `inbox_capture`.
+- **no** — drop the subject for the rest of this session.
+- **continuous** — create the note in `reference/` or the matching project, then append each further durable fact to it
+  as the session goes. Same test per fact; never append per response.
+
+Rules:
+
+- If the knowledge base tools are not available in this session, never offer. That is the entire gate.
+- Never offer for employer-classified work. Name the classification in the offer line so a wrong call is visible.
+- Offer at most once per session; a second offer only for a materially different artifact; never after a **no**.
+- Only agent-authored text leaves the session. Never write a transcript, a raw session export, or quoted conversation
+  into the knowledge base.
+- Compress prose, carry data verbatim: tables, commands, config snippets, exact figures and their uncertainty markers
+  ("estimate", "unverified", "verify") cross over unchanged.
+- `/save-convo` remains the deliberate full-synthesis path, invoked by name. This offer is one cheap capture, not a
+  session artifact.
+
 ## Code
 
 The Boy Scout Rule: leave the code better than you found it.
