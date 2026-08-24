@@ -282,7 +282,6 @@ in
                 bindings = {
                   "enter" = "chat:newline";
                   "shift+enter" = "chat:submit";
-                  "ctrl+enter" = "chat:submit";
                 };
               }
             ];
@@ -424,7 +423,7 @@ in
         helperScripts =
           let
             dir = ./scripts;
-            entries = builtins.removeAttrs (builtins.readDir dir) [
+            entries = removeAttrs (builtins.readDir dir) [
               "gh-renovate-triage"
               "gh-pr-unresolved-comments"
             ];
