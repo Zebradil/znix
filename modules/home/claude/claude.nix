@@ -272,6 +272,22 @@ in
             lspServers = lib.mapAttrs (_: mkClaudeLsp) lspServers;
           }
         );
+        # Enter inserts a newline; shift/ctrl+enter sends. Matches the opencode TUI binds.
+        keybindingsFile = pkgs.writeText "claude-keybindings.json" (
+          builtins.toJSON {
+            "$schema" = "https://www.schemastore.org/claude-code-keybindings.json";
+            bindings = [
+              {
+                context = "Chat";
+                bindings = {
+                  "enter" = "chat:newline";
+                  "shift+enter" = "chat:submit";
+                  "ctrl+enter" = "chat:submit";
+                };
+              }
+            ];
+          }
+        );
         knowRoot =
           if config.znix.claude.knowRoot != null then
             config.znix.claude.knowRoot
@@ -437,6 +453,7 @@ in
                   {
                     "${profile.configDir}/CLAUDE.md".source = "${assetsRoot}/AGENTS.md";
                     "${profile.configDir}/statusline-command.sh".source = "${assetsRoot}/statusline-command.sh";
+                    "${profile.configDir}/keybindings.json".source = keybindingsFile;
                   }
                   // lib.optionalAttrs (lspServers != { }) {
                     "${profile.configDir}/skills/znix-lsp/.claude-plugin/plugin.json".source = lspPluginJson;
