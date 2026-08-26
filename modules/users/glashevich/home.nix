@@ -97,6 +97,7 @@ in
         claude = {
           caveman.enable = true;
           ponytail.enable = true;
+          mcpServers.personal-knowledge-base = self.lib.claude.personalKnowledgeBase;
           worklog = {
             enable = true;
             # Env-less tools (opencode, cursor) target the company worklog;

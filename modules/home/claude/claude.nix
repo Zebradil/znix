@@ -73,6 +73,24 @@ let
           '';
         };
 
+        mcpServers = lib.mkOption {
+          type = lib.types.attrsOf lib.types.attrs;
+          default = { };
+          description = ''
+            MCP servers registered in every enabled profile's user scope, and
+            translated into opencode's and Cursor's own MCP schemas by their
+            modules. Entries use Claude Code's shape (type/url/oauth/headers).
+
+            Claude Code has no settings.json surface for MCP, so these are
+            merged into its own state file ($CLAUDE_CONFIG_DIR/.claude.json) at
+            activation; entries added by hand survive the merge, stale ones need
+            `claude mcp remove -s user <name>`.
+
+            OAuth credentials are not part of this: `claude mcp login <name>`
+            stores them per config directory, so each profile signs in once.
+          '';
+        };
+
         defaultSettings = lib.mkOption {
           type = lib.types.attrs;
           default = {
@@ -205,6 +223,21 @@ in
 {
   flake.lib.claude = {
     inherit renovatePermissions;
+
+    # Personal knowledge base (zebradil/know-mcp). Named for the agents: a
+    # company KB server would sit next to it, and the two must never be
+    # confused. Authelia has no dynamic client registration, so the OAuth
+    # client id is static (the same public client claude.ai and opencode use)
+    # and the callback port fixed — it must match a `http://localhost:PORT/callback`
+    # redirect URI registered on that client.
+    personalKnowledgeBase = {
+      type = "http";
+      url = "https://kb-mcp.zebradil.dev/mcp";
+      oauth = {
+        clientId = "kb-mcp";
+        callbackPort = 41234;
+      };
+    };
 
     # Shared `personal` profile skeleton. Hosts pass only their settings deltas;
     # base settings come from znix.claude.defaultSettings.
@@ -350,6 +383,9 @@ in
 
         defaultSettings = config.znix.claude.defaultSettings;
 
+        mcpServers = config.znix.claude.mcpServers;
+        mcpServersFile = pkgs.writeText "claude-mcp-servers.json" (builtins.toJSON mcpServers);
+
         mkSettingsFile =
           name: profile:
           let
@@ -474,6 +510,21 @@ in
                   "copyClaudeSettings-${name}" = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
                     $DRY_RUN_CMD mkdir -p "$HOME/${profile.configDir}"
                     $DRY_RUN_CMD install -m 0644 ${settingsFile} "$HOME/${profile.configDir}/settings.json"
+                  '';
+                }
+                // lib.optionalAttrs (mcpServers != { }) {
+                  # .claude.json is Claude Code's own state file, so it can't be
+                  # a symlink into the store — merge our servers into whatever
+                  # is there.
+                  "claudeMcpServers-${name}" = lib.hm.dag.entryAfter [ "copyClaudeSettings-${name}" ] ''
+                    state="$HOME/${profile.configDir}/.claude.json"
+                    tmp=$(mktemp)
+                    # Second jq covers a missing or unparseable state file.
+                    ${pkgs.jq}/bin/jq --slurpfile add ${mcpServersFile} \
+                      '.mcpServers = ((.mcpServers // {}) + $add[0])' "$state" >"$tmp" 2>/dev/null \
+                      || ${pkgs.jq}/bin/jq -n --slurpfile add ${mcpServersFile} '{ mcpServers: $add[0] }' >"$tmp"
+                    $DRY_RUN_CMD install -m 0600 "$tmp" "$state"
+                    rm -f "$tmp"
                   '';
                 }
               ) enabled

@@ -17,7 +17,9 @@ Personal and employer-internal work are separate worlds and never mix.
 
 Most sessions produce nothing worth keeping: routine edits, review passes, one-shot questions, anything whose whole
 content is the diff. A few produce a durable fact — a decision with its rationale, a root cause, a researched trade-off,
-a recipe that works. Those should be captured using the tools of kb-mcp.
+a recipe that works. Those should be captured using the tools of the `personal-knowledge-base` MCP server
+(`inbox_capture`, `kb_search`, `reference_create`, …) — a knowledge base named for a company is a different
+server and never receives personal-KB content, or the reverse.
 
 Test: **would this be worth having in a few months, and is it unrecoverable from git history or the worklog?** Evaluate
 from the end of the first exchange onward; a single research reply can qualify.

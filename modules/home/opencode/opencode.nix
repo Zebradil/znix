@@ -68,6 +68,19 @@ _: {
         }
         // lib.optionalAttrs (srv.settings != { }) { initialization = srv.settings; };
 
+      # Same servers as the Claude profiles, in opencode's `mcp` schema. The
+      # OAuth callback path is opencode's own (/mcp/oauth/callback on 127.0.0.1),
+      # so the redirect URI differs from Claude Code's even on the same port.
+      mcpServers = config.znix.claude.mcpServers or { };
+      mkOcMcp =
+        srv:
+        {
+          type = "remote";
+          inherit (srv) url;
+        }
+        // lib.optionalAttrs (srv ? oauth) { inherit (srv) oauth; }
+        // lib.optionalAttrs (srv ? headers) { inherit (srv) headers; };
+
       ocSettings = {
         "$schema" = "https://opencode.ai/config.json";
         plugin =
@@ -75,7 +88,8 @@ _: {
           ++ lib.optional ponytailOn "./plugins/ponytail/ponytail.mjs";
         permission.external_directory."/nix/store/**" = "allow";
       }
-      // lib.optionalAttrs (lspServers != { }) { lsp = lib.mapAttrs (_: mkOcLsp) lspServers; };
+      // lib.optionalAttrs (lspServers != { }) { lsp = lib.mapAttrs (_: mkOcLsp) lspServers; }
+      // lib.optionalAttrs (mcpServers != { }) { mcp = lib.mapAttrs (_: mkOcMcp) mcpServers; };
       tuiSettings = {
         "$schema" = "https://opencode.ai/tui.json";
         keybinds = {

@@ -18,6 +18,8 @@ file: Claude symlinks it to each profile's `CLAUDE.md`; OpenCode reads it as `AG
 always-on local-plugin rule. Vendored skills wire in separately via `znix.claude.extraSkillRoots` (see
 `docs/vendored-skills.md`). Private company skill repos must never be referenced from this public repo — they are
 synced out-of-band by the `skillsync` tool with per-host config outside the repo (see `docs/private-skills.md`).
+MCP servers reach every Claude profile, opencode, and Cursor through `znix.claude.mcpServers` (see
+`docs/mcp-servers.md`).
 
 ## Key Patterns
 

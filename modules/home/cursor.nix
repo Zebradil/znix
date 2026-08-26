@@ -75,6 +75,23 @@
 
         ${builtins.readFile "${cavemanSrc}/src/rules/caveman-activate.md"}
       '';
+      # Same servers as the Claude profiles, in Cursor's mcp.json schema: no
+      # `type`, and static OAuth credentials live under `auth` with SCREAMING
+      # keys. Cursor's redirect URIs are fixed (http://localhost:8787/callback
+      # for the desktop app, https://www.cursor.com/agents/mcp/oauth/callback
+      # for web), so a callbackPort has nothing to map onto here.
+      mcpServers = config.znix.claude.mcpServers or { };
+      mkCursorMcp =
+        srv:
+        {
+          inherit (srv) url;
+        }
+        // lib.optionalAttrs (srv ? headers) { inherit (srv) headers; }
+        // lib.optionalAttrs (srv ? oauth) { auth.CLIENT_ID = srv.oauth.clientId; };
+      mcpServersFile = pkgs.writeText "cursor-mcp-servers.json" (
+        builtins.toJSON (lib.mapAttrs (_: mkCursorMcp) mcpServers)
+      );
+
       agent = pkgs.writeShellScriptBin "agent" ''
         exec ${pkgs.cursor-cli}/bin/cursor-agent --plugin-dir "$HOME/${pluginDir}" "$@"
       '';
@@ -155,6 +172,22 @@
             fi
           fi
         '';
+
+        # mcp.json is Cursor-owned too (the UI adds servers to it), so merge
+        # only the keys Nix knows about. Dropping one from Nix leaves it behind.
+        home.activation.cursorMcpServers = lib.mkIf (mcpServers != { }) (
+          lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+            mcp="$HOME/.cursor/mcp.json"
+            tmp=$(mktemp)
+            # Second jq covers a missing or unparseable mcp.json.
+            ${pkgs.jq}/bin/jq --slurpfile add ${mcpServersFile} \
+              '.mcpServers = ((.mcpServers // {}) + $add[0])' "$mcp" >"$tmp" 2>/dev/null \
+              || ${pkgs.jq}/bin/jq -n --slurpfile add ${mcpServersFile} '{ mcpServers: $add[0] }' >"$tmp"
+            $DRY_RUN_CMD mkdir -p "$HOME/.cursor"
+            $DRY_RUN_CMD install -m 0644 "$tmp" "$mcp"
+            rm -f "$tmp"
+          ''
+        );
 
         home.persistence."/persist" = lib.mkIf (config.znix.impermanence.enable or false) {
           directories = [ ".cursor" ];
