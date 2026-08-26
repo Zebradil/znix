@@ -68,9 +68,12 @@ _: {
         }
         // lib.optionalAttrs (srv.settings != { }) { initialization = srv.settings; };
 
-      # Same servers as the Claude profiles, in opencode's `mcp` schema. The
-      # OAuth callback path is opencode's own (/mcp/oauth/callback on 127.0.0.1),
-      # so the redirect URI differs from Claude Code's even on the same port.
+      # Same servers as the Claude profiles, in opencode's `mcp` schema.
+      # `callbackPort` is dropped: opencode redirects to a 127.0.0.1 literal, and
+      # RFC 8252 §7.3 makes the port irrelevant to redirect-URI matching there —
+      # only the host literal and path have to match what the IdP registered.
+      # Claude Code's port survives in its own entry because it uses `localhost`,
+      # which gets no such flexibility.
       mcpServers = config.znix.claude.mcpServers or { };
       mkOcMcp =
         srv:
@@ -78,7 +81,9 @@ _: {
           type = "remote";
           inherit (srv) url;
         }
-        // lib.optionalAttrs (srv ? oauth) { inherit (srv) oauth; }
+        // lib.optionalAttrs (srv ? oauth) {
+          oauth = builtins.removeAttrs srv.oauth [ "callbackPort" ];
+        }
         // lib.optionalAttrs (srv ? headers) { inherit (srv) headers; };
 
       ocSettings = {

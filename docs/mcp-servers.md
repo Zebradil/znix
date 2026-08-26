@@ -23,13 +23,15 @@ Properties of the merge:
 
 opencode gets the servers in `~/.config/opencode/opencode.json` under `mcp`, written wholesale like the rest of that
 file (`type = "remote"`, plus `url`, `oauth`, `headers`). Its OAuth callback is
-`http://127.0.0.1:<callbackPort>/mcp/oauth/callback` — same port as Claude Code's if `callbackPort` says so, but a
-different path, so it needs its own redirect URI registered. Sign in with `opencode mcp auth <name>`.
+`http://127.0.0.1:<port>/mcp/oauth/callback` — a path Claude Code never uses, so it needs its own redirect URI
+registered. The port is not part of that registration and `callbackPort` is stripped from the entry: opencode
+redirects to a loopback IP literal, and Authelia implements RFC 8252 §7.3 port flexibility there, so any port opencode
+picks matches. Sign in with `opencode mcp auth <name>`.
 
 Cursor gets them in `~/.cursor/mcp.json` under `mcpServers`, merged with `jq` at activation because Cursor's UI
 writes to that file too (same caveats as `.claude.json`: hand-added servers survive, removed ones need deleting by
 hand). Cursor's schema has no `type` and takes a static OAuth client as `auth.CLIENT_ID`; its redirect URIs are
-fixed and unconfigurable:
+fixed and unconfigurable — and on `localhost`, which is not an IP literal and so gets no port flexibility:
 
 ```
 http://localhost:8787/callback                              # desktop app and CLI
@@ -37,6 +39,11 @@ https://www.cursor.com/agents/mcp/oauth/callback            # web and Cursor clo
 ```
 
 `callbackPort` therefore has nothing to map onto on the Cursor side.
+
+Claude Code is in the same position for the opposite reason: it redirects to `localhost`, not `127.0.0.1`
+([claude-code#42765](https://github.com/anthropics/claude-code/issues/42765)), so its `callbackPort` has to stay
+pinned and registered exactly. Authelia's matching only relaxes the port when *both* the registered and the requested
+host are loopback IP literals with the same hostname, path, and query.
 
 ## Personal knowledge base
 
@@ -63,11 +70,12 @@ trv-claude-key mcp login personal-knowledge-base    # company, API key
 opencode mcp auth personal-knowledge-base           # opencode
 ```
 
-Cursor signs in from its MCP settings page. All told, the `kb-mcp` client needs these redirect URIs:
+Cursor signs in from its MCP settings page. All told, the `kb-mcp` client carries these redirect URIs (registered in
+the homelab repo's `prototypes/authelia/helm/authelia.yaml`):
 
 ```
 http://localhost:41234/callback                     # Claude Code
-http://127.0.0.1:41234/mcp/oauth/callback           # opencode
+http://127.0.0.1/mcp/oauth/callback                 # opencode, any port
 http://localhost:8787/callback                      # Cursor desktop/CLI
 https://www.cursor.com/agents/mcp/oauth/callback    # Cursor web
 ```
