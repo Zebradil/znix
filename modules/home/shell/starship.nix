@@ -2,6 +2,28 @@ _: {
   flake.modules.homeManager.starship =
     { lib, ... }:
     {
+      # Probe for slow shell startup: renders the prompt once at the top of an
+      # interactive shell, while the filesystem and tool caches are still cold,
+      # and keeps the per-module timings only when that render was slow.
+      programs.zsh.initContent = lib.mkOrder 1500 ''
+        () {
+          zmodload zsh/datetime
+          local dir=''${XDG_CACHE_HOME:-$HOME/.cache}/starship/slow
+          local tmp=''${TMPDIR:-/tmp}/starship-timings.$$
+          local t0=$EPOCHREALTIME
+          starship timings >$tmp 2>&1
+          local elapsed=$(( EPOCHREALTIME - t0 ))
+          if (( elapsed > ''${STARSHIP_SLOW_THRESHOLD:-0.5} )); then
+            mkdir -p $dir
+            {
+              print -r -- "# $(date -Iseconds) total=''${elapsed}s pwd=$PWD"
+              cat $tmp
+            } >| $dir/$(date +%s)-$$.log
+          fi
+          rm -f $tmp
+        }
+      '';
+
       programs.starship = {
         enable = true;
         settings =
