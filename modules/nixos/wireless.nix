@@ -34,15 +34,22 @@ _: {
           WIFI_PSK=${config.sops.placeholder.wireless}
         '';
 
-        # iwd's autoconnect_quick path probes only the frequencies cached in
-        # /var/lib/iwd/.known_network.freq, in file order, and takes the first usable BSS —
-        # on a multi-AP SSID that parks it on whichever AP happens to be listed first,
-        # ignoring signal. The stock thresholds (-70 / -76) are too low for a
-        # mediocre-but-usable link to ever trigger the corrective roam scan.
-        # See docs/wifi-troubleshooting.md.
-        networking.wireless.iwd.settings.General = {
-          RoamThreshold = -55;
-          RoamThreshold5G = -65;
+        # On a multi-AP SSID, iwd can end up on a distant AP — its autoconnect_quick path only
+        # probes the frequencies cached in /var/lib/iwd/.known_network.freq, and a BSS that
+        # recently failed to associate is skipped even when it is by far the strongest. The
+        # stock thresholds (-70 / -76) are low enough that the resulting mediocre-but-usable
+        # link never triggers a corrective roam scan. See docs/wifi-troubleshooting.md.
+        networking.wireless.iwd.settings = {
+          General = {
+            RoamThreshold = -55;
+            RoamThreshold5G = -65;
+          };
+
+          # iwd ranks candidate BSSes by the data rate it estimates from their RSSI, so a
+          # close 2.4 GHz radio can outrank a 5 GHz one that is still perfectly usable.
+          # Halving the 2.4 GHz rank leaves it as a fallback for when 5 GHz is genuinely
+          # bad. Not 0.0 — that disables the band outright, scanning included.
+          Rank.BandModifier2_4GHz = "0.5";
         };
 
         networking.networkmanager = {
