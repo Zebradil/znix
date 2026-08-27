@@ -34,6 +34,17 @@ _: {
           WIFI_PSK=${config.sops.placeholder.wireless}
         '';
 
+        # iwd's autoconnect_quick path probes only the frequencies cached in
+        # /var/lib/iwd/.known_network.freq, in file order, and takes the first usable BSS —
+        # on a multi-AP SSID that parks it on whichever AP happens to be listed first,
+        # ignoring signal. The stock thresholds (-70 / -76) are too low for a
+        # mediocre-but-usable link to ever trigger the corrective roam scan.
+        # See docs/wifi-troubleshooting.md.
+        networking.wireless.iwd.settings.General = {
+          RoamThreshold = -55;
+          RoamThreshold5G = -65;
+        };
+
         networking.networkmanager = {
           enable = true;
           wifi.backend = "iwd";
