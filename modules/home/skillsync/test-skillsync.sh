@@ -40,7 +40,7 @@ HOME="$tmp/home" SKILLSYNC_DATA="$tmp/data" SKILLSYNC_CONFIG="$tmp/home/.config/
 output=$(HOME="$tmp/home" SKILLSYNC_DATA="$tmp/data" SKILLSYNC_CONFIG="$tmp/home/.config/skillsync/config.yaml" bash "$script" status)
 [[ "$output" == *"refs: 1 ok, 0 need attention"* ]]
 
-touch "$tmp/source/skill/new-file"
+touch "$tmp/source/skill/new-file" "$tmp/source/unrelated-file"
 git -C "$tmp/source" add .
 git -C "$tmp/source" commit --quiet -m update
 git -C "$tmp/source" push --quiet "$tmp/remote.git" alternate
@@ -48,3 +48,7 @@ git -C "$tmp/source" push --quiet "$tmp/remote.git" alternate
 output=$(HOME="$tmp/home" SKILLSYNC_DATA="$tmp/data" SKILLSYNC_CONFIG="$tmp/home/.config/skillsync/config.yaml" bash "$script" status)
 [[ "$output" == *"UPDATE    source:"* ]]
 [[ "$output" == *"refs: 0 ok, 1 need attention"* ]]
+
+output=$(HOME="$tmp/home" SKILLSYNC_DATA="$tmp/data" SKILLSYNC_CONFIG="$tmp/home/.config/skillsync/config.yaml" bash "$script" diff source)
+[[ "$output" == *"skill/new-file"* ]]
+[[ "$output" != *"unrelated-file"* ]]

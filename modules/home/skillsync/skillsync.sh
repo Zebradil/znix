@@ -124,7 +124,8 @@ cmd_status() {
 }
 
 cmd_diff() {
-  local only="${1:-}" s dir url ref head next
+  local only="${1:-}" s dir url ref head next b
+  local -a included
   [ -z "$only" ] || require_source "$only"
   while IFS= read -r s; do
     [ -z "$only" ] || [ "$s" = "$only" ] || continue
@@ -139,16 +140,18 @@ cmd_diff() {
     git -c "remote.origin.url=$url" -C "$dir" fetch --quiet origin "$ref"
     head=$(git -C "$dir" rev-parse HEAD)
     next=$(git -C "$dir" rev-parse FETCH_HEAD)
+    included=()
+    while IFS= read -r b; do included+=("$b"); done < <(src_include "$s")
     if [ "$head" = "$next" ]; then
       echo "up to date"
       continue
     fi
     if git -C "$dir" merge-base --is-ancestor HEAD FETCH_HEAD; then
-      git -C "$dir" --no-pager log --oneline HEAD..FETCH_HEAD
+      git -C "$dir" --no-pager log --oneline HEAD..FETCH_HEAD -- "${included[@]}"
     else
-      git -C "$dir" --no-pager log --left-right --oneline HEAD...FETCH_HEAD
+      git -C "$dir" --no-pager log --left-right --oneline HEAD...FETCH_HEAD -- "${included[@]}"
     fi
-    git -C "$dir" diff HEAD FETCH_HEAD
+    git -C "$dir" diff HEAD FETCH_HEAD -- "${included[@]}"
   done < <(list_sources)
 }
 
