@@ -2,7 +2,7 @@
 # | Fuzzy finder             |
 # +--------------------------+
 
-if lib::check_commands fzf fd bat exa; then
+if lib::check_commands fzf fd bat eza; then
   log::debug "Configuring fzf"
 
   export FZF_DEFAULT_OPTS='--multi --no-height --extended'
@@ -11,7 +11,7 @@ if lib::check_commands fzf fd bat exa; then
   export FZF_ALT_C_COMMAND="${FZF_DEFAULT_COMMAND} --type d"
   # TODO transform these commands to functions
   FZF_PREVIEW_MAX_LINES=200
-  FZF_DIRECTORY_PREVIEW_CMD="eza -l --group-directories-first -T -L5 --color=always {} | head -${FZF_PREVIEW_MAX_LINES}"
+  FZF_DIRECTORY_PREVIEW_CMD="eza -l --no-permissions --no-user --no-filesize --group-directories-first --color=always {} | head -${FZF_PREVIEW_MAX_LINES}"
   FZF_TEXT_FILE_PREVIEW_CMD="bat -pp --italic-text=always --color=always -r:${FZF_PREVIEW_MAX_LINES}"
   export FZF_ALT_C_OPTS="--preview '${FZF_DIRECTORY_PREVIEW_CMD}'"
 
