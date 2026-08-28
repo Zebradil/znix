@@ -8,6 +8,7 @@
       url = "github:MalpenZibo/ashell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    blebridge.url = "github:Zebradil/blebridge";
     colmena = {
       url = "github:zhaofengli/colmena";
       inputs.nixpkgs.follows = "nixpkgs";

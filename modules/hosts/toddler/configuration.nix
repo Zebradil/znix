@@ -11,6 +11,7 @@
         openssh
         suok # lean admin user
         toddler-adguard
+        toddler-blebridge
         toddler-hardware
       ];
 

@@ -25,11 +25,16 @@ recorded in [ADR 0001](../adr/0001-toddler-appliance-host.md).
   Not migrated. 2 Ubuntu machines will hit upstream mirrors directly. Re-add
   later only if bandwidth actually hurts.
 - **blebridge** — custom app: reads Bluetooth (BLE) treadmill data,
-  re-transmits over ANT+. Runs today as locally-built `blebridge:local`
-  Docker container: single static aarch64 binary (`/blebridge`, ~5.7 MB, not
-  Go), **host network**, `/dev/bus/usb` passthrough (ANT+ stick), `/run/dbus`
-  bind (BlueZ). Image `Created` epoch = 1980 → looks Nix-`dockerTools`-built
-  already. Source NOT on the Pi.
+  re-transmits over ANT+. Runs as a **native systemd unit**
+  (`modules/hosts/toddler/blebridge.nix`), no Docker: the upstream flake's
+  `packages.x86_64-linux.blebridge-arm64` is a static-musl aarch64 binary
+  (~5.7 MB) cross-built on the deployer, so the Pi never compiles Rust.
+  Upstream keeps a container path for other users; it never bound this host
+  (see blebridge's `docs/adr/0001-rust-rewrite.md`). App Endpoint pinned to
+  hci0 — see DEFER-7 and DEFER-8. Starts at boot and restarts on failure, but
+  rate-limited to 5 starts/hour: an occasional crash self-heals, a crash loop
+  parks the unit in `failed` rather than resetting USB (and with it Ethernet)
+  forever. Recover with `systemctl reset-failed blebridge`.
 
 ## Current hardware (read off the box via SSH)
 
@@ -76,8 +81,29 @@ recorded in [ADR 0001](../adr/0001-toddler-appliance-host.md).
 - **Boot/firmware**: mainline `aarch64` kernel + extlinux
   (`boot.loader.generic-extlinux-compatible.enable = true`,
   `boot.loader.grub.enable = false`) + `nixos-hardware` `raspberry-pi/3` module
-  (reuses existing `inputs.hardware`). Onboard Pi Bluetooth (UART) ignored —
-  blebridge uses USB BT dongles.
+  (reuses existing `inputs.hardware`).
+    - **`boot.kernelPackages = pkgs.linuxPackages` must be set explicitly.**
+      `raspberry-pi/3` `mkDefault`s the downstream `linux-rpi` kernel, which
+      pairs badly with the `sd-image-aarch64` firmware partition: on that
+      combination *both* Bluetooth radios are dead. Mainline recovers the USB
+      dongle (hci1).
+    - **`hardware.deviceTree.name` must name the DTB**
+      (`broadcom/bcm2837-rpi-3-b-plus.dtb`). Mainline names this board after
+      the SoC (`bcm2837-`); the firmware's `$fdtfile` says `bcm2710-` (the
+      downstream name), so `FDTDIR` finds nothing and U-Boot falls back to the
+      firmware's own DTB — which boots, but with **no network**, requiring a
+      keyboard and display to recover. Naming the DTB emits a concrete `FDT`.
+    - **`boot.kernelParams` must be `mkForce`d to drop
+      `console=ttyAMA0,115200n8`.** On a 3B+ the PL011 (`ttyAMA0`,
+      `3f201000.serial`) *is* the onboard Bluetooth HCI UART; the header
+      console is the mini-UART (`ttyS0`, GPIO14/15). `sd-image-aarch64.nix`
+      hardcodes that console for QEMU's `-machine virt`, and it kills hci0.
+      The option is a plain list and neither the sd-image profile nor
+      `nixos-hardware`'s `raspberry-pi/3` uses `mkDefault`, so `mkForce` over
+      the whole list is the only way to remove one entry — keep `root=fstab`
+      (from nixpkgs' systemd-initrd module) or the box will not boot.
+    - Onboard Pi Bluetooth (UART) is **not** optional after all: the App
+      Endpoint has to advertise from it (see DEFER-7).
 - **CI**: no `checks` entry for toddler initially (hand-listed in
   `modules/flake/ci.nix`; adding a host does not auto-break CI). Build/verify
   locally on tuxedo via binfmt. Add an `aarch64-linux.toddler-build` check
@@ -127,14 +153,62 @@ recorded in [ADR 0001](../adr/0001-toddler-appliance-host.md).
   deploy/SSH reach. Deferred, not required for the LAN DNS role.
 - **DEFER-4 — apt-proxy identity**: confirm what the current systemd service
   actually is (apt-cacher-ng? custom?) before modelling it in Nix.
-- **DEFER-5 — blebridge deployment**: OUT of initial scope. Source is a WIP
-  Rust rewrite at `~/code/github.com/zebradil/blebridge`; user packages + wires
-  the systemd service later. Initial migration only guarantees the **substrate**:
-    - `hardware.bluetooth.enable = true` with latest BlueZ (BLE central;
-      likely `settings.General.Experimental = true`).
-    - udev rules granting raw USB access to ANT+ sticks (`0fcf:1008`,
-      `0fcf:1009`) for the blebridge service user (libusb userspace, no kernel
-      driver needed).
-    - `usbutils` for debugging.
+- **DEFER-5 — blebridge deployment**: RESOLVED. Deployed as a systemd unit
+  from the upstream flake (`modules/hosts/toddler/blebridge.nix`). Verified
+  end-to-end: treadmill `C1:5C:7A:44:82:BA` found and connected, ANT channel
+  open broadcasting SDM pages as `device_number=12345`. Runs as root — the
+  BlueZ D-Bus policy grants `GattCharacteristic1`/`LEAdvertisement1` to
+  `user="root"` only, so an unprivileged unit needs a bespoke `org.bluez`
+  policy drop-in. ~460 KB resident against a 64 MB cap.
+- **DEFER-7 — onboard Bluetooth (hci0)**: RESOLVED. Root cause was
+  `console=ttyAMA0,115200n8` on the kernel command line, contributed by
+  `sd-image-aarch64.nix` ("for QEMU's `-machine virt`", per its own comment).
+  On a 3B+ that PL011 is the Broadcom radio's HCI UART, so the kernel ran a
+  console on the chip's serial line: printk went out its RX pin, and
+  `pl011_console_write()` clears `CR_CTSEN` for the duration of every write,
+  dropping hardware flow control on a link declared `uart-has-rtscts`. The H4
+  stream was corrupted and hci0 died on its first command (`0x1001`/`0xfc18`
+  tx timeout, `-110`). Raspbian used `console=serial0` → `ttyS0` and never hit
+  it. Fix is the `mkForce`d `boot.kernelParams` above; hci0 then comes up as
+  Cypress CYW43455, HCI 5.0.
+    - Everything that *looked* suspicious was fine and cost time: `BT_ON`
+      claimed and high on `raspberrypi-exp-gpio`, PL011 clock 48 MHz,
+      `hci_uart_bcm` bound to `serial0-0`, GPIO30–33 in alt3, `BCM4345C5.hcd`
+      present. Lowering the console log level (`dmesg -n 1`) does **not**
+      exonerate the console — the damage is the `CR_CTSEN` toggle and the
+      termios override in `uart_port_startup()`, not the log volume.
+    - hci0 runs on the Broadcom factory-default address `43:45:C0:00:1F:AC`.
+      Mainline's DTS ships `local-bd-address = [00 00 00 00 00 00]` for the
+      VideoCore firmware to overwrite, and the kernel does not consume the
+      property here. **Do not bother with a device-tree overlay for it**: one
+      was tried, the value never survived to the controller, and it forced a
+      118 MB repack of the whole arm64 dtb tree into `/boot` per generation.
+    - **Waking hci0 changed blebridge's adapter assignment**, which is what
+      actually took the host down. See DEFER-8.
+- **DEFER-8 — blebridge must pin the App Endpoint to hci0**: with both radios
+  present, blebridge auto-assigned Link→hci0 and App Endpoint→**hci1**. The
+  RTL8761BU then threw `hci1: Unexpected advertising set terminated event`
+  followed by `usb 1-1.3: reset ... using dwc2`, and since a 3B+ carries its
+  Ethernet behind that same USB controller the box dropped off the LAN and
+  wedged within seconds — no shutdown records, keyboard needed to recover.
+  Fixed by `BLEBRIDGE_APP_ADAPTER = "hci0"` in
+  `modules/hosts/toddler/blebridge.nix`; the Link then takes what is left
+  (`not_app` in blebridge's `assign_adapters`), so the dongle may renumber
+  freely while hci0, the UART chip, never does.
+- **DEFER-9 — this box's USB tree is independently flaky**: `dwc2` logs a
+  steady stream of `hcint 0x00000402`, devices reset and re-enumerate mid-boot,
+  and one gen-11 boot enumerated **no USB at all** (no dongle, no ANT+ stick,
+  no Ethernet, `dhcpcd` timed out) with kernel params identical to a
+  neighbouring boot that was fine. `rpi_volt`'s `in0_lcrit_alarm` reads 0 and
+  no under-voltage is logged, so it is not obviously power. Unexplained;
+  suspect a warm-reboot/dwc2 reset issue, unproven. Relevant because it makes
+  any single boot a poor experiment — confirm on more than one.
+    - The two `0424:2514` hubs are **both internal** and normal for a 3B+ — the
+      SoC-side 4-port hub cascades into the LAN7515's own 3-port hub. Nothing
+      external is attached; `lsusb -t` reads
+      `root_hub -> hub(4p) -> hub(3p) -> {lan78xx, BT500}`, with the Logitech
+      receiver and the ANT+ stick on the outer hub. Worth knowing: the **BT500
+      shares the inner hub with Ethernet** (`1-1.1.3` vs `1-1.1.1`), so a fault
+      on that dongle can take the network down with it.
 - **DEFER-6 — AdGuard DHCP**: RESOLVED — DHCP is `enabled: false`. AdGuard is
   DNS-only. No action.
