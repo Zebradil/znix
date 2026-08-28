@@ -38,10 +38,10 @@
       znix = {
         impermanence.enable = true;
         kube.homelab.enable = true;
+        mcpServers.personal-knowledge-base = self.lib.claude.personalKnowledgeBase;
         claude = {
           caveman.enable = true;
           ponytail.enable = true;
-          mcpServers.personal-knowledge-base = self.lib.claude.personalKnowledgeBase;
           profiles.personal = self.lib.claude.mkPersonalProfile { };
         };
       };

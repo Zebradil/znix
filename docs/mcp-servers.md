@@ -1,6 +1,6 @@
 # MCP servers for agent tools
 
-`znix.claude.mcpServers` registers MCP servers in **every** enabled Claude Code profile — personal and the company
+`znix.mcpServers` registers MCP servers in **every** enabled Claude Code profile — personal and the company
 ones alike — and in opencode and Cursor. Entries are written in Claude Code's shape (`type` / `url` / `oauth` /
 `headers`); the opencode and Cursor modules translate them into their own schemas.
 
@@ -9,7 +9,7 @@ the entries are merged with `jq` into each profile's own state file, `$CLAUDE_CO
 home-manager activation.
 
 ```nix
-znix.claude.mcpServers.personal-knowledge-base = self.lib.claude.personalKnowledgeBase;
+znix.mcpServers.personal-knowledge-base = self.lib.claude.personalKnowledgeBase;
 ```
 
 Properties of the merge:

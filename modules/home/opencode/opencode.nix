@@ -74,7 +74,7 @@ _: {
       # only the host literal and path have to match what the IdP registered.
       # Claude Code's port survives in its own entry because it uses `localhost`,
       # which gets no such flexibility.
-      mcpServers = config.znix.claude.mcpServers or { };
+      mcpServers = config.znix.mcpServers or { };
       mkOcMcp =
         srv:
         {

@@ -80,7 +80,7 @@
       # keys. Cursor's redirect URIs are fixed (http://localhost:8787/callback
       # for the desktop app, https://www.cursor.com/agents/mcp/oauth/callback
       # for web), so a callbackPort has nothing to map onto here.
-      mcpServers = config.znix.claude.mcpServers or { };
+      mcpServers = config.znix.mcpServers or { };
       mkCursorMcp =
         srv:
         {

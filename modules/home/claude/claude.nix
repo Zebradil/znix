@@ -73,24 +73,6 @@ let
           '';
         };
 
-        mcpServers = lib.mkOption {
-          type = lib.types.attrsOf lib.types.attrs;
-          default = { };
-          description = ''
-            MCP servers registered in every enabled profile's user scope, and
-            translated into opencode's and Cursor's own MCP schemas by their
-            modules. Entries use Claude Code's shape (type/url/oauth/headers).
-
-            Claude Code has no settings.json surface for MCP, so these are
-            merged into its own state file ($CLAUDE_CONFIG_DIR/.claude.json) at
-            activation; entries added by hand survive the merge, stale ones need
-            `claude mcp remove -s user <name>`.
-
-            OAuth credentials are not part of this: `claude mcp login <name>`
-            stores them per config directory, so each profile signs in once.
-          '';
-        };
-
         defaultSettings = lib.mkOption {
           type = lib.types.attrs;
           default = {
@@ -217,6 +199,27 @@ let
             )
           );
         };
+      };
+      options.znix.mcpServers = lib.mkOption {
+        type = lib.types.attrsOf lib.types.attrs;
+        default = { };
+        description = ''
+          MCP servers registered in every enabled Claude Code profile, opencode,
+          and Cursor. Entries use Claude Code's shape (type/url/oauth/headers)
+          and are translated into each harness's own schema.
+
+          Claude Code has no settings.json surface for MCP, so these are
+          merged into its own state file ($CLAUDE_CONFIG_DIR/.claude.json) at
+          activation; entries added by hand survive the merge, stale ones need
+          `claude mcp remove -s user <name>`.
+
+          OAuth credentials are not part of this: `claude mcp login <name>`
+          stores them per config directory, so each profile signs in once.
+        '';
+      };
+      config.znix.mcpServers.atlassian = lib.mkDefault {
+        type = "http";
+        url = "https://mcp.atlassian.com/v1/mcp";
       };
     };
 in
@@ -383,7 +386,7 @@ in
 
         defaultSettings = config.znix.claude.defaultSettings;
 
-        mcpServers = config.znix.claude.mcpServers;
+        mcpServers = config.znix.mcpServers;
         mcpServersFile = pkgs.writeText "claude-mcp-servers.json" (builtins.toJSON mcpServers);
 
         mkSettingsFile =
