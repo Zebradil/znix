@@ -29,6 +29,11 @@
       zebradil-tuxedo-home-build = inputs.self.homeConfigurations."zebradil@tuxedo".activationPackage;
 
       junior-build = inputs.self.nixosConfigurations.junior.config.system.build.toplevel;
+
+      # toddler's blebridge is an aarch64 binary cross-built by an x86_64
+      # builder, so the aarch64 runner cannot build it (build-set.sh skips it).
+      # Building it here keeps the cache complete for toddler's closure.
+      blebridge-arm64 = inputs.blebridge.packages.x86_64-linux.blebridge-arm64;
     }
     // builtins.listToAttrs (
       builtins.genList (

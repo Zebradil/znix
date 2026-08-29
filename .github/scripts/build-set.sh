@@ -69,12 +69,31 @@ is_aggregator() {
 	((size * 100 >= top * pct))
 }
 
+# Can this runner build a derivation whose `system` is $1? "builtin" (and a
+# missing binding) is system-agnostic. Otherwise it must be the runner's own
+# system ($2) or one it emulates via extra-platforms ($3, space-separated).
+# A closure can legitimately contain foreign-system drvs: toddler's blebridge is
+# an aarch64 binary cross-built by an x86_64 builder. Handing one to `nix build`
+# on the wrong runner is a hard "platform mismatch" error that fails the job.
+is_buildable_system() {
+	local sys="$1" host="$2" extra="${3:-}"
+	case "$sys" in
+	"" | builtin) return 0 ;;
+	esac
+	[[ " ${host} ${extra} " == *" ${sys} "* ]]
+}
+
 # --- store queries -----------------------------------------------------------
 
 # Number of derivations in a drv's input closure. Warmth-independent: every
 # input .drv is present once the top-level is instantiated.
 drv_closure_size() {
 	nix-store --query --requisites "$1" 2>/dev/null | grep -c '\.drv$' || true
+}
+
+# The `system` a drv must be built on. Empty when the binding is absent.
+drv_system() {
+	nix-store --query --binding system "$1" 2>/dev/null || true
 }
 
 # --- self-test ---------------------------------------------------------------
@@ -113,6 +132,12 @@ self_test() {
 	# A zero top size never drops a candidate.
 	! is_aggregator 100 0 90      || { echo "self-test FAILED (zero-top guard)" >&2; return 1; }
 
+	is_buildable_system aarch64-linux aarch64-linux ''   || { echo "self-test FAILED (native rejected)" >&2; return 1; }
+	is_buildable_system builtin aarch64-linux ''          || { echo "self-test FAILED (builtin rejected)" >&2; return 1; }
+	is_buildable_system x86_64-linux aarch64-linux 'i686-linux x86_64-linux' \
+	                                                      || { echo "self-test FAILED (extra-platform rejected)" >&2; return 1; }
+	! is_buildable_system x86_64-linux aarch64-linux ''   || { echo "self-test FAILED (foreign system accepted)" >&2; return 1; }
+
 	echo "self-test OK"
 }
 
@@ -140,8 +165,16 @@ candidates="$(parse_built "$top_drv" <<<"$plan")"
 top_size="$(drv_closure_size "$top_drv")"
 ((top_size > 0)) || { echo "build-set: empty top-level drv closure for ${attr}" >&2; exit 1; }
 
+host_system="$(nix config show system)"
+extra_platforms="$(nix config show extra-platforms 2>/dev/null || true)"
+
 while IFS= read -r drv; do
 	[[ -n "$drv" ]] || continue
+	sys="$(drv_system "$drv")"
+	if ! is_buildable_system "$sys" "$host_system" "$extra_platforms"; then
+		echo "build-set: skipping ${sys}-only drv on ${host_system}: ${drv}" >&2
+		continue
+	fi
 	size="$(drv_closure_size "$drv")"
 	if is_aggregator "$size" "$top_size" "$BUILD_SET_MAX_CLOSURE_PCT"; then
 		echo "build-set: skipping aggregation drv (${size}/${top_size} drvs >= ${BUILD_SET_MAX_CLOSURE_PCT}%): ${drv}" >&2
