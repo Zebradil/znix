@@ -959,6 +959,7 @@
         "nixpkgs": "nixpkgs_6",
         "nixpkgs-tuxedo": "nixpkgs-tuxedo",
         "nixvim": "nixvim",
+        "sito": "sito",
         "sops-nix": "sops-nix",
         "tree-sitter-queries": "tree-sitter-queries",
         "tree-sitter-test_highlights": "tree-sitter-test_highlights",
@@ -983,6 +984,26 @@
       "original": {
         "owner": "oxalica",
         "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "sito": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1788051030,
+        "narHash": "sha256-1yiFQhf2D7S/ocZoI1ZGNQkdciEgiuamyVOdi+Qt5LA=",
+        "owner": "Zebradil",
+        "repo": "sito",
+        "rev": "a3ff1fc2c50adc528c7294108df80268791b74da",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Zebradil",
+        "repo": "sito",
         "type": "github"
       }
     },

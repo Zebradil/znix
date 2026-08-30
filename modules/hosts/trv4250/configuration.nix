@@ -27,6 +27,7 @@
       home-manager
       glashevich
       trv4250-shell
+      sito
     ];
 
     znix.diff.enable = true;
@@ -35,6 +36,11 @@
     determinateNix = {
       enable = true;
       customSettings = (inputs.self.lib.nixSettings or { }) // {
+        # sito fronts every cache from localhost (modules/shared/sito.nix), so
+        # the shared static list would only double-query the remotes on a miss.
+        # No explicit fallback: Determinate's own customSettings definition
+        # already appends cache.nixos.org after this entry.
+        substituters = [ "http://127.0.0.1:5001" ];
         trusted-users = [
           "root"
           "glashevich"
