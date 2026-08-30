@@ -1,4 +1,4 @@
-{ inputs, ... }:
+{ inputs, lib, ... }:
 {
   flake-file.inputs.disko = {
     url = "github:nix-community/disko";
@@ -26,6 +26,7 @@
         locale
         nix-settings
         openssh
+        sito
         sops
         tailscale
         tuxedo-disko
@@ -40,6 +41,16 @@
     system.stateVersion = "25.11";
 
     determinate.enable = true;
+
+    # sito fronts every cache from localhost (modules/shared/sito.nix), so the
+    # shared static list would only double-query the remotes on a miss. The
+    # force drops every other definition, hence hyprland's cachix is restated
+    # here; trusted-public-keys is untouched, sito passes upstream signatures
+    # through as-is.
+    nix.settings.substituters = lib.mkForce [
+      "http://127.0.0.1:5001"
+      "https://hyprland.cachix.org"
+    ];
 
     znix = {
       boot.enable = true;
