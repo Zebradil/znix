@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
-# Print the derivations CI should actually build for a flake attr: the
-# genuinely-uncached *real* derivations, EXCLUDING both the top-level and the
-# whole assembly tower beneath it.
+# Print the derivations CI should actually build for a flake attr.
+#
+# For a system toplevel (a `*-build` attr): the genuinely-uncached *real*
+# derivations, EXCLUDING both the top-level and the whole assembly tower beneath
+# it. For any other attr — a plain package — the top-level itself, unfiltered.
 #
 # Why this is not just "uncached minus the top-level":
 # A NixOS/darwin/home-manager system is a tower of pure-aggregation
@@ -83,6 +85,15 @@ is_buildable_system() {
 	[[ " ${host} ${extra} " == *" ${sys} "* ]]
 }
 
+# Is this attr a system toplevel (NixOS/darwin/home-manager) rather than a plain
+# package? The repo names those `*-build`, the same convention the CI attr-filter
+# keys on. Only a toplevel sits atop the aggregation tower this script exists to
+# avoid realizing; for a plain package the top-level drv IS the build we want, so
+# excluding it would push its dependencies to the cache and never the package.
+is_toplevel_attr() {
+	[[ "$1" == *-build ]]
+}
+
 # --- store queries -----------------------------------------------------------
 
 # Number of derivations in a drv's input closure. Warmth-independent: every
@@ -138,6 +149,9 @@ self_test() {
 	                                                      || { echo "self-test FAILED (extra-platform rejected)" >&2; return 1; }
 	! is_buildable_system x86_64-linux aarch64-linux ''   || { echo "self-test FAILED (foreign system accepted)" >&2; return 1; }
 
+	is_toplevel_attr checks.aarch64-linux.toddler-build   || { echo "self-test FAILED (toplevel attr not recognized)" >&2; return 1; }
+	! is_toplevel_attr checks.x86_64-linux.blebridge-arm64 || { echo "self-test FAILED (package attr treated as toplevel)" >&2; return 1; }
+
 	echo "self-test OK"
 }
 
@@ -151,6 +165,13 @@ fi
 attr="${1:?usage: build-set.sh <flake-attr>|--self-test}"
 
 top_drv="$(nix path-info --derivation ".#${attr}")"
+
+# A plain package: build it whole. `nix build` substitutes whatever of its
+# closure is already cached, so there is nothing to prune here.
+if ! is_toplevel_attr "$attr"; then
+	printf '%s\n' "$top_drv"
+	exit 0
+fi
 
 # One dry-run plans the whole build without doing it: what it would build and
 # what it would substitute. This tells us which candidates are uncached (the

@@ -81,8 +81,8 @@ runs:
 
     - name: Build target
       shell: bash
-      # Build only the genuinely-uncached derivations, NOT the top-level. The
-      # top-level's build merely links an already-substitutable closure, so
+      # For a system toplevel, build only the genuinely-uncached derivations,
+      # NOT the top-level: its build merely links an already-substitutable closure, so
       # realizing it would fetch the entire runtime closure (GBs) just to
       # symlink it — the disk-exhaustion that fails these runners. Building the
       # leaves still proves they compile (the buildability gate); the box
