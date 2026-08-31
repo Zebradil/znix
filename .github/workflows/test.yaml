@@ -1,5 +1,13 @@
 name: Test Flake
 
+# PR gate: evaluate the flake, then build every discovered check on a runner that matches its
+# system and publish what was built.
+#
+# Explicit jobs rather than `zebradil/nix-ci/.github/workflows/ci.yaml@v1`, because every push here
+# must be followed by a kasha generation manifest: an unrooted NAR in the remote cache is deleted
+# by the nightly kasha GC sweep, and the box's mirror-down never sees it. The manifest needs the
+# `build` action's `paths-file` output, and the wrapper workflow forwards no outputs.
+
 on:
   pull_request:
 
@@ -10,36 +18,120 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  CACHE_PULL_URL: https://znix.zebradil.dev
+  CACHE_PUBLIC_KEY: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
+  # Forks cannot read secrets, so they build without pushing rather than failing at the push.
+  PUSH_TO_CACHE: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+
 jobs:
-  ci:
-    uses: ./.github/workflows/nix-ci.yaml
-    with:
-      nix-infra-ref: ${{ github.sha }}
-      discovery-types: |
-        checks
-      attr-filter: '-build$|^checks\.x86_64-linux\.'
-      runner-mapping: |
-        x86_64-linux:ubuntu-latest
-        aarch64-linux:ubuntu-24.04-arm
-        aarch64-darwin:macos-26
-      cache-pull-url: https://znix.zebradil.dev
-      cache-public-key: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
-      push-to-cache: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-      kasha-flake: znix
-    secrets:
-      sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: zebradil/nix-ci/.github/actions/setup-nix@v1
+        with:
+          extra-substituters: ${{ env.CACHE_PULL_URL }}
+          extra-trusted-public-keys: ${{ env.CACHE_PUBLIC_KEY }}
+
+      - name: Pre-instantiate checks
+        # A `*-build` check is a system toplevel whose closure pulls in source paths created during
+        # evaluation (home.file sources scoped via builtins.path). `nix flake check --no-build`
+        # evaluates a check's outPath but never instantiates it, so under lazy trees those paths are
+        # known by hash yet never written to the store -> "path '...' is not valid". Forcing each
+        # drvPath instantiates without building, which materializes them. One eval for all checks,
+        # reusing a single flake evaluation instead of cold-loading it per attribute.
+        run: |
+          system=$(nix eval --raw --impure --expr builtins.currentSystem)
+          nix eval --json ".#checks.${system}" \
+            --apply 'builtins.mapAttrs (_: c: c.drvPath)' >/dev/null
+
+      - name: Check flake
+        # --no-build: the build job builds every check on a runner that matches its system.
+        run: nix flake check --no-build
+
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+      has-targets: ${{ steps.discover.outputs.has-targets }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: zebradil/nix-ci/.github/actions/setup-nix@v1
+
+      - id: discover
+        uses: zebradil/nix-ci/.github/actions/discover@v1
+        with:
+          discovery-types: checks
+          attr-filter: '-build$|^checks\.x86_64-linux\.'
+          runner-mapping: |
+            x86_64-linux:ubuntu-latest
+            aarch64-linux:ubuntu-24.04-arm
+            aarch64-darwin:macos-26
+
+  build:
+    needs: [check, discover]
+    if: ${{ needs.discover.outputs.has-targets == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: zebradil/nix-ci/.github/actions/setup-nix@v1
+        with:
+          extra-substituters: ${{ env.CACHE_PULL_URL }}
+          extra-trusted-public-keys: ${{ env.CACHE_PUBLIC_KEY }}
+          signing-key: ${{ env.PUSH_TO_CACHE == 'true' && secrets.CACHE_PRIVATE_KEY || '' }}
+
+      - id: build
+        uses: zebradil/nix-ci/.github/actions/build@v1
+        with:
+          attr: ${{ matrix.attr }}
+          strategy: uncached-leaves
+          cache-s3-url: ${{ env.PUSH_TO_CACHE == 'true' && secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Check for pushed paths
+        id: pushed
+        # always(): a partially failed build still pushed what it finished, and those paths need a
+        # manifest or the GC sweep takes them. `paths-file` may name an empty file when the target
+        # was already fully cached; `kasha emit` rejects an empty closure, so gate on file size.
+        if: ${{ always() && steps.build.outputs.paths-file != '' }}
+        env:
+          PATHS_FILE: ${{ steps.build.outputs.paths-file }}
+        run: |
+          if [[ -s "$PATHS_FILE" ]]; then
+            echo "any=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Emit kasha manifest
+        if: ${{ always() && steps.pushed.outputs.any == 'true' }}
+        uses: zebradil/kasha/.github/actions/emit-manifest@v1
+        with:
+          flake: znix
+          paths-file: ${{ steps.build.outputs.paths-file }}
+          attr: ${{ matrix.attr }}
+          s3-url: ${{ format('s3://{0}', secrets.CACHE_URL) }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
   required-checks:
     name: required-checks
-    needs: [ci]
+    needs: [check, discover, build]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Verify CI result
+        # build is 'skipped' when discovery found nothing to build — still a pass.
         env:
-          CI_RESULT: ${{ needs.ci.result }}
+          RESULTS: ${{ needs.check.result }} ${{ needs.discover.result }} ${{ needs.build.result }}
         run: |
-          echo "ci result: $CI_RESULT"
-          if [[ "$CI_RESULT" != "success" ]]; then
-            exit 1
-          fi
+          echo "results: $RESULTS"
+          for r in $RESULTS; do
+            [[ "$r" == "success" || "$r" == "skipped" ]] || exit 1
+          done
