@@ -8,8 +8,8 @@ Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) using age
 
 - **User key** (`zebradil`): Personal age key for encrypting/decrypting all secrets
 - **Host keys**: Derived from each host's `/etc/ssh/ssh_host_ed25519_key`
-- **CI key** (`github-ci`): Dedicated age key used by GitHub Actions to decrypt `secrets/cache.yaml`.
-  The private key is stored as the `SOPS_AGE_KEY` repository secret. See [cache.md](cache.md).
+- **CI key** (`github-ci`): Dedicated age key, still a recipient of `secrets/cache.yaml` but no
+  longer used — CI reads the cache credentials as plain repository secrets. See [cache.md](cache.md).
 
 ## Deriving a Host Age Key
 
