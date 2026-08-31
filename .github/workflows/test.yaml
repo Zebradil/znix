@@ -3,7 +3,7 @@ name: Test Flake
 # PR gate: evaluate the flake, then build every discovered check on a runner that matches its
 # system and publish what was built.
 #
-# Explicit jobs rather than `zebradil/nix-ci/.github/workflows/ci.yaml@v1`, because every push here
+# Explicit jobs rather than `zebradil/nix-ci/.github/workflows/ci.yaml@v0.1.0`, because every push here
 # must be followed by a kasha generation manifest: an unrooted NAR in the remote cache is deleted
 # by the nightly kasha GC sweep, and the box's mirror-down never sees it. The manifest needs the
 # `build` action's `paths-file` output, and the wrapper workflow forwards no outputs.
@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: zebradil/nix-ci/.github/actions/setup-nix@v1
+      - uses: zebradil/nix-ci/.github/actions/setup-nix@v0.1.0
         with:
           extra-substituters: ${{ env.CACHE_PULL_URL }}
           extra-trusted-public-keys: ${{ env.CACHE_PUBLIC_KEY }}
@@ -59,10 +59,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: zebradil/nix-ci/.github/actions/setup-nix@v1
+      - uses: zebradil/nix-ci/.github/actions/setup-nix@v0.1.0
 
       - id: discover
-        uses: zebradil/nix-ci/.github/actions/discover@v1
+        uses: zebradil/nix-ci/.github/actions/discover@v0.1.0
         with:
           discovery-types: checks
           attr-filter: '-build$|^checks\.x86_64-linux\.'
@@ -81,14 +81,14 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: zebradil/nix-ci/.github/actions/setup-nix@v1
+      - uses: zebradil/nix-ci/.github/actions/setup-nix@v0.1.0
         with:
           extra-substituters: ${{ env.CACHE_PULL_URL }}
           extra-trusted-public-keys: ${{ env.CACHE_PUBLIC_KEY }}
           signing-key: ${{ env.PUSH_TO_CACHE == 'true' && secrets.CACHE_PRIVATE_KEY || '' }}
 
       - id: build
-        uses: zebradil/nix-ci/.github/actions/build@v1
+        uses: zebradil/nix-ci/.github/actions/build@v0.1.0
         with:
           attr: ${{ matrix.attr }}
           strategy: uncached-leaves
@@ -111,7 +111,7 @@ jobs:
 
       - name: Emit kasha manifest
         if: ${{ always() && steps.pushed.outputs.any == 'true' }}
-        uses: zebradil/kasha/.github/actions/emit-manifest@v1
+        uses: zebradil/kasha/.github/actions/emit-manifest@v0.1.0
         with:
           flake: znix
           paths-file: ${{ steps.build.outputs.paths-file }}
