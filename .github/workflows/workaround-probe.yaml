@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Nix
-        uses: ./.github/actions/setup-nix
+        uses: zebradil/nix-ci/.github/actions/setup-nix@v1.0.2
 
       - name: Build probe matrix
         id: matrix
@@ -50,17 +50,20 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.matrix.outputs.matrix) }}
     runs-on: ${{ matrix.runner }}
+    env:
+      # The `secrets` context is not available in a step-level `if:`, so hoist the presence check
+      # to job level, where it is.
+      CACHE_S3_URL: ${{ secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Nix
-        id: nix
-        uses: ./.github/actions/setup-nix
+        uses: zebradil/nix-ci/.github/actions/setup-nix@v1.0.2
         with:
           extra-substituters: https://znix.zebradil.dev
           extra-trusted-public-keys: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
-          cache-signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
+          signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
 
       # A failing build is the expected outcome, so the step must not fail the
       # job. `nix build` output is left in the log; only the verdict is exported.
@@ -98,15 +101,16 @@ jobs:
           path: ${{ runner.temp }}/${{ matrix.name }}__${{ matrix.system }}.json
           retention-days: 7
 
+      # No manifest: a vanilla probe build is not a znix generation, and the paths are already
+      # reachable from cache.nixos.org — this only warms the LAN cache for the removal PR.
+      # No signing step either: setup-nix registers the key as nix.conf `secret-key-files`.
       - name: Push to cache
-        if: ${{ steps.probe.outputs.ok == 'true' }}
-        uses: ./.github/actions/push-nix-cache
-        with:
-          store-paths-file: ${{ runner.temp }}/paths
-          signing-key-file: ${{ steps.nix.outputs.signing-key-file }}
-          s3-url: ${{ secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        if: ${{ steps.probe.outputs.ok == 'true' && env.CACHE_S3_URL != '' }}
+        env:
+          S3_URL: ${{ env.CACHE_S3_URL }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: xargs -r -a "$RUNNER_TEMP/paths" nix copy --to "$S3_URL"
 
   propose:
     needs: [matrix, probe]
@@ -135,7 +139,7 @@ jobs:
           token: ${{ steps.app_token.outputs.token || github.token }}
 
       - name: Setup Nix
-        uses: ./.github/actions/setup-nix
+        uses: zebradil/nix-ci/.github/actions/setup-nix@v1.0.2
         with:
           extra-substituters: https://znix.zebradil.dev
           extra-trusted-public-keys: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=

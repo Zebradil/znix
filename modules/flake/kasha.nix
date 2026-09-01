@@ -15,15 +15,14 @@
   perSystem =
     { system, ... }:
     {
-      # Resolved by the CI publish job (`nix build .#kasha`) and baked into the
-      # local cache-push app. Publishing NARs without emitting a generation
-      # manifest leaves them undiscoverable to the box's mirror-down.
+      # The generation-manifest emitter. CI builds its own copy from kasha's
+      # emit-manifest action; this attr keeps `kasha emit` reachable locally
+      # from the same pin that drives cache-push below.
       packages.kasha = inputs.kasha.packages.${system}.kasha;
 
       # The resolve -> sign -> push core, from the same pinned input as the
-      # emitter it drives. Kept under kasha's own attr name because CI resolves
-      # it as `.#kasha-cache-push` against whichever repo it is building, and
-      # because `apps.cache-push` below is a different thing (the sops wrapper).
+      # emitter it drives. Kept under kasha's own attr name because
+      # `apps.cache-push` below is a different thing (the sops wrapper).
       packages.kasha-cache-push = inputs.kasha.packages.${system}.kasha-cache-push;
     };
 }

@@ -1,5 +1,14 @@
 name: Build and Publish
 
+# Main-branch publish: build every discovered check and push it to the binary cache, so the hosts
+# can realize their toplevel from the cache instead of compiling it. On a manual run it can also
+# refresh flake.lock first and commit it back — but only after the build proves it is good.
+#
+# Explicit jobs rather than `zebradil/nix-ci/.github/workflows/ci.yaml@v1.0.0`, for the same reason as
+# test.yaml: each push needs a kasha generation manifest built from the `build` action's
+# `paths-file`, and the wrapper workflow forwards no outputs. The flake-update/commit pair is also
+# outside anything nix-ci offers.
+
 on:
   push:
     branches:
@@ -16,24 +25,147 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
+
+env:
+  CACHE_PULL_URL: https://znix.zebradil.dev
+  CACHE_PUBLIC_KEY: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
 
 jobs:
-  publish:
-    uses: ./.github/workflows/nix-update.yaml
-    with:
-      discovery-types: |
-        checks
-      attr-filter: '-build$|^checks\.x86_64-linux\.'
-      runner-mapping: |
-        x86_64-linux:ubuntu-latest
-        aarch64-linux:ubuntu-24.04-arm
-        aarch64-darwin:macos-26
-      cache-pull-url: https://znix.zebradil.dev
-      cache-public-key: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
-      run-flake-update: ${{ github.event_name == 'workflow_dispatch' && inputs.run-flake-update }}
-      auto-commit: ${{ github.event_name == 'workflow_dispatch' && inputs.run-flake-update }}
-      kasha-flake: znix
-    secrets:
-      sops-age-key: ${{ secrets.SOPS_AGE_KEY }}
-      ci-push-ssh-key: ${{ secrets.CI_PUSH_DEPLOY_KEY }}
+  update-flake:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run-flake-update }}
+    runs-on: ubuntu-latest
+    outputs:
+      has-changes: ${{ steps.check.outputs.has_changes }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: zebradil/nix-ci/.github/actions/setup-nix@v1.0.2
+        with:
+          extra-substituters: ${{ env.CACHE_PULL_URL }}
+          extra-trusted-public-keys: ${{ env.CACHE_PUBLIC_KEY }}
+
+      - name: Update flake.lock
+        run: nix flake update
+
+      - name: Check for changes
+        id: check
+        run: |
+          if git diff --quiet flake.lock; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The build jobs run on other runners, so the updated lock travels as an artifact. It is
+      # committed only once the build has passed.
+      - name: Upload flake.lock artifact
+        if: ${{ steps.check.outputs.has_changes == 'true' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: flake-lock
+          path: flake.lock
+
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+      has-targets: ${{ steps.discover.outputs.has-targets }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: zebradil/nix-ci/.github/actions/setup-nix@v1.0.2
+
+      - id: discover
+        uses: zebradil/nix-ci/.github/actions/discover@v1.0.2
+        with:
+          discovery-types: checks
+          attr-filter: '-build$|^checks\.x86_64-linux\.'
+          runner-mapping: |
+            x86_64-linux:ubuntu-latest
+            aarch64-linux:ubuntu-24.04-arm
+            aarch64-darwin:macos-26
+
+  build:
+    needs: [update-flake, discover]
+    # update-flake is 'skipped' on a plain push to main; that is the normal path.
+    if: ${{ !failure() && !cancelled() && needs.discover.outputs.has-targets == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download updated flake.lock
+        if: ${{ needs.update-flake.outputs.has-changes == 'true' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: flake-lock
+
+      - uses: zebradil/nix-ci/.github/actions/setup-nix@v1.0.2
+        with:
+          extra-substituters: ${{ env.CACHE_PULL_URL }}
+          extra-trusted-public-keys: ${{ env.CACHE_PUBLIC_KEY }}
+          signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
+
+      - id: build
+        uses: zebradil/nix-ci/.github/actions/build@v1.0.2
+        with:
+          attr: ${{ matrix.attr }}
+          strategy: uncached-leaves
+          cache-s3-url: ${{ secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Check for pushed paths
+        id: pushed
+        # always(): a partially failed build still pushed what it finished, and those paths need a
+        # manifest or the nightly kasha GC sweep takes them. `paths-file` may name an empty file
+        # when the target was already fully cached; `kasha emit` rejects an empty closure.
+        if: ${{ always() && steps.build.outputs.paths-file != '' }}
+        env:
+          PATHS_FILE: ${{ steps.build.outputs.paths-file }}
+        run: |
+          if [[ -s "$PATHS_FILE" ]]; then
+            echo "any=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Emit kasha manifest
+        if: ${{ always() && steps.pushed.outputs.any == 'true' }}
+        uses: zebradil/kasha/.github/actions/emit-manifest@v0.1.0
+        with:
+          flake: znix
+          paths-file: ${{ steps.build.outputs.paths-file }}
+          attr: ${{ matrix.attr }}
+          s3-url: ${{ format('s3://{0}', secrets.CACHE_URL) }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  commit-flake-update:
+    needs: [update-flake, discover, build]
+    # build is 'skipped' when discovery found nothing — still a valid, buildable lock.
+    if: >-
+      ${{ always()
+          && needs.update-flake.result == 'success'
+          && needs.update-flake.outputs.has-changes == 'true'
+          && needs.discover.result == 'success'
+          && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ssh-key: ${{ secrets.CI_PUSH_DEPLOY_KEY }}
+
+      - name: Download updated flake.lock
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: flake-lock
+
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0
+        with:
+          commit_message: 'chore: update flake.lock [skip ci]'
+          file_pattern: flake.lock

@@ -1,5 +1,13 @@
 name: Update Flake Lock (PR)
 
+# Nightly `nix flake update` opened as a PR, with an nvd package diff of what the update really
+# changes and the post-update builds published to the binary cache.
+#
+# Calls the `update-lock-pr` action rather than `zebradil/nix-ci/.github/workflows/update-pr.yaml`,
+# because the closure it pushes needs a kasha generation manifest chained after it — otherwise the
+# nightly kasha GC sweep deletes the NARs it just uploaded. That needs the action's `paths-file`
+# output, and the wrapper workflow forwards no outputs.
+
 on:
   schedule:
     - cron: '0 0 * * *'
@@ -10,26 +18,67 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   pr:
-    uses: ./.github/workflows/nix-update-pr.yaml
-    with:
-      cache-pull-url: https://znix.zebradil.dev
-      cache-public-key: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
-      diff-targets: |
-        checks.x86_64-linux.tuxedo-build
-        checks.aarch64-linux.toddler-build
-        checks.aarch64-darwin.trv4250-build
-      auto-merge: true
-      branch-name: automation/flake-update
-      kasha-flake: znix
-    secrets:
-      ci-app-id: ${{ secrets.CI_APP_ID }}
-      ci-app-private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
-      cache-signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
-      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      cache-s3-url: ${{ secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      HAS_APP_TOKEN: ${{ secrets.CI_APP_ID != '' && secrets.CI_APP_PRIVATE_KEY != '' }}
+      CACHE_S3_URL: ${{ secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
+    steps:
+      # Before checkout, so actions/checkout can bake the push credentials into the git remote.
+      - name: Generate app token
+        id: app-token
+        if: ${{ env.HAS_APP_TOKEN == 'true' }}
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.CI_APP_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.app-token.outputs.token || github.token }}
+
+      - uses: zebradil/nix-ci/.github/actions/setup-nix@v1.0.2
+        with:
+          extra-substituters: https://znix.zebradil.dev
+          extra-trusted-public-keys: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
+          signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
+
+      - name: Update flake.lock and open PR
+        id: update
+        uses: zebradil/nix-ci/.github/actions/update-lock-pr@v1.0.2
+        with:
+          token: ${{ steps.app-token.outputs.token || github.token }}
+          has-app-token: ${{ steps.app-token.outputs.token != '' }}
+          branch-name: automation/flake-update
+          auto-merge: true
+          diff-targets: |
+            checks.x86_64-linux.tuxedo-build
+            checks.aarch64-linux.toddler-build
+            checks.aarch64-darwin.trv4250-build
+          cache-s3-url: ${{ env.CACHE_S3_URL }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      # One manifest per update run, listing the closure the action just pushed. `attr` is the fixed
+      # group name `update` rather than a target: the diff targets vary from run to run, so they
+      # cannot name a stable retention group.
+      - name: Emit kasha manifest
+        if: ${{ always() && steps.update.outputs.paths-file != '' && env.CACHE_S3_URL != '' }}
+        uses: zebradil/kasha/.github/actions/emit-manifest@v0.1.0
+        with:
+          flake: znix
+          paths-file: ${{ steps.update.outputs.paths-file }}
+          attr: update
+          gen: ${{ steps.update.outputs.gen }}
+          branch: ${{ steps.update.outputs.branch }}
+          s3-url: ${{ env.CACHE_S3_URL }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

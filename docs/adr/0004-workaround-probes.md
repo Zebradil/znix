@@ -91,3 +91,13 @@ The corollary is a rule: a package modification that is temporary belongs in
 `modules/flake/workarounds/`, never inline in the module that consumes it. An
 inline override is invisible to the probe, and it makes the probe lie about the
 workarounds that *are* declared.
+
+## Amendment: CI moved out of this repo
+
+The reusable workflows this ADR contrasts the probe against — `nix-ci.yaml`,
+`discover-targets.sh`, `probe-cache.sh` — now live in
+[zebradil/nix-ci](https://github.com/zebradil/nix-ci); this repo only calls
+them. Nothing above changes: probes still sit in `flake.workaroundProbes` so
+nix-ci's `discover` action never sweeps them into the build matrix, and
+`workaround-probe.yaml` is still standalone, now for the additional reason that
+its inverted pass condition has no place in a shared CI repo.
