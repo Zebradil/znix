@@ -32,28 +32,36 @@
 
     # `nixpkgs` lets a host pin its own nixpkgs input (e.g. tuxedo stays on a
     # known-good GDM rev) without dragging every other host off unstable.
+    # `flake` lets an external flake that takes znix as an input resolve the
+    # host module from its own registry (pass its `self`) instead of znix's.
     mkNixos =
       system: name:
       {
         nixpkgs ? inputs.nixpkgs,
+        flake ? inputs.self,
       }:
       {
         ${name} = nixpkgs.lib.nixosSystem {
           modules = [
-            inputs.self.modules.nixos.${name}
+            flake.modules.nixos.${name}
             { nixpkgs.hostPlatform = lib.mkDefault system; }
           ];
         };
       };
 
-    mkDarwin = system: name: {
-      ${name} = inputs.nix-darwin.lib.darwinSystem {
-        modules = [
-          inputs.self.modules.darwin.${name}
-          { nixpkgs.hostPlatform = lib.mkDefault system; }
-        ];
+    mkDarwin =
+      system: name:
+      {
+        flake ? inputs.self,
+      }:
+      {
+        ${name} = inputs.nix-darwin.lib.darwinSystem {
+          modules = [
+            flake.modules.darwin.${name}
+            { nixpkgs.hostPlatform = lib.mkDefault system; }
+          ];
+        };
       };
-    };
 
     # Standalone home-manager entrypoint (home-manager switch --flake .#<key>).
     # Unlike integrated home (useGlobalPkgs borrows the system's pkgs), this
@@ -62,6 +70,8 @@
     #   - self.overlays.default: tree-sitter grammars + workarounds.
     # Omitting either would resolve files to different store paths than the
     # system switch. `standalone = true` flips the HM impermanence import.
+    # `extraModules` lets an external flake sweep its own homeManager module
+    # registry in on top of znix's (znix's set is always included).
     mkHomeManager =
       system: key:
       {
@@ -69,6 +79,7 @@
         nixpkgs ? inputs.nixpkgs,
         isDarwin ? false,
         excludeModules ? [ ],
+        extraModules ? [ ],
       }:
       {
         ${key} = inputs.home-manager.lib.homeManagerConfiguration {
@@ -81,9 +92,10 @@
             inherit inputs isDarwin;
             standalone = true;
           };
-          modules = (builtins.attrValues (removeAttrs inputs.self.modules.homeManager excludeModules)) ++ [
-            profile
-          ];
+          modules =
+            (builtins.attrValues (removeAttrs inputs.self.modules.homeManager excludeModules))
+            ++ extraModules
+            ++ [ profile ];
         };
       };
 
