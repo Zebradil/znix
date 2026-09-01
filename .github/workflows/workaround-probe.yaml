@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Nix
-        uses: zebradil/nix-ci/.github/actions/setup-nix@v0.1.0
+        uses: zebradil/nix-ci/.github/actions/setup-nix@v1.0.0
 
       - name: Build probe matrix
         id: matrix
@@ -59,7 +59,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Nix
-        uses: zebradil/nix-ci/.github/actions/setup-nix@v0.1.0
+        uses: zebradil/nix-ci/.github/actions/setup-nix@v1.0.0
         with:
           extra-substituters: https://znix.zebradil.dev
           extra-trusted-public-keys: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
@@ -139,7 +139,7 @@ jobs:
           token: ${{ steps.app_token.outputs.token || github.token }}
 
       - name: Setup Nix
-        uses: zebradil/nix-ci/.github/actions/setup-nix@v0.1.0
+        uses: zebradil/nix-ci/.github/actions/setup-nix@v1.0.0
         with:
           extra-substituters: https://znix.zebradil.dev
           extra-trusted-public-keys: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=

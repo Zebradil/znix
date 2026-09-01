@@ -4,7 +4,7 @@ name: Build and Publish
 # can realize their toplevel from the cache instead of compiling it. On a manual run it can also
 # refresh flake.lock first and commit it back — but only after the build proves it is good.
 #
-# Explicit jobs rather than `zebradil/nix-ci/.github/workflows/ci.yaml@v0.1.0`, for the same reason as
+# Explicit jobs rather than `zebradil/nix-ci/.github/workflows/ci.yaml@v1.0.0`, for the same reason as
 # test.yaml: each push needs a kasha generation manifest built from the `build` action's
 # `paths-file`, and the wrapper workflow forwards no outputs. The flake-update/commit pair is also
 # outside anything nix-ci offers.
@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: zebradil/nix-ci/.github/actions/setup-nix@v0.1.0
+      - uses: zebradil/nix-ci/.github/actions/setup-nix@v1.0.0
         with:
           extra-substituters: ${{ env.CACHE_PULL_URL }}
           extra-trusted-public-keys: ${{ env.CACHE_PUBLIC_KEY }}
@@ -74,10 +74,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: zebradil/nix-ci/.github/actions/setup-nix@v0.1.0
+      - uses: zebradil/nix-ci/.github/actions/setup-nix@v1.0.0
 
       - id: discover
-        uses: zebradil/nix-ci/.github/actions/discover@v0.1.0
+        uses: zebradil/nix-ci/.github/actions/discover@v1.0.0
         with:
           discovery-types: checks
           attr-filter: '-build$|^checks\.x86_64-linux\.'
@@ -103,14 +103,14 @@ jobs:
         with:
           name: flake-lock
 
-      - uses: zebradil/nix-ci/.github/actions/setup-nix@v0.1.0
+      - uses: zebradil/nix-ci/.github/actions/setup-nix@v1.0.0
         with:
           extra-substituters: ${{ env.CACHE_PULL_URL }}
           extra-trusted-public-keys: ${{ env.CACHE_PUBLIC_KEY }}
           signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
 
       - id: build
-        uses: zebradil/nix-ci/.github/actions/build@v0.1.0
+        uses: zebradil/nix-ci/.github/actions/build@v1.0.0
         with:
           attr: ${{ matrix.attr }}
           strategy: uncached-leaves
