@@ -37,7 +37,7 @@ persistence) moves to home scope.
   `/persist` creation, `chown /persist/$HOME`, and `programs.fuse.userAllowOther`
   that home persistence bind-mounts depend on.
 - **Divergence is prevented structurally, not by discipline**: each `<user>@<host>`
-  home consumes *that host's* nixpkgs input (tuxedo pins `nixpkgs-tuxedo`) and applies
+  home consumes *that host's* nixpkgs input and applies
   `self.overlays.default`, so system and home resolve to the same rev + overlays at
   every commit. The only residual skew is temporal (between the two switch commands
   after `nix flake update`) and matters only for the version-coupled
