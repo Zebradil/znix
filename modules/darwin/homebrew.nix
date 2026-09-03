@@ -13,7 +13,6 @@
         "brightness"
       ];
       casks = [
-        "flameshot"
         "notunes"
         "orbstack"
         "orcaslicer"
