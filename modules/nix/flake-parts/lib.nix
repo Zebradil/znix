@@ -30,8 +30,8 @@
 
   config.flake.lib = {
 
-    # `nixpkgs` lets a host pin its own nixpkgs input (e.g. tuxedo stays on a
-    # known-good GDM rev) without dragging every other host off unstable.
+    # `nixpkgs` lets a host pin its own nixpkgs input without dragging every
+    # other host off unstable.
     # `flake` lets an external flake that takes znix as an input resolve the
     # host module from its own registry (pass its `self`) instead of znix's.
     mkNixos =
@@ -66,7 +66,7 @@
     # Standalone home-manager entrypoint (home-manager switch --flake .#<key>).
     # Unlike integrated home (useGlobalPkgs borrows the system's pkgs), this
     # builds its own pkgs, so it must replicate BOTH host-divergence knobs:
-    #   - `nixpkgs`: the host's own input (tuxedo pins nixpkgs-tuxedo for GDM).
+    #   - `nixpkgs`: the host's own input, when it pins one.
     #   - self.overlays.default: tree-sitter grammars + workarounds.
     # Omitting either would resolve files to different store paths than the
     # system switch. `standalone = true` flips the HM impermanence import.
