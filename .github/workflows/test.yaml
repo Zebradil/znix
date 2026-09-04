@@ -69,7 +69,9 @@ jobs:
         id: discover
         uses: zebradil/nix-ci/.github/actions/discover@04cd06d6dc934270866604c5af67772c62637bee # v1.0.2
         with:
-          discovery-types: checks
+          discovery-types: |
+            checks
+            devShells
           attr-filter: '-build$|^devShells\.|^checks\.x86_64-linux\.'
           runner-mapping: |
             x86_64-linux:ubuntu-latest
