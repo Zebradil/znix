@@ -65,7 +65,7 @@ jobs:
         uses: zebradil/nix-ci/.github/actions/discover@04cd06d6dc934270866604c5af67772c62637bee # v1.0.2
         with:
           discovery-types: checks
-          attr-filter: '-build$|^checks\.x86_64-linux\.'
+          attr-filter: '-build$|^devShells\.|^checks\.x86_64-linux\.'
           runner-mapping: |
             x86_64-linux:ubuntu-latest
             aarch64-linux:ubuntu-24.04-arm
@@ -92,7 +92,8 @@ jobs:
         with:
           attr: ${{ matrix.attr }}
           strategy: uncached-leaves
-          cache-s3-url: ${{ env.PUSH_TO_CACHE == 'true' && secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
+          cache-s3-url:
+            ${{ env.PUSH_TO_CACHE == 'true' && secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
