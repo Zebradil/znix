@@ -41,11 +41,13 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
 
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           token: ${{ steps.app-token.outputs.token || github.token }}
 
-      - uses: zebradil/nix-ci/.github/actions/setup-nix@04cd06d6dc934270866604c5af67772c62637bee # v1.0.2
+      - name: Setup Nix
+        uses: zebradil/nix-ci/.github/actions/setup-nix@04cd06d6dc934270866604c5af67772c62637bee # v1.0.2
         with:
           extra-substituters: https://znix.zebradil.dev
           extra-trusted-public-keys: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=

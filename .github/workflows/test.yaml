@@ -28,9 +28,11 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: zebradil/nix-ci/.github/actions/setup-nix@04cd06d6dc934270866604c5af67772c62637bee # v1.0.2
+      - name: Setup Nix
+        uses: zebradil/nix-ci/.github/actions/setup-nix@04cd06d6dc934270866604c5af67772c62637bee # v1.0.2
         with:
           extra-substituters: ${{ env.CACHE_PULL_URL }}
           extra-trusted-public-keys: ${{ env.CACHE_PUBLIC_KEY }}
@@ -57,11 +59,14 @@ jobs:
       matrix: ${{ steps.discover.outputs.matrix }}
       has-targets: ${{ steps.discover.outputs.has-targets }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: zebradil/nix-ci/.github/actions/setup-nix@04cd06d6dc934270866604c5af67772c62637bee # v1.0.2
+      - name: Setup Nix
+        uses: zebradil/nix-ci/.github/actions/setup-nix@04cd06d6dc934270866604c5af67772c62637bee # v1.0.2
 
-      - id: discover
+      - name: Discover build targets
+        id: discover
         uses: zebradil/nix-ci/.github/actions/discover@04cd06d6dc934270866604c5af67772c62637bee # v1.0.2
         with:
           discovery-types: checks
@@ -79,15 +84,18 @@ jobs:
       matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: zebradil/nix-ci/.github/actions/setup-nix@04cd06d6dc934270866604c5af67772c62637bee # v1.0.2
+      - name: Setup Nix
+        uses: zebradil/nix-ci/.github/actions/setup-nix@04cd06d6dc934270866604c5af67772c62637bee # v1.0.2
         with:
           extra-substituters: ${{ env.CACHE_PULL_URL }}
           extra-trusted-public-keys: ${{ env.CACHE_PUBLIC_KEY }}
           signing-key: ${{ env.PUSH_TO_CACHE == 'true' && secrets.CACHE_PRIVATE_KEY || '' }}
 
-      - id: build
+      - name: Build attr
+        id: build
         uses: zebradil/nix-ci/.github/actions/build@04cd06d6dc934270866604c5af67772c62637bee # v1.0.2
         with:
           attr: ${{ matrix.attr }}
