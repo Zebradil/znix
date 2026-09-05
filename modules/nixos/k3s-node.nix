@@ -81,6 +81,13 @@ _: {
           name = "iqn.2005-03.org.open-iscsi:${config.networking.hostName}";
         };
 
+        # nixpkgs enables both iscsid.service and iscsid.socket but orders
+        # neither against the other. On boot sockets.target settles first, so
+        # the socket wins; on a switch both are started together and if the
+        # service wins, systemd refuses the socket ("service already active")
+        # and activation exits non-zero.
+        systemd.services.iscsid.after = [ "iscsid.socket" ];
+
         # The plugin execs `env iscsiadm` with the container's PATH
         # (/usr/sbin:/sbin:...), which misses NixOS's /run/current-system/sw/bin.
         # Bridge the binary onto /usr/bin — on PATH and the one FHS bin dir NixOS
