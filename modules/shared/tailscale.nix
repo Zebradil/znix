@@ -22,6 +22,23 @@ _: {
           '';
         };
 
+        acceptDns = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = ''
+            Whether this node uses the tailnet's DNS configuration
+            (`--accept-dns`). Off by default: a tailnet-wide nameserver with
+            "Override local DNS" replaces `/etc/resolv.conf` on every node, so
+            one dead resolver in the admin console takes DNS down fleet-wide —
+            including on hosts whose own `networking.nameservers` is perfectly
+            healthy. Headless hosts here are addressed by IP or LAN name and
+            need nothing from MagicDNS.
+
+            Turn it on for machines a human sits at, where reaching other nodes
+            by their `*.ts.net` name is the point.
+          '';
+        };
+
         advertiseTags = lib.mkOption {
           type = lib.types.listOf lib.types.str;
           default = [ ];
@@ -70,6 +87,7 @@ _: {
           # stranded in tailscaled's state.
           extraSetFlags = [
             "--advertise-routes=${lib.concatStringsSep "," cfg.advertiseRoutes}"
+            "--accept-dns=${lib.boolToString cfg.acceptDns}"
           ];
         };
       };
