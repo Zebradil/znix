@@ -45,7 +45,7 @@ import path from 'node:path';
 const here = dirname(fileURLToPath(import.meta.url));
 
 // When installed: caveman-config.cjs sits next to plugin.js (copied by
-// cli/install.js, renamed to .cjs because this directory's package.json
+// bin/install.js, renamed to .cjs because this directory's package.json
 // declares "type": "module" — bare .js would be loaded as ESM). When loaded
 // from the source tree (tests, dev): fall back to the canonical
 // src/hooks/caveman-config.js, which lives in a directory whose own
@@ -105,6 +105,16 @@ function opencodeConfigDir() {
 
 const flagPath = path.join(opencodeConfigDir(), '.caveman-active');
 
+function removeFlag() {
+  try {
+    unlinkSync(flagPath);
+  } catch (error) {
+    if (process.env.CAVEMAN_DEBUG === '1' && error.code !== 'ENOENT') {
+      console.error(`caveman: failed to remove flag ${flagPath}: ${error.message}`);
+    }
+  }
+}
+
 function reinforcementLine(mode) {
   return 'CAVEMAN MODE ACTIVE (' + mode + ') — session ruleset applies.';
 }
@@ -112,7 +122,7 @@ function reinforcementLine(mode) {
 function applyModeChange(change) {
   if (!change) return;
   if (change.action === 'clear') {
-    try { if (existsSync(flagPath)) unlinkSync(flagPath); } catch (e) {}
+    removeFlag();
     return;
   }
   if (change.action === 'set' && change.mode) {
@@ -126,7 +136,7 @@ function applyModeChange(change) {
 function handleSessionCreated() {
   const mode = getDefaultMode();
   if (mode === 'off') {
-    try { if (existsSync(flagPath)) unlinkSync(flagPath); } catch (e) {}
+    removeFlag();
     return;
   }
   safeWriteFlag(flagPath, mode);
@@ -174,7 +184,28 @@ export const CavemanPlugin = async (_ctx) => {
     if (!output || !Array.isArray(output.system)) return;
     const active = readFlag(flagPath);
     if (active && !INDEPENDENT_MODES.has(active)) {
-      output.system.push(reinforcementLine(active));
+      const line = reinforcementLine(active);
+      // Idempotent: opencode is expected to rebuild `output.system` per
+      // request, but if it ever reuses the array across turns an unguarded
+      // append grows the system prompt without bound — silently eating the
+      // context window. Rewrite any line we already left instead of stacking
+      // another, so a mode switch updates in place rather than accumulating.
+      const stale = /CAVEMAN MODE ACTIVE \([a-z-]+\) — session ruleset applies\./g;
+      let found = false;
+      for (let i = 0; i < output.system.length; i++) {
+        if (typeof output.system[i] === 'string' && stale.test(output.system[i])) {
+          stale.lastIndex = 0;
+          output.system[i] = output.system[i].replace(stale, line);
+          found = true;
+        }
+        stale.lastIndex = 0;
+      }
+      if (found) return;
+      if (output.system.length > 0) {
+        output.system[output.system.length - 1] += '\n\n' + line;
+      } else {
+        output.system.push(line);
+      }
     }
   },
   };
