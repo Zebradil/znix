@@ -7,6 +7,7 @@ let
       address = "192.168.0.111/24";
       fallback = "192.168.0.121/24";
       vpn = "100.104.120.72";
+      adguard = true;
     };
     d2 = {
       address = "192.168.0.112/24";
@@ -25,6 +26,7 @@ in
     modules.nixos = lib.mapAttrs (name: h: {
       imports = [ inputs.self.modules.nixos.dell-xps-9380 ];
       networking.hostName = name;
+      znix.adguard.enable = h.adguard or false;
       znix.dualNet = {
         address = h.address;
         fallbackAddress = h.fallback;

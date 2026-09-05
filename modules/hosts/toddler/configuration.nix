@@ -10,7 +10,6 @@
         nix-settings # kasha binary cache substituter — avoids emulated rebuilds
         openssh
         suok # lean admin user
-        toddler-adguard
         toddler-blebridge
         toddler-hardware
       ];
@@ -32,7 +31,7 @@
       # sd-image profile even though no zfs pool is used).
       boot.zfs.forceImportRoot = false;
 
-      # AdGuard owns :53, so systemd-resolved's stub listener must not.
+      # Fleet norm: no resolved stub listener.
       services.resolved.enable = false;
 
       # Minimal locale/timezone. Deliberately NOT the shared `locale` module: it

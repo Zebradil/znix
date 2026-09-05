@@ -6,6 +6,7 @@
     {
       imports =
         (with inputs.self.modules.nixos; [
+          adguard
           boot
           cloudflare-dynamic-dns
           dell-xps-9380-disko
