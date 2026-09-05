@@ -10,10 +10,10 @@ directories:
   path: vendor/mattpocock-skills
 - contents:
   - git:
-      commitTitle: 'chore: sync SKILL.md copies [skip ci]'
-      sha: fcf7663366c217dc8f334a11028de52ed950ceab
+      commitTitle: 'chore(release): v2.6.0...'
+      sha: b82c0ad42c2bedc1f2cd78e414dadfaffbaaeec3
       tags:
-      - v1.10.0
+      - v2.6.0
     path: .
   path: vendor/caveman
 - contents:
