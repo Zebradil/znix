@@ -102,8 +102,7 @@ jobs:
         with:
           attr: ${{ matrix.attr }}
           strategy: uncached-leaves
-          cache-s3-url:
-            ${{ env.PUSH_TO_CACHE == 'true' && secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
+          cache-s3-url: ${{ env.PUSH_TO_CACHE == 'true' && vars.CACHE_S3_URL || '' }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
@@ -127,7 +126,7 @@ jobs:
           flake: znix
           paths-file: ${{ steps.build.outputs.paths-file }}
           attr: ${{ matrix.attr }}
-          s3-url: ${{ format('s3://{0}', secrets.CACHE_URL) }}
+          s3-url: ${{ vars.CACHE_S3_URL }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 

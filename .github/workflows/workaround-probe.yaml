@@ -51,9 +51,7 @@ jobs:
       matrix: ${{ fromJSON(needs.matrix.outputs.matrix) }}
     runs-on: ${{ matrix.runner }}
     env:
-      # The `secrets` context is not available in a step-level `if:`, so hoist the presence check
-      # to job level, where it is.
-      CACHE_S3_URL: ${{ secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
+      CACHE_S3_URL: ${{ vars.CACHE_S3_URL }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -110,7 +108,15 @@ jobs:
           S3_URL: ${{ env.CACHE_S3_URL }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: xargs -r -a "$RUNNER_TEMP/paths" nix copy --to "$S3_URL"
+        run: |
+          # `compression` is a store setting, so it only travels as a URL query parameter — the
+          # same zstd default nix-ci's build action applies to every other push.
+          case "$S3_URL" in
+            *compression=*) ;;
+            *\?*) S3_URL="$S3_URL&compression=zstd&compression-level=6" ;;
+            *) S3_URL="$S3_URL?compression=zstd&compression-level=6" ;;
+          esac
+          xargs -r -a "$RUNNER_TEMP/paths" nix copy --to "$S3_URL"
 
   propose:
     needs: [matrix, probe]

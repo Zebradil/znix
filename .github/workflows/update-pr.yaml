@@ -28,7 +28,7 @@ jobs:
       pull-requests: write
     env:
       HAS_APP_TOKEN: ${{ secrets.CI_APP_ID != '' && secrets.CI_APP_PRIVATE_KEY != '' }}
-      CACHE_S3_URL: ${{ secrets.CACHE_URL != '' && format('s3://{0}', secrets.CACHE_URL) || '' }}
+      CACHE_S3_URL: ${{ vars.CACHE_S3_URL }}
     steps:
       # Before checkout, so actions/checkout can bake the push credentials into the git remote.
       - name: Generate app token
