@@ -91,6 +91,13 @@ _: {
             dns = {
               bind_hosts = [ cfg.serviceAddress ];
               port = 53;
+              # AdGuard's default is 20 QPS, and `ratelimit_subnet_len_ipv4`
+              # defaults to 24 — so the whole 192.168.1.0/24 shares one bucket
+              # and a single browser burst silently drops every other client's
+              # queries (no reply, no query-log entry: a bare dig timeout).
+              # The limit exists to keep an open resolver from being a
+              # DDoS amplifier; here the bind above and the firewall do that.
+              ratelimit = 0;
               upstream_dns = [
                 "[/lan/] 192.168.0.1" # local `lan` names -> router
                 "8.8.4.4"
