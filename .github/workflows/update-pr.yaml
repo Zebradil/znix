@@ -47,7 +47,7 @@ jobs:
           token: ${{ steps.app-token.outputs.token || github.token }}
 
       - name: Setup Nix
-        uses: zebradil/nix-ci/.github/actions/setup-nix@04cd06d6dc934270866604c5af67772c62637bee # v1.0.2
+        uses: zebradil/nix-ci/.github/actions/setup-nix@97a2729c1f60ab655cff974c9e861916e9b03712 # v1.1.0
         with:
           extra-substituters: https://znix.zebradil.dev
           extra-trusted-public-keys: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
@@ -55,7 +55,7 @@ jobs:
 
       - name: Update flake.lock and open PR
         id: update
-        uses: zebradil/nix-ci/.github/actions/update-lock-pr@04cd06d6dc934270866604c5af67772c62637bee # v1.0.2
+        uses: zebradil/nix-ci/.github/actions/update-lock-pr@97a2729c1f60ab655cff974c9e861916e9b03712 # v1.1.0
         with:
           token: ${{ steps.app-token.outputs.token || github.token }}
           has-app-token: ${{ steps.app-token.outputs.token != '' }}
