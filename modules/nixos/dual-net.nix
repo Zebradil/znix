@@ -17,12 +17,17 @@ _: {
         enable = lib.mkEnableOption "headless dual-link networking (networkd + iwd, wired primary, WiFi fallback)";
         address = lib.mkOption {
           type = lib.types.str;
-          example = "192.168.0.110/24";
-          description = "Static IPv4 CIDR for the wired (primary) link. This is the host's canonical/reachable address.";
+          example = "192.168.0.110/16";
+          description = ''
+            Static IPv4 CIDR for the wired (primary) link. This is the host's
+            canonical/reachable address. The prefix length must match the
+            router's LAN prefix — a narrower one makes DHCP clients outside it
+            off-subnet, and their return traffic hairpins through the router.
+          '';
         };
         fallbackAddress = lib.mkOption {
           type = lib.types.str;
-          example = "192.168.0.120/24";
+          example = "192.168.0.120/16";
           description = "Static IPv4 CIDR for the WiFi fallback link. Unpublished; carries a higher-metric default route for recovery when wired is down.";
         };
         gateway = lib.mkOption {
@@ -59,7 +64,7 @@ _: {
                 Path = "*usb*";
               };
               # RouteMetric sets the on-link subnet route's metric. Every k3s
-              # node is on this /24, so all node-to-node traffic (flannel VXLAN,
+              # node is on this /16, so all node-to-node traffic (flannel VXLAN,
               # ClusterIP backends) is on-link and never touches the default
               # route below — without this the wired and WiFi subnet routes are
               # equal-cost and the kernel sends the overlay out WiFi at random.

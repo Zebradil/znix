@@ -25,9 +25,9 @@ let
     };
   }
   // lib.genAttrs [ "d1" "d2" "d3" ] (host: {
-    targetHost =
-      lib.removeSuffix "/24"
-        config.flake.nixosConfigurations.${host}.config.znix.dualNet.address;
+    targetHost = lib.head (
+      lib.splitString "/" config.flake.nixosConfigurations.${host}.config.znix.dualNet.address
+    );
     targetUser = "suok";
     tags = [
       "k3s"
