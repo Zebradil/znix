@@ -500,6 +500,8 @@ def build_events(records, level):
                     if level == "debug":
                         emit(record, "user", "meta", text=redact(content))
                     continue
+                if content.startswith("<task-notification>") and level == "llm":
+                    continue
                 found = dict((k, v.strip()) for k, v in COMMAND_RE.findall(content))
                 if found:
                     emit(
@@ -1402,6 +1404,21 @@ def selftest_claude(tmp):
     assert "Bash" not in llm, "llm leaked a tool name"
     assert "```\nline" not in llm, "llm must not render tool_result bodies"
     assert "**B** ← selected" in llm, "llm dropped the question substance"
+
+    task_notification = {
+        "type": "user",
+        "timestamp": "2026-01-01T10:00:05.500Z",
+        "message": {
+            "role": "user",
+            "content": "<task-notification>\n<summary>completed</summary>\n</task-notification>",
+        },
+    }
+    assert not build_events([task_notification], "llm"), (
+        "llm must drop task lifecycle notifications"
+    )
+    assert build_events([task_notification], "full")[0]["kind"] == "text", (
+        "full must retain task lifecycle notifications"
+    )
 
     payload = json.loads(export(ref, "brief", "table", True))
     assert payload["session"]["counts"]["tools"] == {
