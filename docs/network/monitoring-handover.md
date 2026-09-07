@@ -4,16 +4,20 @@ Goal: alert when a link that should be 1000 Mbit negotiates 100 Mbit (the
 2026-07-07 failure mode, see [README](./README.md)). Scrape into the existing
 VictoriaMetrics stack in k3s; alert via the receiver already wired there.
 
-`expected_mbit` per link lives in
-[`topology.netjson.json`](./topology.netjson.json) — keep that as the source of
-truth and encode it in the alert rules (or generate rules from it).
+`expected_mbit` per link lives in the topology NetJSON file in the personal
+knowledge base (moved out of this repo) — keep that as the source of truth
+and encode it in the alert rules (or generate rules from it).
 
 ## Coverage plan
 
 | Segment | Vantage | Mechanism |
 |---|---|---|
-| All 8 switch ports (Mac/dock, Pi, WAX214, switch↔router, incl. dumb devices) | **SG108E switch** | web-scrape exporter (no SNMP) |
+| Switch ports (Mac/dock, Pi, WAX214, switch↔router, incl. dumb devices) | **both TP-Link switches**, `192.168.0.2` *and* `192.168.0.3` | web-scrape exporter (no SNMP) |
 | Router ports + WAN | **RT-AX53U (OpenWrt)** | node-exporter-lua or snmpd |
+
+There are **two** switches, not one — see the topology note in
+[README](./README.md); scrape both, or half the LAN (junior, d1-d3, the NAS)
+has no vantage at all.
 
 Per-host self-report (ethtool/networksetup) was considered and **dropped**: it
 can't see switch↔switch or dumb-device links, and the switch exporter already
