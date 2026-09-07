@@ -62,10 +62,35 @@ _: {
           };
         };
 
+        # CoreDNS ships with `dnsPolicy: Default`, so its upstream is whatever
+        # kubelet's resolv-conf held when the pod started — and the forward
+        # plugin reads that file exactly once, at start. Pointing kubelet at
+        # /etc/resolv.conf therefore makes cluster-wide DNS hostage to a file
+        # any runtime daemon may rewrite: tailscale's MagicDNS put
+        # 100.100.100.100 there, and once that entry went away CoreDNS kept
+        # forwarding to the dead resolver and SERVFAILed every external name
+        # until the deployment was restarted by hand. This copy is Nix-owned,
+        # so the cluster's upstream can only move on a rebuild.
+        #
+        # Editing `networking.nameservers` still needs a
+        # `kubectl -n kube-system rollout restart deploy/coredns` to take
+        # effect — a rebuild rewrites the file, CoreDNS does not re-read it.
+        assertions = [
+          {
+            assertion = config.networking.nameservers != [ ];
+            message = "znix.k3sNode: networking.nameservers must be set — it is the cluster's DNS upstream, and an empty resolv-conf stops CoreDNS from starting.";
+          }
+        ];
+
+        environment.etc."rancher/k3s/resolv.conf".text = lib.concatMapStrings (
+          ns: "nameserver ${ns}\n"
+        ) config.networking.nameservers;
+
         services.k3s = {
           enable = true;
           package = pkgs.k3s_1_36;
           tokenFile = config.sops.secrets.k3s-token.path;
+          extraFlags = [ "--kubelet-arg=resolv-conf=/etc/rancher/k3s/resolv.conf" ];
         };
 
         # k3s reads registries.yaml only at start. Restart when the encrypted
