@@ -1,0 +1,15 @@
+# vim: ft=dosini :
+
+font-family = IosevkaTerm NFM
+font-size = 18
+# Light themes: CRLS, Tomorrow, Monokai Pro Light
+# Dark themes: Monokai Pro, ayu
+theme = light:CLRS,dark:ayu
+macos-titlebar-style = tabs
+macos-option-as-alt = true
+macos-window-shadow = false
+
+bell-features = system,attention,title,border
+
+# u64 max value
+scrollback-limit = 18446744073709551615

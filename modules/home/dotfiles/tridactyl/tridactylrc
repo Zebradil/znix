@@ -1,0 +1,8 @@
+" vim: set filetype=tridactyl
+
+unbind --mode=n <C-f>
+
+blacklistadd calendar.google.com
+blacklistadd mail.google.com
+blacklistadd docs.google.com
+blacklistadd youtube.com
