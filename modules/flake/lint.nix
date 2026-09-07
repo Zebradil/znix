@@ -19,6 +19,7 @@
             actionlint -color ${inputs.self}/.github/workflows/*.y*ml
             shellcheck ${inputs.self}/.github/scripts/*.sh
             shellcheck --shell=bash ${inputs.self}/modules/home/skillsync/*.sh
+            shellcheck ${inputs.self}/hack/*.sh
 
             # assets/bin takes whatever scripts land there, so lint by shebang
             # rather than by glob -- a python helper must not break the check.
