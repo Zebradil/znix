@@ -1,6 +1,11 @@
 _: {
   flake.modules.nixos.adguard =
-    { config, lib, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
       cfg = config.znix.adguard;
       uiPort = 3000;
@@ -39,6 +44,47 @@ _: {
             address = [ "${cfg.serviceAddress}/32" ];
             # Carries no route anywhere; must not hold up wait-online.
             linkConfig.RequiredForOnline = "no";
+          };
+        };
+
+        # `arp_ignore = 0` lets whichever link a request arrived on answer for
+        # the service address — but it never tells a client which link is
+        # *live*. On a dual-net host both links answer, so a client caches
+        # whichever reply won the race and then keeps that entry alive by
+        # unicast-probing the same MAC. Land on the standby link's MAC while
+        # that path is unhealthy and DNS blackholes for that client alone until
+        # its ARP cache ages out (20 minutes on macOS) — the resolver looks
+        # perfectly healthy throughout, and restarting it changes nothing. The
+        # same gap makes a real wired-link failover invisible to every client
+        # that already has an entry.
+        #
+        # A gratuitous ARP out the link currently holding the default route
+        # repins every cache to the live path. Route metrics (`dual-net`) make
+        # that wired while wired is up, WiFi otherwise, so no health check is
+        # needed here either.
+        systemd.services.dns-garp = {
+          description = "Gratuitous ARP for ${cfg.serviceAddress} out the active link";
+          serviceConfig.Type = "oneshot";
+          path = [
+            pkgs.iputils
+            pkgs.iproute2
+          ];
+          script = ''
+            set -- $(ip -o route show default | head -n1)
+            while [ $# -gt 0 ] && [ "$1" != "dev" ]; do shift; done
+            dev=$2
+            [ -n "$dev" ] || exit 0
+            # -s: the address lives on dns0, never on the announcing link.
+            arping -c 2 -U -I "$dev" -s ${cfg.serviceAddress} ${cfg.serviceAddress}
+          '';
+        };
+
+        systemd.timers.dns-garp = {
+          wantedBy = [ "timers.target" ];
+          # Bounds both a failover and a wrongly-cached MAC to one interval.
+          timerConfig = {
+            OnBootSec = "30s";
+            OnUnitActiveSec = "30s";
           };
         };
 

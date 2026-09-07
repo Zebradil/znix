@@ -45,7 +45,15 @@ that is otherwise perfectly up — which would defeat the entire reason `d1` bea
 So `192.168.0.53/32` lives on a `dummy` netdev. A dummy link never flaps, and
 Linux's default weak host model (`arp_ignore = 0`) answers ARP for the address
 out of whichever link the request arrived on. Wired and WiFi both work, failover
-is free, and no daemon or health check is involved.
+is free, and no health check is involved.
+
+`arp_ignore = 0` only makes d1 *able* to answer on either link; it never tells a
+client which link is live. Both links answer, so a client caches whichever reply
+won the race and keeps that entry alive by unicast-probing the same MAC — and a
+real failover reaches nobody who already has an entry. A 30s gratuitous ARP for
+the service address, sent out whichever link currently holds the default route,
+repins every cache to the live path and bounds both cases to one interval. Route
+metrics pick that link, so this stays health-check-free.
 
 Two further consequences fall out of it:
 
