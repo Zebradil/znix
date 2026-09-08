@@ -6,8 +6,9 @@
 // marker — lives here and is emitted as one JSON blob on stdout.
 //
 // Subcommands:
-//   standup [--dry-run]   drain current.jsonl → archive (or read in place on
-//                         --dry-run), collapse, fetch sources, emit JSON.
+//   standup [--dry-run]   recover pending archives, drain current.jsonl →
+//                         archive (or read in place on --dry-run), collapse,
+//                         fetch sources, emit JSON.
 //   weekly  [<since>]     read archive/*.jsonl + current.jsonl (non-destructive),
 //                         filter by window (default: latest Friday 13:00 strictly
 //                         before today; or the given date/datetime), emit JSON.
@@ -104,6 +105,35 @@ function tsCompact(d) {
   return d.toISOString().replace(/[-:]/g, "").replace(/\..+/, "Z");
 }
 
+function archiveFiles(dir) {
+  const archiveDir = path.join(dir, "archive");
+  if (!fs.existsSync(archiveDir)) return [];
+  return fs
+    .readdirSync(archiveDir)
+    .filter((f) => f.endsWith(".jsonl"))
+    .sort()
+    .map((f) => path.join(archiveDir, f));
+}
+
+function archiveTime(file) {
+  const match = path.basename(file).match(/^(\d{8})T(\d{6})Z\.jsonl$/);
+  if (!match) return null;
+  const [, date, time] = match;
+  return new Date(
+    `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6)}T${time.slice(0, 2)}:${time.slice(2, 4)}:${time.slice(4)}Z`,
+  );
+}
+
+function pendingArchiveRecords(dir, marker) {
+  const cutoff = marker ? new Date(marker) : null;
+  return archiveFiles(dir)
+    .filter((file) => {
+      const created = archiveTime(file);
+      return !cutoff || !created || created >= cutoff;
+    })
+    .flatMap(parseJsonl);
+}
+
 // ---- source fetch ----------------------------------------------------------
 
 function fetchSources(cfg, sinceDate) {
@@ -136,21 +166,19 @@ function standup(cfg) {
   fs.mkdirSync(path.join(dir, "reports"), { recursive: true });
 
   const live = path.join(dir, "current.jsonl");
-  let drained = null;
-  if (!fs.existsSync(live) || fs.statSync(live).size === 0) {
-    drained = null;
-  } else if (dry) {
-    drained = live; // peek in place, leave it for the next real run
-  } else {
-    drained = path.join(dir, "archive", ts + ".jsonl");
-    fs.renameSync(live, drained); // atomic: a concurrent Stop-hook append lands in a fresh current.jsonl
+  const hasLive = fs.existsSync(live) && fs.statSync(live).size > 0;
+  if (hasLive && !dry) {
+    // Atomic: a concurrent Stop-hook append lands in a fresh current.jsonl.
+    fs.renameSync(live, path.join(dir, "archive", ts + ".jsonl"));
   }
 
-  const records = drained ? parseJsonl(drained) : [];
+  // Source window: last-standup marker, else earliest pending record, else 7d ago.
+  const marker = readMarker(dir);
+  // Archived batches can survive an interrupted report. Current records are
+  // always uncommitted, so do not filter them by the marker.
+  const records = pendingArchiveRecords(dir, marker).concat(parseJsonl(live));
   const { sessions, trivialCount } = collapse(records);
 
-  // Source window: last-standup marker, else earliest drained record, else 7d ago.
-  const marker = readMarker(dir);
   let start, startSource;
   if (marker) {
     start = marker;
@@ -169,13 +197,13 @@ function standup(cfg) {
   return {
     mode: "standup",
     dry_run: dry,
-    empty: !drained,
+    empty: records.length === 0,
     window: { start, startDate, source: startSource },
     report_path: dry ? null : path.join(dir, "reports", ts + ".md"),
     latest_report: latestReport(dir),
     sessions,
     trivialCount,
-    sources: drained ? fetchSources(cfg, startDate) : [],
+    sources: records.length ? fetchSources(cfg, startDate) : [],
   };
 }
 
@@ -192,11 +220,7 @@ function weekly(cfg) {
 
   // Union of every archived batch + the live (undrained) file, filtered by ts.
   let records = [];
-  const archiveDir = path.join(dir, "archive");
-  if (fs.existsSync(archiveDir)) {
-    for (const f of fs.readdirSync(archiveDir).filter((f) => f.endsWith(".jsonl")))
-      records = records.concat(parseJsonl(path.join(archiveDir, f)));
-  }
+  for (const f of archiveFiles(dir)) records = records.concat(parseJsonl(f));
   records = records.concat(parseJsonl(path.join(dir, "current.jsonl")));
   records = records.filter((r) => r.ts >= start);
 
