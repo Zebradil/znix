@@ -134,6 +134,21 @@ function pendingArchiveRecords(dir, marker) {
     .flatMap(parseJsonl);
 }
 
+function withoutCommittedDuplicates(records, dir, marker) {
+  if (!marker) return records;
+  const cutoff = new Date(marker);
+  const committed = new Set(
+    archiveFiles(dir)
+      .filter((file) => {
+        const created = archiveTime(file);
+        return created && created < cutoff;
+      })
+      .flatMap(parseJsonl)
+      .map((record) => `${record.session || ""}\0${record.ts}`),
+  );
+  return records.filter((record) => !committed.has(`${record.session || ""}\0${record.ts}`));
+}
+
 // ---- source fetch ----------------------------------------------------------
 
 function fetchSources(cfg, sinceDate) {
@@ -174,9 +189,13 @@ function standup(cfg) {
 
   // Source window: last-standup marker, else earliest pending record, else 7d ago.
   const marker = readMarker(dir);
-  // Archived batches can survive an interrupted report. Current records are
-  // always uncommitted, so do not filter them by the marker.
-  const records = pendingArchiveRecords(dir, marker).concat(parseJsonl(live));
+  // Records written between rotation and commit are uncommitted; retain them
+  // unless they exactly duplicate a record already included in a past report.
+  const records = withoutCommittedDuplicates(
+    pendingArchiveRecords(dir, marker).concat(parseJsonl(live)),
+    dir,
+    marker,
+  );
   const { sessions, trivialCount } = collapse(records);
 
   let start, startSource;
