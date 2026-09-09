@@ -943,6 +943,7 @@
         "nixpkgs": "nixpkgs_6",
         "nixvim": "nixvim",
         "sito": "sito",
+        "sofka": "sofka",
         "sops-nix": "sops-nix",
         "tree-sitter-queries": "tree-sitter-queries",
         "tree-sitter-test_highlights": "tree-sitter-test_highlights",
@@ -987,6 +988,26 @@
       "original": {
         "owner": "Zebradil",
         "repo": "sito",
+        "type": "github"
+      }
+    },
+    "sofka": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1788962960,
+        "narHash": "sha256-e/+cdD8B+yE4tQzk73LdUbAX9ULKn4XJyoBUYb3fVOs=",
+        "owner": "nklmilojevic",
+        "repo": "sofka",
+        "rev": "d4db1e7f6e3ddcfeeb26f47a9f59ab2f33ee042e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nklmilojevic",
+        "repo": "sofka",
         "type": "github"
       }
     },

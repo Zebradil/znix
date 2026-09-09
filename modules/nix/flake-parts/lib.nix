@@ -67,7 +67,7 @@
     # Unlike integrated home (useGlobalPkgs borrows the system's pkgs), this
     # builds its own pkgs, so it must replicate BOTH host-divergence knobs:
     #   - `nixpkgs`: the host's own input, when it pins one.
-    #   - self.overlays.default: tree-sitter grammars + workarounds.
+    #   - self.overlays.default: external packages + workarounds.
     # Omitting either would resolve files to different store paths than the
     # system switch. `standalone = true` flips the HM impermanence import.
     # `extraModules` lets an external flake sweep its own homeManager module

@@ -69,6 +69,10 @@
       url = "github:Zebradil/sito";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    sofka = {
+      url = "github:nklmilojevic/sofka";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
