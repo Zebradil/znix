@@ -40,6 +40,7 @@ _: {
         jnv
         k9s
         lazygit
+        sofka
         tmux
 
         # CLI tools

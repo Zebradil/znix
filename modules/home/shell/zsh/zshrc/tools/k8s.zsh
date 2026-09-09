@@ -57,19 +57,28 @@ function z:k8s:context:switch() {
   new_kubeconfig="$(z:k8s:context:generate-kubeconfig "$context")"
   ret=$?
   case $ret in
-    101) log::info "Aborted" ; return 1 ;;
-    100) log::info "Already on context '$context'" ; return 0 ;;
-    0) export KUBECONFIG="$new_kubeconfig" ;;
-    *) log::error "Failed to switch context to '$context'"; return $ret ;;
+  101)
+    log::info "Aborted"
+    return 1
+    ;;
+  100)
+    log::info "Already on context '$context'"
+    return 0
+    ;;
+  0) export KUBECONFIG="$new_kubeconfig" ;;
+  *)
+    log::error "Failed to switch context to '$context'"
+    return $ret
+    ;;
   esac
 }
 
 function z:k8s:context:switch-k9s() {
-  z:k8s:context:switch $1 && k9s
+  z:k8s:context:switch $1 && sofka
 }
 
 function z:k8s:contexts:do-parallel() {
-  if (( $# < 2 )); then
+  if (($# < 2)); then
     log::error "Too few arguments"
     log::info "Usage: ${funcstack[1]} <file suffix> <command> [args...]"
     return 1
@@ -77,9 +86,8 @@ function z:k8s:contexts:do-parallel() {
   z:k8s:contexts:do-parallel-filter ".*" "$1" "${@:2}"
 }
 
-
 function z:k8s:contexts:do-parallel-filter() {
-  if (( $# < 3 )); then
+  if (($# < 3)); then
     log::error "Too few arguments"
     log::info "Usage: ${funcstack[1]} <rg pattern> <file suffix> <command> [args...]"
     return 1
@@ -92,7 +100,7 @@ function z:k8s:contexts:do-parallel-filter() {
   local -a contexts
   contexts=(${(f)"$(kubectl config get-contexts -oname | rg "$rg_pattern")"})
 
-  if (( ${#contexts} == 0 )); then
+  if ((${#contexts} == 0)); then
     log::warn "No contexts found"
     return 0
   fi
@@ -106,9 +114,8 @@ function z:k8s:contexts:do-parallel-filter() {
   lib::parallel::run -c _z_k8s_parallel_job -- "${contexts[@]}"
 }
 
-
 function z:k8s:namespaces:dump() {
-  if (( $# < 2 )); then
+  if (($# < 2)); then
     log::error "Too few arguments"
     log::info "Usage: ${funcstack[1]} <rg pattern> <out dir>"
     return 1
@@ -121,14 +128,14 @@ function z:k8s:namespaces:dump() {
     kubectl get namespaces -o custom-columns=NAME:.metadata.name --no-headers \
       | rg "$rg_pattern"
   )"})
-  if (( ${#namespaces} == 0 )); then
+  if ((${#namespaces} == 0)); then
     log::warn "No namespaces matched pattern '$rg_pattern'"
     return 0
   fi
 
   local -a kinds
   kinds=(${(f)"$(kubectl api-resources --verbs=list --namespaced -o name)"})
-  if (( ${#kinds} == 0 )); then
+  if ((${#kinds} == 0)); then
     log::error "No namespaced api-resources found"
     return 1
   fi
@@ -145,8 +152,8 @@ function z:k8s:namespaces:dump() {
     for kind in "${kinds[@]}"; do
       (
         kubectl get --ignore-not-found -n "$ns" "$kind" -oyaml \
-          > "$ns_dir/$kind.yaml"
-        : > "$progress_dir/$ns/$kind"
+          >"$ns_dir/$kind.yaml"
+        : >"$progress_dir/$ns/$kind"
       ) &
     done
     wait
@@ -159,10 +166,10 @@ function z:k8s:namespaces:dump() {
     local count=${#done_files}
     local total=${#kinds}
     local width=20
-    local filled=$(( count * width / total ))
+    local filled=$((count * width / total))
     local bar="" i
-    for (( i = 0; i < width; i++ )); do
-      (( i < filled )) && bar+="█" || bar+="░"
+    for ((i = 0; i < width; i++)); do
+      ((i < filled)) && bar+="█" || bar+="░"
     done
     printf 'running [%s] %d/%d' "$bar" "$count" "$total"
   }
