@@ -37,7 +37,7 @@ let
   jiraSource = {
     name = "Jira";
     instruction = "Assigned tickets you moved this period — can back the topics above.";
-    cmd = ''JIRA_API_TOKEN=$(op read 'op://Employee/Jira API token/credential') jira issue list --jql 'project IS NOT EMPTY AND assignee = currentUser() AND updated >= "{{since}}"' --plain --no-headers --no-truncate --columns KEY,STATUS,SUMMARY'';
+    cmd = ''JIRA_API_TOKEN="$(op read 'op://Employee/Jira API token/credential')" jira issue list --jql 'project IS NOT EMPTY AND assignee = currentUser() AND updated >= "{{since}}"' --plain --no-headers --no-truncate --columns KEY,STATUS,SUMMARY'';
   };
 
   # opencode keeps its own durable session history, so it needs no Stop hook —
@@ -83,6 +83,7 @@ in
         username = "glashevich";
         homeDirectory = "/Users/glashevich";
         stateVersion = "26.05";
+        sessionVariables.OP_ACCOUNT = "my.1password.eu";
       };
 
       znix = {
