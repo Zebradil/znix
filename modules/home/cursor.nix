@@ -113,11 +113,17 @@
       '';
     in
     {
-      options.znix.cursor.enable = lib.mkEnableOption "Cursor agent configuration";
+      options.znix.cursor = {
+        enable = lib.mkEnableOption "Cursor agent configuration";
+        installDesktopApp = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Whether to install the Cursor desktop app.";
+        };
+      };
 
       config = lib.mkIf cfg.enable {
-        home.packages = [
-          pkgs.code-cursor
+        home.packages = lib.optionals cfg.installDesktopApp [ pkgs.code-cursor ] ++ [
           pkgs.cursor-cli
           agent
         ];
