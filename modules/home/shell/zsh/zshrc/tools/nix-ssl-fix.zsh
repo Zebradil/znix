@@ -2,7 +2,9 @@
 # The following code extracts all certificates from the macOS keychain and adds them to a single file.
 # This file is then used by openssl to verify certificates.
 
-[[ $OSTYPE == darwin* ]] || return 0
+# [[ $OSTYPE == darwin* ]] || return 0
+# TODO: This is not needed with determinate nix - double check and remove or gate
+return 0
 
 export SSL_CERT_FILE=${XDG_STATE_HOME:?}/ssl/certs.pem
 if [[ -n $SSL_CERT_FILE(#qN.mh-24) ]]; then
@@ -12,5 +14,5 @@ else
   {
     security find-certificate -a -p
     security find-certificate -a -p /System/Library/Keychains/SystemRootCertificates.keychain
-  }> $SSL_CERT_FILE
+  } >$SSL_CERT_FILE
 fi
