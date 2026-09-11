@@ -32,7 +32,7 @@ directories:
       - path: .
         git:
           url: https://github.com/JuliusBrussee/caveman
-          ref: v1.10.0
+          ref: v2.6.0
         includePaths: [ src/hooks/**, src/plugins/**, src/rules/**, skills/**, commands/** ]
         # Self-installers (`curl … | bash`, fetch hooks from GitHub at runtime)
         # stay out. Cavecrew is no longer deployed by any harness.
