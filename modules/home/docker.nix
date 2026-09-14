@@ -86,12 +86,13 @@ _: {
                       "oci.lan.zebradil.dev"
                     ];
                   };
-                  # Two mutually exclusive credential forms (asserted below):
-                  #   split : usernameSecret + passwordSecret -> plaintext username/password
-                  #           fields. Docker keeps these verbatim when `auth` is absent, so
-                  #           no base64 packing is needed.
-                  #   blob  : authSecret -> the `auth` field, base64(`user:password`). Use for
-                  #           registries where the split fields aren't honored.
+                  # Three mutually exclusive credential forms (asserted below):
+                  #   split  : usernameSecret + passwordSecret -> plaintext username/password
+                  #            fields. Docker keeps these verbatim when `auth` is absent, so
+                  #            no base64 packing is needed.
+                  #   blob   : authSecret -> the `auth` field, base64(`user:password`). Use for
+                  #            registries where the split fields aren't honored.
+                  #   helper : credHelper -> credHelpers.<host> (no sops keys).
                   usernameSecret = lib.mkOption {
                     type = lib.types.nullOr lib.types.str;
                     default = null;
@@ -106,6 +107,11 @@ _: {
                     type = lib.types.nullOr lib.types.str;
                     default = null;
                     description = "sops key holding base64(`user:password`) for the `auth` field.";
+                  };
+                  credHelper = lib.mkOption {
+                    type = lib.types.nullOr lib.types.str;
+                    default = null;
+                    description = "Credential helper name (e.g. gcloud); written to credHelpers.";
                   };
                 };
               }
@@ -138,6 +144,7 @@ _: {
             ph = config.sops.placeholder;
 
             isSplit = r: r.usernameSecret != null;
+            isHelper = r: r.credHelper != null;
 
             # The credential attrs for one registry, keyed into every one of its
             # endpoint hosts. Split emits plaintext username/password (docker keeps
@@ -152,9 +159,14 @@ _: {
               else
                 { auth = ph.${r.authSecret}; };
 
+            authsRegs = lib.filter (r: !isHelper r) (lib.attrValues auth.registries);
+            helperRegs = lib.filter isHelper (lib.attrValues auth.registries);
+
             # Flatten registries × endpoints into a single host-keyed auths map.
-            authsEntries = lib.concatMap (r: map (host: lib.nameValuePair host (credOf r)) r.endpoints) (
-              lib.attrValues auth.registries
+            authsEntries = lib.concatMap (r: map (host: lib.nameValuePair host (credOf r)) r.endpoints) authsRegs;
+
+            credHelpers = lib.listToAttrs (
+              lib.concatMap (r: map (host: lib.nameValuePair host r.credHelper) r.endpoints) helperRegs
             );
 
             # Distinct sops keys across all registries; attrset merge dedupes shared keys.
@@ -165,16 +177,26 @@ _: {
                   r.usernameSecret
                   r.passwordSecret
                 ]
+              else if isHelper r then
+                [ ]
               else
                 [ r.authSecret ]
             ) (lib.attrValues auth.registries);
+
+            dockerConfig =
+              lib.optionalAttrs (authsEntries != [ ]) { auths = lib.listToAttrs authsEntries; }
+              // lib.optionalAttrs (credHelpers != { }) { inherit credHelpers; };
           in
           {
             assertions = lib.mapAttrsToList (name: r: {
               assertion =
-                (r.usernameSecret != null && r.passwordSecret != null && r.authSecret == null)
-                || (r.authSecret != null && r.usernameSecret == null && r.passwordSecret == null);
-              message = "znix.docker.registryAuth.registries.${name}: set either usernameSecret + passwordSecret, or authSecret alone.";
+                let
+                  split = r.usernameSecret != null && r.passwordSecret != null && r.authSecret == null && r.credHelper == null;
+                  blob = r.authSecret != null && r.usernameSecret == null && r.passwordSecret == null && r.credHelper == null;
+                  helper = r.credHelper != null && r.usernameSecret == null && r.passwordSecret == null && r.authSecret == null;
+                in
+                split || blob || helper;
+              message = "znix.docker.registryAuth.registries.${name}: set usernameSecret + passwordSecret, authSecret, or credHelper — exactly one form.";
             }) auth.registries;
 
             sops.secrets = lib.genAttrs secretKeys (_: {
@@ -184,7 +206,7 @@ _: {
             sops.templates."docker-config" = {
               path = "${config.home.homeDirectory}/.docker/config.json";
               mode = "0400";
-              content = builtins.toJSON { auths = lib.listToAttrs authsEntries; };
+              content = builtins.toJSON dockerConfig;
             };
           }
         ))
