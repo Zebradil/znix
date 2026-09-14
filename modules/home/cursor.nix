@@ -132,7 +132,6 @@
           (mkSkillFiles "${assetsRoot}/skills" [
             "save-convo"
             "save-note"
-            "export-session"
             "standup"
             "weekly"
             "kick-pr-copilot"

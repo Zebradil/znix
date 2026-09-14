@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Export a Claude Code or opencode session transcript as readable Markdown or JSON.
+"""Export a Claude Code, Cursor, or opencode session transcript as readable Markdown or JSON.
 
-Two stores, one projection. Claude Code appends a JSONL event log per session;
-opencode writes rows into SQLite (`session` / `message` / `part`). Both are
-reduced to the same event list, so every renderer below is source-agnostic.
+Three stores, one projection. Claude Code appends a JSONL event log per session;
+Cursor writes a slimmer JSONL under `~/.cursor/projects/*/agent-transcripts/`;
+opencode writes rows into SQLite (`session` / `message` / `part`). All three
+are reduced to the same event list, so every renderer below is source-agnostic.
 
 A "chat" is a projection over that log, not a message list: assistant prose
 lives in text blocks, but the substance of a driven session often lives in a
@@ -21,7 +22,7 @@ import subprocess
 import sys
 import tempfile
 from contextlib import closing
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 TOOL_INPUT_CHARS = 120
@@ -67,6 +68,10 @@ def claude_ref(path):
     return {"tool": "claude", "path": Path(path)}
 
 
+def cursor_ref(path):
+    return {"tool": "cursor", "path": Path(path)}
+
+
 def opencode_ref(db, session_id):
     return {"tool": "opencode", "db": Path(db), "id": session_id}
 
@@ -101,10 +106,24 @@ def mangle(path):
     return re.sub(r"[^A-Za-z0-9]", "-", str(path))
 
 
+def cursor_project_name(path):
+    """Cursor's project dir: same dash-mangle, but the leading slash is dropped.
+
+    `/Users/me/code/github.com/o/a_b` → `Users-me-code-github-com-o-a-b`, sitting
+    at `~/.cursor/projects/<name>/`. Claude keeps the leading dash.
+    """
+    return mangle(path).lstrip("-")
+
+
 def project_label(mangled):
     """A project's mangled dir name, shortened against $HOME so the distinctive
     tail fits a column: `-Users-me-code-github-com-o-repo` -> `code-github-com-o-repo`.
+
+    Cursor dirs drop the leading dash Claude keeps; prepend it so the same
+    home-prefix trim applies.
     """
+    if mangled and not mangled.startswith("-"):
+        mangled = "-" + mangled
     home = mangle(Path.home())
     trimmed = mangled[len(home) :] if mangled.startswith(home) else mangled
     return trimmed.strip("-") or mangled.strip("-")
@@ -129,6 +148,131 @@ def session_files(scope=None):
     )
     files = [f for d in dirs for f in d.glob("*.jsonl")]
     return sorted(files, key=lambda f: f.stat().st_mtime, reverse=True)
+
+
+def cursor_projects_root():
+    return Path.home() / ".cursor" / "projects"
+
+
+def cursor_project_dirs(scoped):
+    """Cursor's per-workspace folders, or just the one for cwd when scoped."""
+    root = cursor_projects_root()
+    if not root.is_dir():
+        return []
+    if scoped:
+        found = root / cursor_project_name(Path.cwd())
+        return [found] if found.is_dir() else []
+    return [d for d in root.iterdir() if d.is_dir()]
+
+
+def cursor_session_files(dirs):
+    files = [f for d in dirs for f in (d / "agent-transcripts").glob("*/*.jsonl")]
+    return sorted(files, key=lambda f: f.stat().st_mtime, reverse=True)
+
+
+CURSOR_QUERY_RE = re.compile(r"<user_query>\s*(.*?)</user_query>", re.S)
+CURSOR_SKILLS_RE = re.compile(
+    r"<manually_attached_skills>.*?</manually_attached_skills>", re.S
+)
+CURSOR_CLOCK_RE = re.compile(
+    r"<timestamp>\s*(?P<body>.*?)\s*</timestamp>",
+    re.S,
+)
+CURSOR_CLOCK_BODY = re.compile(
+    r"(?P<mon>[A-Za-z]+) (?P<day>\d{1,2}), (?P<year>\d{4}), "
+    r"(?P<hour>\d{1,2}):(?P<minute>\d{2}) (?P<ampm>AM|PM) "
+    r"\(UTC(?:(?P<off>[+-]\d{1,2}(?::\d{2})?))?\)$",
+    re.I,
+)
+_MONTHS = {
+    "jan": 1,
+    "feb": 2,
+    "mar": 3,
+    "apr": 4,
+    "may": 5,
+    "jun": 6,
+    "jul": 7,
+    "aug": 8,
+    "sep": 9,
+    "oct": 10,
+    "nov": 11,
+    "dec": 12,
+}
+
+
+def iso_mtime(path):
+    return (
+        datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z")
+    )
+
+
+def cursor_clock_to_iso(raw):
+    """`Friday, Sep 11, 2026, 12:20 AM (UTC+2)` → UTC ISO. None if it doesn't parse."""
+    raw = " ".join((raw or "").split())
+    # Weekday is prefix noise; the body starts at the month.
+    chopped = raw.split(", ", 1)[-1] if ", " in raw else raw
+    parsed = CURSOR_CLOCK_BODY.search(chopped) or CURSOR_CLOCK_BODY.search(raw)
+    if not parsed:
+        return None
+    month = _MONTHS.get(parsed.group("mon")[:3].lower())
+    if not month:
+        return None
+    hour = int(parsed.group("hour"))
+    if parsed.group("ampm").upper() == "AM":
+        hour = 0 if hour == 12 else hour
+    else:
+        hour = hour if hour == 12 else hour + 12
+    local = datetime(
+        int(parsed.group("year")),
+        month,
+        int(parsed.group("day")),
+        hour,
+        int(parsed.group("minute")),
+    )
+    off = parsed.group("off")
+    if off:
+        sign = 1 if off[0] == "+" else -1
+        bits = off[1:].split(":")
+        minutes = sign * (int(bits[0]) * 60 + (int(bits[1]) if len(bits) > 1 else 0))
+    else:
+        minutes = 0
+    utc = local.replace(tzinfo=timezone.utc) - timedelta(minutes=minutes)
+    return utc.isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def cursor_plain_content(record):
+    content = record.get("message", {}).get("content")
+    if isinstance(content, list):
+        return "\n".join(
+            b.get("text") or ""
+            for b in content
+            if isinstance(b, dict) and b.get("type") == "text"
+        )
+    return content if isinstance(content, str) else ""
+
+
+def cursor_user_text(record):
+    """The prompt, with Cursor's wrapper tags stripped.
+
+    User turns arrive as `<timestamp>…</timestamp><user_query>…</user_query>`,
+    sometimes with a `<manually_attached_skills>` blob. The query is the
+    message; the timestamp becomes the event's `ts`.
+    """
+    if record.get("role") != "user":
+        return ""
+    text = CURSOR_SKILLS_RE.sub("", cursor_plain_content(record))
+    found = CURSOR_QUERY_RE.search(text)
+    if found:
+        return found.group(1).strip()
+    text = CURSOR_CLOCK_RE.sub("", text).strip()
+    return text
+
+
+def cursor_record_ts(record):
+    found = CURSOR_CLOCK_RE.search(cursor_plain_content(record))
+    return cursor_clock_to_iso(found.group("body")) if found else None
 
 
 def opencode_dbs():
@@ -166,8 +310,26 @@ def summarize(path):
     return path.stem, when, f"{size}K", title
 
 
+def cursor_summarize(path):
+    """Same columns as summarize(), title from the first user_query."""
+    title = ""
+    with path.open() as handle:
+        for line in handle:
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            text = cursor_user_text(rec)
+            if text:
+                title = text.splitlines()[0]
+                break
+    when = datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+    size = path.stat().st_size // 1024
+    return path.stem, when, f"{size}K", redact(title)
+
+
 def rows(scoped):
-    """Both tools' sessions as picker rows, newest first."""
+    """Every tool's sessions as picker rows, newest first."""
     found = []
 
     scope = project_dirs_for_cwd() if scoped else None
@@ -216,6 +378,22 @@ def rows(scoped):
                     }
                 )
 
+    for path in cursor_session_files(cursor_project_dirs(scoped)):
+        sid, when, size, title = cursor_summarize(path)
+        found.append(
+            {
+                "tool": "cursor",
+                "label": "cursor",
+                "project": project_label(path.parent.parent.parent.name),
+                "id": sid,
+                "when": when,
+                "size": size,
+                "title": title,
+                "ref": cursor_ref(path),
+                "sort": path.stat().st_mtime,
+            }
+        )
+
     return sorted(found, key=lambda r: r["sort"], reverse=True)
 
 
@@ -226,18 +404,44 @@ def scoped_rows(everywhere=False):
     return rows(True) or rows(False)
 
 
+def jsonl_ref(path):
+    """A .jsonl path is Claude or Cursor; the directory is the reliable signal."""
+    path = Path(path)
+    if "agent-transcripts" in path.parts:
+        return cursor_ref(path)
+    try:
+        with path.open() as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                rec = json.loads(line)
+                if rec.get("type") == "turn_ended" or (
+                    rec.get("role") in ("user", "assistant") and "type" not in rec
+                ):
+                    return cursor_ref(path)
+                return claude_ref(path)
+    except (OSError, json.JSONDecodeError):
+        pass
+    return claude_ref(path)
+
+
 def resolve(arg, everywhere=False):
-    """A path, or a bare session id looked up in either store."""
+    """A path, or a bare session id looked up in any store."""
     if not arg:
         return pick(everywhere)
 
     candidate = Path(arg)
     if candidate.is_file():
-        return claude_ref(candidate)
+        return jsonl_ref(candidate)
     for root in project_roots():
         hits = sorted(root.glob(f"*/{arg}*.jsonl"))
         if hits:
             return claude_ref(hits[0])
+    hits = cursor_session_files(cursor_project_dirs(False))
+    for path in hits:
+        if path.stem.startswith(arg):
+            return cursor_ref(path)
     for db in opencode_dbs():
         with closing(connect(db)) as conn:
             hit = conn.execute(
@@ -247,7 +451,11 @@ def resolve(arg, everywhere=False):
         if hit:
             return opencode_ref(db, hit["id"])
 
-    searched = [str(r) for r in project_roots()] + [str(d) for d in opencode_dbs()]
+    searched = (
+        [str(r) for r in project_roots()]
+        + [str(cursor_projects_root())]
+        + [str(d) for d in opencode_dbs()]
+    )
     sys.exit(f"no session matching {arg!r} under {searched}")
 
 
@@ -773,6 +981,173 @@ def opencode_events(messages, level):
     return events
 
 
+# --- parsing: Cursor -----------------------------------------------------------
+#
+# `~/.cursor/projects/<project>/agent-transcripts/<id>/<id>.jsonl`. Same
+# content-block shape as Claude (text / tool_use) but a thinner envelope: no
+# `type`, no per-line timestamp, no model, no tokens, and no tool_result —
+# Cursor drops outputs upstream. User turns wrap the prompt in <timestamp>
+# / <user_query> tags. `turn_ended` markers sit between model turns.
+#
+# Question answers never land in this file: AskQuestion is recorded as the
+# call, then the next assistant line already knows the pick. Same projection
+# as Claude's question event, minus the answer.
+
+
+def cursor_question(block):
+    data = block.get("input") or {}
+    title = data.get("title")
+    items = []
+    for question in data.get("questions") or []:
+        items.append(
+            {
+                "header": title or question.get("id"),
+                "question": redact(question.get("prompt") or question.get("question") or ""),
+                "options": [
+                    {
+                        "label": o.get("label"),
+                        "description": redact(o.get("description")),
+                        "preview": None,
+                    }
+                    for o in question.get("options") or []
+                ],
+                "answer": None,
+                "notes": None,
+                "outcome": None,
+            }
+        )
+    return items
+
+
+def cursor_meta(records, path):
+    tools = {}
+    prompts = 0
+    turns = 0
+    stamps = []
+    title = ""
+    for record in records:
+        if record.get("role") == "user":
+            text = cursor_user_text(record)
+            if text:
+                prompts += 1
+                if not title:
+                    title = text.splitlines()[0]
+            ts = cursor_record_ts(record)
+            if ts:
+                stamps.append(ts)
+        elif record.get("role") == "assistant":
+            turns += 1
+            content = record.get("message", {}).get("content")
+            if isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "tool_use":
+                        name = block.get("name")
+                        tools[name] = tools.get(name, 0) + 1
+    mtime = iso_mtime(path)
+    project = (
+        path.parent.parent.parent.name if "agent-transcripts" in path.parts else None
+    )
+    return {
+        "tool": "cursor",
+        "title": redact(title) if title else None,
+        "session_id": path.stem,
+        "path": str(path),
+        "started": stamps[0] if stamps else mtime,
+        "ended": mtime,
+        "cwd": project_label(project) if project else None,
+        "git_branch": None,
+        "models": [],
+        "counts": {"prompts": prompts, "assistant_turns": turns, "tools": tools},
+    }
+
+
+def cursor_events(records, level):
+    events = []
+    last_ts = None
+
+    def emit(role, kind, **payload):
+        events.append({"ts": last_ts, "role": role, "kind": kind, **payload})
+
+    for record in records:
+        if record.get("type") == "turn_ended":
+            status = record.get("status") or ""
+            error = record.get("error") or status
+            if status != "success" and level != "llm":
+                emit("assistant", "summary", text=redact(error))
+            elif level == "debug":
+                emit("assistant", "system", subtype="turn_ended", text=status)
+            continue
+
+        role = record.get("role")
+        ts = cursor_record_ts(record)
+        if ts:
+            last_ts = ts
+
+        if role == "user":
+            text = cursor_user_text(record)
+            if text:
+                emit("user", "text", text=redact(text))
+            continue
+
+        if role != "assistant":
+            continue
+
+        content = record.get("message", {}).get("content")
+        if not isinstance(content, list):
+            if isinstance(content, str) and content.strip():
+                emit("assistant", "text", text=redact(content))
+            continue
+
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            btype = block.get("type")
+            if btype == "text":
+                text = block.get("text") or ""
+                if text.strip():
+                    emit("assistant", "text", text=redact(text))
+            elif btype == "thinking" and level == "debug":
+                text = block.get("thinking") or block.get("text") or ""
+                emit("assistant", "reasoning", text=redact(text))
+            elif btype == "tool_use":
+                if block.get("name") == "AskQuestion":
+                    emit("assistant", "question", items=cursor_question(block))
+                    continue
+                event = {
+                    "name": block.get("name"),
+                    "summary": redact(tool_summary(block)),
+                }
+                if level in ("full", "debug"):
+                    event["input"] = json.loads(
+                        redact(json.dumps(block.get("input") or {}))
+                    )
+                emit("assistant", "tool_use", **event)
+            elif btype == "tool_result" and level in ("full", "debug"):
+                # Not observed in Cursor's own files; kept so a format change
+                # that starts writing results still exports them.
+                content_body = block.get("content")
+                if isinstance(content_body, str):
+                    text = content_body
+                elif isinstance(content_body, list):
+                    text = "\n".join(
+                        b.get("text", "")
+                        for b in content_body
+                        if isinstance(b, dict)
+                    )
+                else:
+                    text = ""
+                if text:
+                    text, clipped = truncate_result(text, level)
+                    emit(
+                        "assistant",
+                        "tool_result",
+                        text=redact(text),
+                        truncated=clipped,
+                    )
+
+    return events
+
+
 def collapse_tools(events, level):
     """Per-call lines are noise once a session runs long, so below `full` a
     contiguous run of calls becomes a single count (`brief`) or disappears
@@ -873,7 +1248,6 @@ def render_header(meta, style):
         f"{name} {n}"
         for name, n in sorted(counts["tools"].items(), key=lambda kv: -kv[1])
     )
-    used = meta["tokens"]
     rows = [
         ("Session", meta["session_id"] or "?"),
         (
@@ -893,6 +1267,7 @@ def render_header(meta, style):
     ]
     # Each tool records what the other does not: no shared row full of dashes.
     if meta["tool"] == "claude":
+        used = meta["tokens"]
         rows += [
             ("Effort", compact(meta["efforts"])),
             (
@@ -905,7 +1280,8 @@ def render_header(meta, style):
             ),
             ("Skills", ", ".join(meta["skills"]) or "—"),
         ]
-    else:
+    elif meta["tool"] == "opencode":
+        used = meta["tokens"]
         rows += [
             ("Agent", compact(meta["agents"])),
             (
@@ -918,6 +1294,8 @@ def render_header(meta, style):
             ),
             ("Cost", f"${meta['cost']:.2f}"),
         ]
+    else:
+        rows += [("Client", "Cursor")]
 
     out = [f"# {title}", "", "| | |", "|---|---|"]
     out += [f"| {label} | {value} |" for label, value in rows]
@@ -959,7 +1337,11 @@ def render_question(items, level):
 
 def render_markdown(meta, events, level, header):
     out = render_header(meta, header)
-    who_agent = "🤖 Claude" if meta["tool"] == "claude" else "🤖 opencode"
+    who_agent = {
+        "claude": "🤖 Claude",
+        "opencode": "🤖 opencode",
+        "cursor": "🤖 Cursor",
+    }[meta["tool"]]
     role = None
     for event in events:
         if event["role"] != role:
@@ -1049,10 +1431,14 @@ def export(ref, level, header, as_json):
         # transcript when wrong. Untested case is a real rewind (edited message),
         # which would show the abandoned branch here. Add --thread if that bites.
         events = build_events(records, level)
-    else:
+    elif ref["tool"] == "opencode":
         session, messages = opencode_load(ref)
         meta = opencode_meta(ref, session, messages)
         events = opencode_events(messages, level)
+    else:
+        records = load(ref["path"])
+        meta = cursor_meta(records, ref["path"])
+        events = cursor_events(records, level)
 
     events = collapse_tools(events, level)
     return (
@@ -1498,19 +1884,169 @@ def selftest_opencode(tmp):
     )
 
 
+CURSOR_FIXTURE = [
+    {
+        "role": "user",
+        "message": {
+            "content": [
+                {
+                    "type": "text",
+                    "text": (
+                        "<timestamp>Friday, Jan 01, 2026, 10:00 AM (UTC)</timestamp>\n"
+                        "<user_query>\nhello, my key is sk-ant-oat01-DEADBEEFDEADBEEF\n"
+                        "</user_query>"
+                    ),
+                }
+            ]
+        },
+    },
+    {
+        "role": "assistant",
+        "message": {
+            "content": [
+                {"type": "thinking", "thinking": "weighing the options"},
+                {"type": "text", "text": "looking"},
+                {
+                    "type": "tool_use",
+                    "name": "Shell",
+                    "input": {"command": "rg -n secret ."},
+                },
+                {
+                    "type": "tool_use",
+                    "name": "AskQuestion",
+                    "input": {
+                        "title": "Pick",
+                        "questions": [
+                            {
+                                "id": "which",
+                                "prompt": "Which?",
+                                "options": [
+                                    {"id": "a", "label": "A", "description": "first"},
+                                    {"id": "b", "label": "B", "description": "second"},
+                                ],
+                            }
+                        ],
+                    },
+                },
+            ]
+        },
+    },
+    {
+        "role": "assistant",
+        "message": {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "name": "Read",
+                    "input": {"file_path": "/tmp/x/a"},
+                },
+                {
+                    "type": "tool_use",
+                    "name": "Read",
+                    "input": {"file_path": "/tmp/x/b"},
+                },
+                {
+                    "type": "tool_use",
+                    "name": "Shell",
+                    "input": {"command": "ls"},
+                },
+            ]
+        },
+    },
+    {"type": "turn_ended", "status": "success"},
+    {"type": "turn_ended", "status": "aborted", "error": "User aborted/interrupted manually."},
+]
+
+
+def selftest_cursor(tmp):
+    path = Path(tmp) / "cursor-fixture.jsonl"
+    path.write_text("\n".join(json.dumps(r) for r in CURSOR_FIXTURE))
+    os.utime(path, (OC_BASE / 1000, OC_BASE / 1000 + 5))
+    ref = cursor_ref(path)
+    assert jsonl_ref(path)["tool"] == "cursor"
+
+    brief = export(ref, "brief", "table", False)
+    assert "sk-ant-" not in brief, "redaction did not fire"
+    assert "[REDACTED]" in brief, "redacted marker missing"
+    assert "<timestamp>" not in brief, "wrapper tags leaked into the chat"
+    assert "<user_query>" not in brief
+    assert "```\nline" not in brief, "brief must not invent tool_result bodies"
+    assert "`Shell` rg -n secret ." not in brief, "brief must not render tool inputs"
+    assert "*1 tool call: Shell 1*" in brief, "lone call lost its stats line"
+    assert "*3 tool calls: Read 2, Shell 1*" in brief, (
+        "a run must collapse into one line, counts ordered by frequency"
+    )
+    assert "### ❓ Pick" in brief, "AskQuestion dropped"
+    assert "- A" in brief and "- B" in brief, "question options dropped"
+    assert "**B** ← selected" not in brief, "Cursor logs no answers; do not invent one"
+    assert "Recap: User aborted/interrupted manually." in brief, (
+        "aborted turn_ended lost its outcome"
+    )
+    assert "turn_ended" not in brief, "successful turn_ended leaked into brief"
+    assert "*[reasoning]*" not in brief, "thinking is debug-only"
+    assert "Client | Cursor" in brief or "| Client | Cursor |" in brief
+    assert "🤖 Cursor" in brief
+
+    full = export(ref, "full", "table", False)
+    assert "`Shell` rg -n secret ." in full, "full must keep per-call detail"
+    assert "first" in full, "full must render option descriptions"
+    assert "tool calls:" not in full, "full must not collapse runs"
+    assert "```\nline" not in full, "Cursor transcripts have no tool_result to render"
+
+    debug = export(ref, "debug", "table", False)
+    assert "*[reasoning]*" in debug, "thinking missing at debug"
+    assert "weighing the options" in debug, "thinking text missing at debug"
+    assert "*[turn_ended]* success" in debug, "successful turn_ended missing at debug"
+
+    llm = export(ref, "llm", "minimal", False)
+    assert "Session of 2026-01-01" in llm, "minimal header lost the date"
+    assert "Shell" not in llm, "llm leaked a tool name"
+    assert "Which?" in llm, "llm dropped the question substance"
+    assert "aborted" not in llm, "llm must drop turn_ended abort recap"
+
+    payload = json.loads(export(ref, "brief", "table", True))
+    assert payload["session"]["tool"] == "cursor"
+    assert payload["session"]["session_id"] == "cursor-fixture"
+    assert payload["session"]["started"] == "2026-01-01T10:00:00Z"
+    assert payload["session"]["counts"]["tools"] == {
+        "Shell": 2,
+        "AskQuestion": 1,
+        "Read": 2,
+    }
+    question = next(e for e in payload["events"] if e["kind"] == "question")
+    assert question["items"][0]["answer"] is None
+    assert payload["events"][0]["ts"] == "2026-01-01T10:00:00Z"
+    assert payload["events"][0]["text"] == (
+        "hello, my key is [REDACTED]"
+    )
+
+
 def selftest():
     assert mangle("/Users/x/code/github.com/o/a_b") == "-Users-x-code-github-com-o-a-b"
+    assert cursor_project_name("/Users/x/code/github.com/o/a_b") == (
+        "Users-x-code-github-com-o-a-b"
+    )
+    assert cursor_clock_to_iso("Friday, Sep 11, 2026, 12:20 AM (UTC+2)") == (
+        "2026-09-10T22:20:00Z"
+    )
+    assert cursor_clock_to_iso("Friday, Jan 01, 2026, 10:00 AM (UTC)") == (
+        "2026-01-01T10:00:00Z"
+    )
     assert profile_name(Path("/h/.config/trv-claude/projects/-a-b/s.jsonl")) == (
         "trv-claude"
     )
     assert profile_name(Path("/h/.claude/projects/-a-b/s.jsonl")) == "claude"
     assert project_label(mangle(Path.home() / "code/o/repo")) == "code-o-repo"
+    assert project_label(cursor_project_name(Path.home() / "code/o/repo")) == (
+        "code-o-repo"
+    )
     assert project_label("-etc-nixos") == "etc-nixos"
     assert column("abc", 5) == "abc  "
     assert column("abcdef", 4) == "\u2026def"
     with tempfile.TemporaryDirectory() as tmp:
         selftest_claude(tmp)
         selftest_opencode(tmp)
+        selftest_cursor(tmp)
     print("selftest ok")
 
 

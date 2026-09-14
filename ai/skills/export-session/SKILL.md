@@ -1,19 +1,20 @@
 ---
 name: export-session
 description:
-  Export a Claude Code or opencode session transcript as a readable chat log (Markdown or JSON). Trigger when the user
-  wants to "export this session", "save the transcript", "share a session", "what did we decide in that session", or
-  wants an older session's context carried into a new one.
+  Export a Claude Code, Cursor, or opencode session transcript as a readable chat log (Markdown or JSON). Trigger when
+  the user wants to "export this session", "save the transcript", "share a session", "what did we decide in that
+  session", or wants an older session's context carried into a new one.
 allowed-tools: Bash(session-export *), Read
 ---
 
 # export-session
 
-`session-export` renders a session as a chat between the user and the agent, from either store: Claude Code's `.jsonl`
-transcripts or opencode's SQLite database. Session metadata (title, model, tool counts, token totals) goes in a header.
+`session-export` renders a session as a chat between the user and the agent, from any of three stores: Claude Code's
+`.jsonl` transcripts, Cursor's `~/.cursor/projects/*/agent-transcripts/` JSONL, or opencode's SQLite database.
+Session metadata (title, model, tool counts, token totals) goes in a header.
 
 ```bash
-session-export                      # fzf picker over this project's sessions, both tools
+session-export                      # fzf picker over this project's sessions, all tools
 session-export <session-id|path>    # a specific session; the source follows from the id
 session-export --list               # profile / id / time / size / title for this project
 session-export --all                # picker over every project on this machine
@@ -25,8 +26,8 @@ machine has ever run a session in — that is the flag for "which session was it
 project column derived from the transcript's directory, shortened against `$HOME` and left-truncated so the
 distinctive tail survives. Passing an explicit session id or path never needs `--all`: id lookup is already global.
 
-A session id is enough to identify the source — opencode ids start with `ses_`, Claude ids are UUIDs — so no flag
-selects the tool.
+A session id is enough to identify the source — opencode ids start with `ses_`; Claude and Cursor ids are both UUIDs,
+so the first column of `--list` (`trv-claude`, `cursor`, …) says which. No flag selects the tool.
 
 Every Claude profile on the machine is searched, not just the running one: each profile is its own config dir
 (`~/.config/personal-claude`, `~/.config/trv-claude`, …) and `CLAUDE_CONFIG_DIR` names only the active one, so the
@@ -59,18 +60,19 @@ and the calls that produced it, which a fresh agent can regenerate in seconds.
 ## Things worth knowing
 
 - **Answers to a question are not messages.** Claude records them on the result half of the tool-call pair (with any
-  free-text notes); opencode records them on the call itself. Either way, a reader that only looks at prose misses the
-  entire substance of a question-driven session.
+  free-text notes); opencode records them on the call itself. Cursor records the question and never the pick — the
+  next assistant turn already knew the answer, so the export shows the options unanswered. A reader that only looks at
+  prose still misses the question's substance.
 - **Secrets are redacted unconditionally** (`sk-ant-`, `gh*_`, `github_pat_`, `AKIA`, `xox*-`, `AGE-SECRET-KEY-`, PEM
   private keys). It is a prefix filter, not a guarantee — skim a `--full` or `--debug` export before sending it
   anywhere.
 
 ### Differences by tool
 
-| | Claude Code | opencode |
-| --- | --- | --- |
-| Reasoning | Never in the transcript — only a replay signature survives, so no mode can show it. `--debug` marks where thinking occurred. | Recorded in full. Shown at `--debug` only: it is bulky and the most sensitive thing in the log. |
-| Header extras | Effort, client mode, permission mode, skills | Agent, session slug, input/reasoning tokens, cost |
-| Subagents | Inline in the parent transcript | Separate child sessions; the parent shows the `task` call and its result. Export a child by its own id. |
-| Not exported | — | Provider metadata blobs and the diffs inlined on user messages; `--full` shows patched-file lists instead. |
-| Ordering | File order — a rewound or edited message may show the abandoned branch as well. | Database order by creation time. |
+| | Claude Code | opencode | Cursor |
+| --- | --- | --- | --- |
+| Reasoning | Never in the transcript — only a replay signature survives, so no mode can show it. `--debug` marks where thinking occurred. | Recorded in full. Shown at `--debug` only: it is bulky and the most sensitive thing in the log. | Rarely present. Shown at `--debug` when the block has text. |
+| Header extras | Effort, client mode, permission mode, skills | Agent, session slug, input/reasoning tokens, cost | Client name only — no model, tokens, or cost in the log |
+| Subagents | Inline in the parent transcript | Separate child sessions; the parent shows the `task` call and its result. Export a child by its own id. | `Task` calls inline in the parent transcript |
+| Not exported | — | Provider metadata blobs and the diffs inlined on user messages; `--full` shows patched-file lists instead. | Tool outputs (Cursor never writes them) and question answers |
+| Ordering | File order — a rewound or edited message may show the abandoned branch as well. | Database order by creation time. | File order. Timestamps only on user turns (`<timestamp>` tags); assistant events inherit the last user time. |
