@@ -143,7 +143,7 @@ jobs:
 
       - name: Emit kasha manifest
         if: ${{ always() && steps.pushed.outputs.any == 'true' }}
-        uses: zebradil/kasha/.github/actions/emit-manifest@c7dbb587a49c2a4dfc4fb3552bf54b0da84d6296 # v0.3.0
+        uses: zebradil/kasha/.github/actions/emit-manifest@edac113d6713181f488d95a20f452e56793a403b # v0.4.0
         with:
           flake: znix
           paths-file: ${{ steps.build.outputs.paths-file }}
