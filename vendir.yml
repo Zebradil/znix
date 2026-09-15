@@ -32,7 +32,7 @@ directories:
       - path: .
         git:
           url: https://github.com/DietrichGebert/ponytail
-          ref: v4.9.0
+          ref: v4.10.0
         includePaths: [ hooks/**, skills/**, commands/**, .opencode/**, .cursor/** ]
         # Windows-only statusline and host hook-registration manifests are inert.
         excludePaths: [ hooks/*.ps1, hooks/claude-codex-hooks.json, hooks/copilot-hooks.json ]
