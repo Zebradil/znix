@@ -346,6 +346,12 @@ _: {
       options.desc = "Open LazyGit";
     }
     {
+      mode = "n";
+      key = "<Leader>gn";
+      action.__raw = ''function() require("neogit").open() end'';
+      options.desc = "Open Neogit";
+    }
+    {
       mode = [
         "n"
         "x"

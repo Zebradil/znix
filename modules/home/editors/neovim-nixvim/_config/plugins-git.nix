@@ -3,6 +3,8 @@ _: {
 
     # ─ Git ────────────────────────────────────────────────────────
     # lazygit + git browse handled by Snacks (Snacks.lazygit / Snacks.gitbrowse).
+    neogit.enable = true;
+
     gitsigns = {
       enable = true;
       settings = {
