@@ -28,6 +28,14 @@
     default = { };
   };
 
+  # Consumed by mkDarwin below. Declared here rather than in a host module:
+  # znix keeps no darwin host of its own, but exports the factory and the
+  # darwin module set to flakes that do.
+  config.flake-file.inputs.nix-darwin = {
+    url = "github:LnL7/nix-darwin";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+
   config.flake.lib = {
 
     # `nixpkgs` lets a host pin its own nixpkgs input without dragging every

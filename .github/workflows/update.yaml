@@ -87,7 +87,10 @@ jobs:
           discovery-types: |
             checks
             devShells
-          attr-filter: '-build$|^devShells\.|^checks\.x86_64-linux\.'
+          # aarch64-darwin is devShells-only: znix keeps no darwin host of its own, and a macOS
+          # runner failure must not be able to block a lock update for the Linux hosts. The
+          # company flake (trivago/zebradil-nix) builds its own darwin closures.
+          attr-filter: '^devShells\.|^checks\.x86_64-linux\.|^checks\.aarch64-linux\..*-build$'
           runner-mapping: |
             x86_64-linux:ubuntu-latest
             aarch64-linux:ubuntu-24.04-arm

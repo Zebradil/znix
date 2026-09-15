@@ -163,7 +163,9 @@ _: {
             helperRegs = lib.filter isHelper (lib.attrValues auth.registries);
 
             # Flatten registries × endpoints into a single host-keyed auths map.
-            authsEntries = lib.concatMap (r: map (host: lib.nameValuePair host (credOf r)) r.endpoints) authsRegs;
+            authsEntries = lib.concatMap (
+              r: map (host: lib.nameValuePair host (credOf r)) r.endpoints
+            ) authsRegs;
 
             credHelpers = lib.listToAttrs (
               lib.concatMap (r: map (host: lib.nameValuePair host r.credHelper) r.endpoints) helperRegs
@@ -191,9 +193,21 @@ _: {
             assertions = lib.mapAttrsToList (name: r: {
               assertion =
                 let
-                  split = r.usernameSecret != null && r.passwordSecret != null && r.authSecret == null && r.credHelper == null;
-                  blob = r.authSecret != null && r.usernameSecret == null && r.passwordSecret == null && r.credHelper == null;
-                  helper = r.credHelper != null && r.usernameSecret == null && r.passwordSecret == null && r.authSecret == null;
+                  split =
+                    r.usernameSecret != null
+                    && r.passwordSecret != null
+                    && r.authSecret == null
+                    && r.credHelper == null;
+                  blob =
+                    r.authSecret != null
+                    && r.usernameSecret == null
+                    && r.passwordSecret == null
+                    && r.credHelper == null;
+                  helper =
+                    r.credHelper != null
+                    && r.usernameSecret == null
+                    && r.passwordSecret == null
+                    && r.authSecret == null;
                 in
                 split || blob || helper;
               message = "znix.docker.registryAuth.registries.${name}: set usernameSecret + passwordSecret, authSecret, or credHelper — exactly one form.";

@@ -1,13 +1,17 @@
 # znix - Unified Nix Configuration
 
-Unified Nix configuration for macOS (darwin) and NixOS hosts using the **dendritic pattern** (flake-parts).
+Unified Nix configuration for NixOS hosts using the **dendritic pattern** (flake-parts). It also exports a darwin
+module set and the `mkDarwin` / `mkHomeManager` factories for flakes that take znix as an input; znix itself
+configures no darwin host.
 
 ## Hosts
 
 | Host      | Platform       | User        | Description                           |
 |-----------|----------------|-------------|---------------------------------------|
-| trv4250   | aarch64-darwin | glashevich  | macOS workstation                     |
 | tuxedo    | x86_64-linux   | zebradil    | Tuxedo InfinityBook Pro 14 Gen9 AMD   |
+| junior    | x86_64-linux   | -           | k3s server / ingress / kasha          |
+| d1-d3     | x86_64-linux   | -           | k3s agents                            |
+| toddler   | aarch64-linux  | -           | Raspberry Pi                          |
 
 ## Architecture
 
@@ -43,16 +47,12 @@ nix develop
 nix flake check
 
 # Build without applying
-nix build .#darwinConfigurations.trv4250.system
 nix build .#nixosConfigurations.tuxedo.config.system.build.toplevel
 
 # Apply — TWO switches per host: system (account + persistence) then home.
 # On a fresh machine the system switch MUST run first: it creates
 # /persist/$HOME, chowns it, and sets programs.fuse.userAllowOther, which the
 # home persistence bind-mounts depend on.
-darwin-rebuild switch --flake .#trv4250            # macOS system
-nh home switch . -c glashevich@trv4250             # macOS home
-
 nixos-rebuild switch --flake .#tuxedo              # NixOS system
 nh home switch . -c zebradil@tuxedo                # NixOS home
 ```

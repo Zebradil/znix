@@ -64,7 +64,6 @@ jobs:
           diff-targets: |
             checks.x86_64-linux.tuxedo-build
             checks.aarch64-linux.toddler-build
-            checks.aarch64-darwin.trv4250-build
           cache-s3-url: ${{ env.CACHE_S3_URL }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

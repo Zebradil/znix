@@ -8,16 +8,6 @@
     # own pkgs, so their closures differ from the integrated home inside the
     # system toplevels above and must be built/pushed separately.
 
-    aarch64-darwin = {
-      trv4250-build =
-        (inputs.self.darwinConfigurations.trv4250.extendModules {
-          modules = [ { home-manager.sharedModules = [ { znix.useWritableLinks = false; } ]; } ];
-        }).config.system.build.toplevel;
-
-      glashevich-trv4250-home-build =
-        inputs.self.homeConfigurations."glashevich@trv4250".activationPackage;
-    };
-
     x86_64-linux = {
       tuxedo-build =
         (inputs.self.nixosConfigurations.tuxedo.extendModules {
