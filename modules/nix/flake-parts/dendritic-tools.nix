@@ -6,16 +6,16 @@
   # https://github.com/hercules-ci/flake-parts
 
   # Generate flake.nix from module options.
-  # https://github.com/vic/flake-file
+  # https://github.com/denful/flake-file
 
   # Import all nix files in a directory tree.
-  # https://github.com/vic/import-tree
+  # https://github.com/denful/import-tree
 
   flake-file.inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    flake-file.url = "github:vic/flake-file";
-    import-tree.url = "github:vic/import-tree";
+    flake-file.url = "github:denful/flake-file";
+    import-tree.url = "github:denful/import-tree";
   };
 
   imports = [
