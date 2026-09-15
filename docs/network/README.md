@@ -13,7 +13,7 @@ RT-AX53U router (192.168.0.1/16, OpenWrt, MT7621) ── WAN 300/150
   ├─ copper ─ switch 192.168.0.2 ── switch 192.168.0.3
   │              ├─ WAX214 AP (192.168.0.5) ─ 5 GHz Wi-Fi 6 ─ tuxedo (DHCP, 192.168.1.x)
   │              ├─ toddler Pi (192.168.0.20)
-  │              └─ Dell dock ── USB-C/TB ── trv4250 MacBook (DHCP, 192.168.1.x)
+  │              └─ Dell dock ── USB-C/TB ── work MacBook (DHCP, 192.168.1.x)
   │
   └─ junior (192.168.0.100, k3s server / ingress / kasha)
      d1/d2/d3 (192.168.0.111-113, k3s agents, USB 3.0 NICs)

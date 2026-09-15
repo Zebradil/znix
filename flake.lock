@@ -532,54 +532,6 @@
         "type": "github"
       }
     },
-    "homebrew-bundle": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1745335228,
-        "narHash": "sha256-TIKR2UgtyUmHLNZp255/vLs+1I10hXe+sciMEbAGFwE=",
-        "owner": "homebrew",
-        "repo": "homebrew-bundle",
-        "rev": "a3265c84b232e13048ecbf6fc18a2eedfadbeb08",
-        "type": "github"
-      },
-      "original": {
-        "owner": "homebrew",
-        "repo": "homebrew-bundle",
-        "type": "github"
-      }
-    },
-    "homebrew-cask": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1789094407,
-        "narHash": "sha256-64PzpY8YXdYgP7kLzKts5wVIEPSYccW0jl2UopqvThs=",
-        "owner": "homebrew",
-        "repo": "homebrew-cask",
-        "rev": "8bbf5da333840af995348baa2e2c98fc2c3f7746",
-        "type": "github"
-      },
-      "original": {
-        "owner": "homebrew",
-        "repo": "homebrew-cask",
-        "type": "github"
-      }
-    },
-    "homebrew-core": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1789095761,
-        "narHash": "sha256-/UtRS5vbau2FQ0y1M3aLRWEfiB564ZNqobCQY0Bugww=",
-        "owner": "homebrew",
-        "repo": "homebrew-core",
-        "rev": "8797c8fb19af1cfd76402b75544a0b56601a166a",
-        "type": "github"
-      },
-      "original": {
-        "owner": "homebrew",
-        "repo": "homebrew-core",
-        "type": "github"
-      }
-    },
     "impermanence": {
       "inputs": {
         "home-manager": "home-manager_2",
@@ -953,9 +905,6 @@
         "gke-kubeconfiger": "gke-kubeconfiger",
         "hardware": "hardware",
         "home-manager": "home-manager",
-        "homebrew-bundle": "homebrew-bundle",
-        "homebrew-cask": "homebrew-cask",
-        "homebrew-core": "homebrew-core",
         "impermanence": "impermanence",
         "import-tree": "import-tree",
         "kasha": "kasha",

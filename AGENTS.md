@@ -51,8 +51,8 @@ Use `znix.<name>.enable` with `lib.mkEnableOption` + `lib.mkIf`.
 nix flake check                    # Validate
 nix develop                        # Dev shell
 nix fmt                            # Format with nixfmt-tree
-nix build .#darwinConfigurations.trv4250.system  # Build macOS system
-nh home switch . -c glashevich@trv4250           # Activate this host's home
+nix build .#nixosConfigurations.tuxedo.config.system.build.toplevel
+nh home switch . -c zebradil@tuxedo  # Activate this host's home
 ```
 
 ### Activation
@@ -74,16 +74,16 @@ weekly probe opens the removal PR once upstream is fixed. See `docs/workarounds.
 
 ## Project constraints
 
-### Claude Code profiles & marketplace independence
+### Claude Code marketplace independence
 
-This repo runs three Claude Code profiles: `personal`, plus the company `trv-claude` / `trv-claude-key` on host
-`trv4250` (see `modules/users/glashevich/home.nix`). The company profiles **cannot use the official
-`claude-plugins-official` marketplace** — they are restricted to an internal marketplace with a limited plugin set.
+The Claude Code profile machinery here is also consumed by downstream flakes whose profiles are restricted to a
+private marketplace with a limited plugin set — the official `claude-plugins-official` marketplace is unavailable
+to them.
 
 So any Claude Code feature that depends on a marketplace must be provided in a **marketplace-independent** way, or it
-silently won't work on the company profiles. The LSP wiring follows this: a local `znix-lsp@skills-dir` plugin (no
-marketplace) rendered from `znix.lsp.servers`. Prefer uniform, marketplace-independent mechanisms, and provision all
-agent tool binaries via Nix store paths (no tool-side auto-install).
+silently won't work there. The LSP wiring follows this: a local `znix-lsp@skills-dir` plugin (no marketplace)
+rendered from `znix.lsp.servers`. Prefer uniform, marketplace-independent mechanisms, and provision all agent tool
+binaries via Nix store paths (no tool-side auto-install).
 
 ## Agent skills
 
