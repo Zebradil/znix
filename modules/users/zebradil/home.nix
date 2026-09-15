@@ -40,7 +40,6 @@
         kube.homelab.enable = true;
         mcpServers.personal-knowledge-base = self.lib.claude.personalKnowledgeBase;
         claude = {
-          caveman.enable = true;
           ponytail.enable = true;
           profiles.personal = self.lib.claude.mkPersonalProfile { };
         };

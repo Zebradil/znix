@@ -23,26 +23,10 @@ directories:
           - skills/*/README.md
         newRootPath: skills
 
-  - path: vendor/caveman
-    contents:
-      # Caveman skills + hooks/plugins from JuliusBrussee/caveman.
-      # Consumed by modules/home/{claude,opencode}/caveman.nix via
-      # inputs.self + "/vendor/caveman/...". Only the subtrees those modules
-      # read are vendored.
-      - path: .
-        git:
-          url: https://github.com/JuliusBrussee/caveman
-          ref: v1.10.0
-        includePaths: [ src/hooks/**, src/plugins/**, src/rules/**, skills/**, commands/** ]
-        # Self-installers (`curl … | bash`, fetch hooks from GitHub at runtime)
-        # stay out. Cavecrew is no longer deployed by any harness.
-        excludePaths: [ src/hooks/install.*, src/hooks/uninstall.*, src/hooks/checksums.sha256, src/hooks/README.md, skills/cavecrew/** ]
-
   - path: vendor/ponytail
     contents:
-      # ponytail "lazy senior dev" mode from DietrichGebert/ponytail. Mirrors the
-      # caveman wiring (modules/home/{claude,opencode}/ponytail.nix) but targets
-      # code minimisation instead of prose. The opencode plugin resolves its
+      # ponytail "lazy senior dev" mode from DietrichGebert/ponytail, wired by
+      # modules/home/{claude,opencode}/ponytail.nix. The opencode plugin resolves its
       # siblings via realpath-relative requires (../../hooks, ../../skills,
       # ../command), so the whole subtree below must stay intact and co-located.
       - path: .

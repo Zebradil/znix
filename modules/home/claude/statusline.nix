@@ -1,8 +1,8 @@
 { ... }:
 {
   # Composes the profile statusline: the znix base line plus one badge per
-  # active addon (caveman, ponytail). Both addons ship a `<addon>-statusline.sh`
-  # that prints a coloured badge from a flag file; running them in sequence lets
+  # active addon (ponytail). An addon ships a `<addon>-statusline.sh` that
+  # prints a coloured badge from a flag file; running them in sequence lets
   # the badges stack. Lives in its own module so no single addon owns the
   # statusline file — default.nix symlinks the plain base, this mkForces the
   # composed script whenever at least one badge is active.
@@ -25,13 +25,9 @@
         name = "znix-statusline-command.sh";
       };
 
-      cavemanOn = p: (claudeCfg.caveman.enable or false) && p.caveman;
       ponytailOn = p: (claudeCfg.ponytail.enable or false) && p.ponytail;
 
-      badgeScripts =
-        profile:
-        lib.optional (cavemanOn profile) "caveman-statusline.sh"
-        ++ lib.optional (ponytailOn profile) "ponytail-statusline.sh";
+      badgeScripts = profile: lib.optional (ponytailOn profile) "ponytail-statusline.sh";
 
       mkComposed =
         profile: scripts:

@@ -11,10 +11,6 @@
       cfg = config.znix.cursor;
       assetsRoot = config.znix.claude.assetsRoot;
       extraSkillRoots = config.znix.claude.extraSkillRoots;
-      cavemanSrc = builtins.path {
-        path = inputs.self + "/vendor/caveman";
-        name = "znix-vendor-caveman";
-      };
       ponytailSrc = builtins.path {
         path = inputs.self + "/vendor/ponytail";
         name = "znix-vendor-ponytail";
@@ -66,14 +62,6 @@
         ---
 
         ${builtins.readFile "${assetsRoot}/AGENTS.md"}
-      '';
-      cavemanRule = pkgs.writeText "znix-cursor-caveman.mdc" ''
-        ---
-        description: Caveman mode
-        alwaysApply: true
-        ---
-
-        ${builtins.readFile "${cavemanSrc}/src/rules/caveman-activate.md"}
       '';
       # Same servers as the Claude profiles, in Cursor's mcp.json schema: no
       # `type`, and static OAuth credentials live under `auth` with SCREAMING
@@ -137,16 +125,10 @@
             "kick-pr-copilot"
           ])
           (lib.mkMerge (map (root: mkSkillFiles root [ ]) extraSkillRoots))
-          (mkSkillFiles "${cavemanSrc}/skills" [
-            "cavecrew"
-            "caveman-compress"
-            "caveman-stats"
-          ])
           (mkSkillFiles "${ponytailSrc}/skills" [ ])
           {
             "${pluginDir}/.cursor-plugin/plugin.json".source = pluginManifest;
             "${pluginDir}/rules/znix.mdc".source = instructionsRule;
-            "${pluginDir}/rules/caveman.mdc".source = cavemanRule;
             "${pluginDir}/rules/ponytail.mdc".source = "${ponytailSrc}/.cursor/rules/ponytail.mdc";
             "${pluginDir}/agents/renovate-red.md".source = mkCursorMd (assetsRoot + "/agents/renovate-red.md");
             "${pluginDir}/commands/renovate-sweep.md".source = mkCursorMd (

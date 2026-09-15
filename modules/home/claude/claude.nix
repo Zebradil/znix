@@ -129,8 +129,6 @@ let
                     description = "settings.json content; statusLine is computed automatically";
                   };
 
-                  caveman = lib.mkEnableOption "caveman hooks/skills/commands for this profile";
-
                   ponytail = lib.mkEnableOption "ponytail hooks/skills/commands for this profile";
 
                   worklog = lib.mkEnableOption "worklog Stop hook for this profile";
@@ -250,7 +248,6 @@ in
       }:
       {
         enable = true;
-        caveman = true;
         ponytail = true;
         configDir = ".config/personal-claude";
         command = "claude";
@@ -340,7 +337,6 @@ in
             exec ${pkgs.claude-code}/bin/claude "$@"
           '';
 
-        cavemanEnabled = config.znix.claude.caveman.enable or false;
         ponytailEnabled = config.znix.claude.ponytail.enable or false;
         worklogEnabled = config.znix.claude.worklog.enable or false;
 
@@ -349,14 +345,6 @@ in
           command = ''${pkgs.nodejs}/bin/node "$HOME/${configDir}/hooks/${script}"'';
           timeout = 5;
         };
-
-        mkCavemanHooks =
-          profile:
-          lib.optionalAttrs (profile.caveman && cavemanEnabled) {
-            SessionStart = [ { hooks = [ (mkNodeHook profile.configDir "caveman-activate.js") ]; } ];
-            UserPromptSubmit = [ { hooks = [ (mkNodeHook profile.configDir "caveman-mode-tracker.js") ]; } ];
-            SubagentStart = [ { hooks = [ (mkNodeHook profile.configDir "caveman-subagent.js") ]; } ];
-          };
 
         mkPonytailHooks =
           profile:
@@ -395,10 +383,9 @@ in
             effective = lib.recursiveUpdate defaultSettings profile.settings;
             base = effective.hooks or { };
             # Each addon contributes per-event hook lists; fold them onto the
-            # base settings, concatenating where events overlap (e.g. both
-            # caveman and ponytail register SessionStart).
+            # base settings, concatenating where events overlap (e.g. a
+            # SessionStart set in defaultSettings plus ponytail's).
             contributions = [
-              (mkCavemanHooks profile)
               (mkPonytailHooks profile)
               (mkWorklogHooks profile)
             ];

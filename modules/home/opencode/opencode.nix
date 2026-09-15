@@ -13,14 +13,12 @@ _: {
       # config dir. opencode's auto-compat only scans ~/.claude, but znix writes
       # to ~/.config/personal-claude, so the assets are wired explicitly here.
       ocEnable = personal != null && personal.enable;
-      cavemanOn = (config.znix.claude.caveman.enable or false) && personal != null && personal.caveman;
       ponytailOn = (config.znix.claude.ponytail.enable or false) && personal != null && personal.ponytail;
       assetsRoot = config.znix.claude.assetsRoot;
       extraSkillRoots = config.znix.claude.extraSkillRoots or [ ];
 
       # Strip Claude-only frontmatter opencode rejects: `tools: [array]` and a
-      # bare `model: haiku` (opencode wants `provider/model`). Mirrors caveman's
-      # stripOpencodeAgentTools (bin/lib/opencode-agent.js).
+      # bare `model: haiku` (opencode wants `provider/model`).
       mkOpencodeMd =
         src:
         let
@@ -88,9 +86,7 @@ _: {
 
       ocSettings = {
         "$schema" = "https://opencode.ai/config.json";
-        plugin =
-          lib.optional cavemanOn "./plugins/caveman/plugin.js"
-          ++ lib.optional ponytailOn "./plugins/ponytail/ponytail.mjs";
+        plugin = lib.optional ponytailOn "./plugins/ponytail/ponytail.mjs";
         permission.external_directory."/nix/store/**" = "allow";
       }
       // lib.optionalAttrs (lspServers != { }) { lsp = lib.mapAttrs (_: mkOcLsp) lspServers; }
@@ -126,11 +122,7 @@ _: {
           (lib.mkMerge (map (mkSymlinkEntries ".config/opencode/skills") extraSkillRoots))
           (mkTransformedMds ".config/opencode/agents" (assetsRoot + "/agents"))
           (mkTransformedMds ".config/opencode/commands" (assetsRoot + "/commands"))
-          # Global instructions. When caveman is on, caveman.nix composes AGENTS.md
-          # (instructions + ruleset) instead, so guard against a double definition.
-          (lib.optionalAttrs (!cavemanOn) {
-            ".config/opencode/AGENTS.md".source = "${assetsRoot}/AGENTS.md";
-          })
+          { ".config/opencode/AGENTS.md".source = "${assetsRoot}/AGENTS.md"; }
         ];
 
         # Install opencode.json as a real file (not a store symlink): opencode
