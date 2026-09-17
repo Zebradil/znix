@@ -17,6 +17,9 @@ _: {
       # is auto-packaged with writeShellScriptBin, which reads its entries as
       # shell text and so can't host a Python file or interpolate a store path.
       sessionExport = pkgs.writeShellScriptBin "session-export" ''
+        # Appended, not prepended: the fzf preview pane highlights through bat,
+        # but a bat the user already has on PATH wins.
+        export PATH="$PATH:${lib.makeBinPath [ pkgs.bat ]}"
         exec ${pkgs.python3}/bin/python3 ${./session-export/session-export.py} "$@"
       '';
     in

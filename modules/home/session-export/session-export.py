@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import shutil
 import sqlite3
 import subprocess
@@ -467,6 +468,30 @@ def list_sessions(everywhere=False):
         )
 
 
+def preview_command():
+    """fzf renders the highlighted row by re-invoking this script on its ref."""
+    cmd = (
+        f"{shlex.quote(sys.executable)} "
+        f"{shlex.quote(str(Path(__file__).resolve()))} --preview {{2}}"
+    )
+    if shutil.which("bat"):
+        cmd += " | bat --language=markdown --color=always --style=plain"
+    return cmd
+
+
+def preview(payload):
+    """Render one row for the fzf preview pane; never let a bad ref kill fzf."""
+    try:
+        ref = json.loads(payload)
+        for key in ("path", "db"):
+            if key in ref:
+                ref[key] = Path(ref[key])
+        return export(ref, "brief", "table", False)
+    # SystemExit too: opencode_load exits on a missing session.
+    except (Exception, SystemExit) as err:  # noqa: BLE001 - the pane shows the reason instead
+        return f"preview failed: {err}\n"
+
+
 def pick(everywhere=False):
     if not shutil.which("fzf"):
         sys.exit(
@@ -474,13 +499,14 @@ def pick(everywhere=False):
         )
     found = scoped_rows(everywhere)
     lines = [
-        f"{i}\t{row['label']:15}  "
+        f"{i}\t{json.dumps(row['ref'], default=str)}\t{row['label']:15}  "
         f"{column(row['project'], 34) + '  ' if everywhere else ''}"
         f"{row['when']}  {row['size']:>6}  {row['title']}"
         for i, row in enumerate(found)
     ]
     chosen = subprocess.run(
-        ["fzf", "--with-nth=2..", "--delimiter=\t", "--prompt=session> "],
+        ["fzf", "--with-nth=3..", "--delimiter=\t", "--prompt=session> ",
+         f"--preview={preview_command()}", "--preview-window=bottom,70%,wrap"],
         input="\n".join(lines),
         capture_output=True,
         text=True,
@@ -1757,6 +1783,7 @@ def selftest_claude(tmp):
     ref = claude_ref(path)
 
     brief = export(ref, "brief", "table", False)
+    assert preview(json.dumps(ref, default=str)) == brief
     assert "sk-ant-" not in brief, "redaction did not fire"
     assert "[REDACTED]" in brief, "redacted marker missing"
     assert "```\nline" not in brief, "brief must not render tool_result bodies"
@@ -1833,6 +1860,7 @@ def selftest_opencode(tmp):
     ref = opencode_ref(db, "ses_test")
 
     brief = export(ref, "brief", "table", False)
+    assert preview(json.dumps(ref, default=str)) == brief
     assert "sk-ant-" not in brief, "redaction did not fire"
     assert "[REDACTED]" in brief, "redacted marker missing"
     assert "```\nline" not in brief, "brief must not render tool_result bodies"
@@ -1966,6 +1994,7 @@ def selftest_cursor(tmp):
     assert jsonl_ref(path)["tool"] == "cursor"
 
     brief = export(ref, "brief", "table", False)
+    assert preview(json.dumps(ref, default=str)) == brief
     assert "sk-ant-" not in brief, "redaction did not fire"
     assert "[REDACTED]" in brief, "redacted marker missing"
     assert "<timestamp>" not in brief, "wrapper tags leaked into the chat"
@@ -2077,10 +2106,14 @@ def main():
         help="search every project on this machine, not just the current directory",
     )
     parser.add_argument("--selftest", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--preview", metavar="REF", help=argparse.SUPPRESS)
     args = parser.parse_args()
 
     if args.selftest:
         return selftest()
+    if args.preview:
+        sys.stdout.write(preview(args.preview))
+        return
     if args.list:
         return list_sessions(args.all)
 
