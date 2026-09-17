@@ -262,8 +262,8 @@ def self_check() -> None:
     assert not _fresh(1000.0, 1000.0 + CACHE_TTL)
     assert not _fresh(1000.0, 999.0)  # clock went backwards: refetch
 
-    # Same dir the module points at; the digest is what names the keychain entry.
-    assert keychain_service("/Users/glashevich/.config/trv-claude").endswith("-ff1a770c")
+    # Any non-default dir: the digest is what names the keychain entry.
+    assert keychain_service("/home/user/.config/example-claude").endswith("-01e206b5")
 
     assert row_claude(
         {"spend": {"enabled": True, "used": {"amount_minor": 20193},
@@ -292,7 +292,7 @@ def main() -> int:
     ap.add_argument("--refresh", action="store_true", help=f"bypass the {CACHE_TTL}s cache")
     ap.add_argument(
         "--claude-config-dir",
-        default=str(Path.home() / ".config/trv-claude"),
+        default=str(Path.home() / ".claude"),
         help="Claude Code profile whose spend cap to read (default: %(default)s)",
     )
     ap.add_argument("--self-check", action="store_true", help="run assertions and exit")

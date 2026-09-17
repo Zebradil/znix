@@ -14,14 +14,39 @@ _: {
       pkgs,
       ...
     }:
-    {
-      options.znix.aiBudget.enable = lib.mkEnableOption "ai-budget spend reporter";
+    let
+      cfg = config.znix.aiBudget;
 
-      config = lib.mkIf config.znix.aiBudget.enable {
+      aiBudget = pkgs.writers.writePython3Bin "ai-budget" {
+        flakeIgnore = [ "E501" ];
+      } (builtins.readFile ./ai-budget.py);
+    in
+    {
+      options.znix.aiBudget = {
+        enable = lib.mkEnableOption "ai-budget spend reporter";
+
+        claudeConfigDir = lib.mkOption {
+          type = lib.types.str;
+          default = ".claude";
+          example = ".config/work-claude";
+          description = ''
+            Claude Code profile directory (relative to $HOME) whose spend cap to
+            report. Only the seat-billed OAuth profile has a cap to read; a
+            profile driven by ANTHROPIC_API_KEY has no keychain entry and no
+            usage endpoint. `--claude-config-dir` still overrides this per call.
+          '';
+        };
+      };
+
+      config = lib.mkIf cfg.enable {
         home.packages = [
-          (pkgs.writers.writePython3Bin "ai-budget" {
-            flakeIgnore = [ "E501" ];
-          } (builtins.readFile ./ai-budget.py))
+          # Wrapped rather than baked into the script: the profile dir is
+          # per-home config, and argparse takes the last occurrence, so a
+          # user-passed --claude-config-dir still wins over the default here.
+          (pkgs.writeShellScriptBin "ai-budget" ''
+            exec ${aiBudget}/bin/ai-budget \
+              --claude-config-dir ${lib.escapeShellArg "${config.home.homeDirectory}/${cfg.claudeConfigDir}"} "$@"
+          '')
         ];
       };
     };
