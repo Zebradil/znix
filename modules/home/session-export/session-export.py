@@ -762,6 +762,10 @@ def one_line(value, limit=TOOL_INPUT_CHARS):
 def tool_summary(block):
     """The most useful single field per tool, falling back to the whole input."""
     data = block.get("input") or {}
+    # Cursor writes some inputs raw rather than as an object (ApplyPatch is a
+    # patch string); `in` on a string would be a substring test, not a key.
+    if not isinstance(data, dict):
+        return one_line(data)
     for key in (
         "command",
         "file_path",
@@ -2144,6 +2148,19 @@ CURSOR_FIXTURE = [
             ]
         },
     },
+    {
+        "role": "assistant",
+        "message": {
+            "content": [
+                # Cursor writes ApplyPatch's input as a raw patch string.
+                {
+                    "type": "tool_use",
+                    "name": "ApplyPatch",
+                    "input": "*** Begin Patch\n*** Update File: /tmp/x/a\n",
+                },
+            ]
+        },
+    },
     {"type": "turn_ended", "status": "success"},
     {"type": "turn_ended", "status": "aborted", "error": "User aborted/interrupted manually."},
 ]
@@ -2165,7 +2182,7 @@ def selftest_cursor(tmp):
     assert "```\nline" not in brief, "brief must not invent tool_result bodies"
     assert "`Shell` rg -n secret ." not in brief, "brief must not render tool inputs"
     assert "*1 tool call: Shell 1*" in brief, "lone call lost its stats line"
-    assert "*3 tool calls: Read 2, Shell 1*" in brief, (
+    assert "*4 tool calls: Read 2, ApplyPatch 1, Shell 1*" in brief, (
         "a run must collapse into one line, counts ordered by frequency"
     )
     assert "### ❓ Pick" in brief, "AskQuestion dropped"
@@ -2181,6 +2198,7 @@ def selftest_cursor(tmp):
 
     full = export(ref, "full", "table", False)
     assert "`Shell` rg -n secret ." in full, "full must keep per-call detail"
+    assert "`ApplyPatch` *** Begin Patch" in full, "raw-string tool input dropped"
     assert "first" in full, "full must render option descriptions"
     assert "tool calls:" not in full, "full must not collapse runs"
     assert "```\nline" not in full, "Cursor transcripts have no tool_result to render"
@@ -2204,6 +2222,7 @@ def selftest_cursor(tmp):
         "Shell": 2,
         "AskQuestion": 1,
         "Read": 2,
+        "ApplyPatch": 1,
     }
     question = next(e for e in payload["events"] if e["kind"] == "question")
     assert question["items"][0]["answer"] is None
