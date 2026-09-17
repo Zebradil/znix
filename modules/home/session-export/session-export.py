@@ -492,7 +492,8 @@ def preview(payload):
         return f"preview failed: {err}\n"
 
 
-def pick(everywhere=False):
+def pick(everywhere=False, multi=False):
+    """One session's ref, or with `multi` every chosen row (Tab marks several)."""
     if not shutil.which("fzf"):
         sys.exit(
             "no session given and fzf is not installed — pass a path or session id"
@@ -505,7 +506,9 @@ def pick(everywhere=False):
         for i, row in enumerate(found)
     ]
     chosen = subprocess.run(
-        ["fzf", "--with-nth=3..", "--delimiter=\t", "--prompt=session> ",
+        ["fzf", "--with-nth=3..", "--delimiter=\t",
+         "--prompt=delete> " if multi else "--prompt=session> ",
+         *(["--multi"] if multi else []),
          f"--preview={preview_command()}", "--preview-window=bottom,70%,wrap"],
         input="\n".join(lines),
         capture_output=True,
@@ -513,7 +516,167 @@ def pick(everywhere=False):
     )
     if chosen.returncode != 0 or not chosen.stdout.strip():
         sys.exit("no session selected")
-    return found[int(chosen.stdout.split("\t", 1)[0])]["ref"]
+    picked = [found[int(line.split("\t", 1)[0])] for line in chosen.stdout.splitlines()]
+    return picked if multi else picked[0]["ref"]
+
+
+# --- deleting ---------------------------------------------------------------
+
+
+def config_dir(path):
+    """<config-dir>/projects/<project>/<id>.jsonl -> <config-dir>."""
+    return path.parent.parent.parent
+
+
+def session_paths(ref):
+    """Everything on disk a session owns; opencode rows go through its CLI instead.
+
+    Claude spreads one session over the transcript, a sibling `<id>/` dir
+    (subagents, tool-results), `file-history/<id>` and `session-env/<id>`. The
+    shared `history.jsonl` is left alone: live sessions append to it.
+    """
+    if ref["tool"] == "cursor":
+        return [ref["path"].parent]
+    if ref["tool"] != "claude":
+        return []
+    path, root = ref["path"], config_dir(ref["path"])
+    candidates = [
+        path,
+        path.with_suffix(""),
+        root / "file-history" / path.stem,
+        root / "session-env" / path.stem,
+    ]
+    return [p for p in candidates if p.exists()]
+
+
+def live_ids():
+    """Session ids of running Claude processes, from <config-dir>/sessions/<pid>.json."""
+    ids = set()
+    for root in project_roots():
+        for entry in (root.parent / "sessions").glob("*.json"):
+            try:
+                info = json.loads(entry.read_text())
+                os.kill(int(info["pid"]), 0)
+            except (OSError, ValueError, KeyError, TypeError):
+                continue
+            ids.add(info.get("sessionId"))
+    return ids
+
+
+def disk_size(path):
+    if path.is_file():
+        return path.stat().st_size
+    return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+
+
+def remove(path):
+    if path.is_dir() and not path.is_symlink():
+        shutil.rmtree(path)
+    else:
+        path.unlink()
+
+
+def paint(text, *codes):
+    """ANSI styling for the confirmation screen, off when stderr isn't a terminal."""
+    if not codes or os.environ.get("NO_COLOR") or not sys.stderr.isatty():
+        return text
+    return f"\033[{';'.join(codes)}m{text}\033[0m"
+
+
+BOLD, DIM, RED, GREEN, YELLOW, CYAN = "1", "2", "31", "32", "33", "36"
+
+
+def human_size(size):
+    for unit in ("B", "K", "M"):
+        if size < 1024:
+            return f"{size:.0f}{unit}" if unit == "B" else f"{size:.1f}{unit}"
+        size /= 1024
+    return f"{size:.1f}G"
+
+
+def home_relative(path):
+    home = str(Path.home())
+    text = str(path)
+    return "~" + text[len(home) :] if text.startswith(home + os.sep) else text
+
+
+def rule(title, *codes, width=72):
+    head = f"── {title} "
+    return paint(head, *codes) + paint("─" * max(width - len(head), 4), DIM)
+
+
+def confirmation_block(row, paths, sizes):
+    """One session: title, a dim facts line, then what goes away."""
+    lines = [f"  {paint('●', RED)} {paint(row['title'] or '(untitled)', BOLD)}"]
+    facts = [
+        f"id {row['id']}",
+        f"updated {row['when']}",
+        f"size {row['size']}",
+    ]
+    lines.append("    " + paint("   ".join(facts), DIM))
+    if row["ref"]["tool"] == "opencode":
+        lines.append(f"    {paint('run', YELLOW)} opencode session delete {row['id']}")
+    for path, size in zip(paths, sizes):
+        lines.append(
+            f"    {paint('rm ', RED)} {home_relative(path)}{'/' if path.is_dir() else ''}"
+            f"  {paint(human_size(size), DIM)}"
+        )
+    return "\n".join(lines)
+
+
+def delete_sessions(everywhere=False):
+    running = live_ids()
+    doomed, skipped, total = [], [], 0
+    sections = {}
+    for row in pick(everywhere, multi=True):
+        if row["id"] in running:
+            skipped.append(row)
+            continue
+        paths = session_paths(row["ref"])
+        sizes = [disk_size(path) for path in paths]
+        total += sum(sizes)
+        doomed.append((row, paths))
+        title = f"{row['label']} · {row['project']}"
+        sections.setdefault(title, []).append(confirmation_block(row, paths, sizes))
+
+    out = sys.stderr
+    print(file=out)
+    for title, blocks in sections.items():
+        print(rule(title, BOLD, CYAN), file=out)
+        print("\n\n".join(blocks), file=out)
+        print(file=out)
+    if skipped:
+        print(rule("Skipped: still running", BOLD, YELLOW), file=out)
+        for row in skipped:
+            print(f"  {paint('○', YELLOW)} {row['title'] or '(untitled)'}", file=out)
+            print("    " + paint(f"{row['label']} · {row['project']} · id {row['id']}", DIM), file=out)
+        print(file=out)
+
+    if not doomed:
+        sys.exit("nothing to delete")
+    summary = f"{plural(len(doomed), 'session')}, {human_size(total)} on disk"
+    print(rule("Summary", BOLD), file=out)
+    print(f"  {summary}. This cannot be undone.\n", file=out)
+    with open("/dev/tty") as tty:
+        print(paint(f"Delete {plural(len(doomed), 'session')}? [y/N] ", BOLD, RED), end="", file=out, flush=True)
+        if tty.readline().strip().lower() not in ("y", "yes"):
+            sys.exit("aborted")
+
+    failed = 0
+    for row, paths in doomed:
+        try:
+            if row["ref"]["tool"] == "opencode":
+                if not shutil.which("opencode"):
+                    raise RuntimeError("opencode CLI not on PATH")
+                subprocess.run(["opencode", "session", "delete", row["id"]], check=True)
+            for path in paths:
+                remove(path)
+            print(f"{paint('deleted', GREEN)} {row['label']} {row['id']}  {row['title']}")
+        except (OSError, RuntimeError, subprocess.CalledProcessError) as err:
+            failed += 1
+            print(f"{paint('FAILED', BOLD, RED)} {row['label']} {row['id']}: {err}", file=sys.stderr)
+    if failed:
+        sys.exit(f"{plural(failed, 'session')} not deleted")
 
 
 # --- parsing: Claude Code ---------------------------------------------------
@@ -2050,6 +2213,39 @@ def selftest_cursor(tmp):
     )
 
 
+def selftest_delete(tmp):
+    root = Path(tmp) / "delete" / "profile"
+    project = root / "projects" / "-a-b"
+    sid, keep = "11111111-aaaa", "22222222-bbbb"
+    for name in (sid, keep):
+        (project / name / "tool-results").mkdir(parents=True)
+        (project / f"{name}.jsonl").write_text("{}\n")
+        (root / "file-history" / name).mkdir(parents=True)
+        (root / "session-env" / name).mkdir(parents=True)
+    ref = claude_ref(project / f"{sid}.jsonl")
+    assert sorted(session_paths(ref)) == sorted(
+        [
+            project / f"{sid}.jsonl",
+            project / sid,
+            root / "file-history" / sid,
+            root / "session-env" / sid,
+        ]
+    )
+    for path in session_paths(ref):
+        remove(path)
+    assert session_paths(ref) == []
+    assert len(session_paths(claude_ref(project / f"{keep}.jsonl"))) == 4
+
+    transcript = Path(tmp) / "delete" / "cursor" / "agent-transcripts" / sid / f"{sid}.jsonl"
+    transcript.parent.mkdir(parents=True)
+    transcript.write_text("{}\n")
+    assert session_paths(cursor_ref(transcript)) == [transcript.parent]
+    assert session_paths(opencode_ref(Path(tmp) / "x.db", "ses_1")) == []
+    assert human_size(512) == "512B"
+    assert human_size(1536) == "1.5K"
+    assert home_relative(Path.home() / "a") == "~/a"
+
+
 def selftest():
     assert mangle("/Users/x/code/github.com/o/a_b") == "-Users-x-code-github-com-o-a-b"
     assert cursor_project_name("/Users/x/code/github.com/o/a_b") == (
@@ -2076,6 +2272,7 @@ def selftest():
         selftest_claude(tmp)
         selftest_opencode(tmp)
         selftest_cursor(tmp)
+        selftest_delete(tmp)
     print("selftest ok")
 
 
@@ -2105,6 +2302,11 @@ def main():
         action="store_true",
         help="search every project on this machine, not just the current directory",
     )
+    parser.add_argument(
+        "--delete",
+        action="store_true",
+        help="pick sessions (Tab marks several), confirm, then delete them",
+    )
     parser.add_argument("--selftest", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--preview", metavar="REF", help=argparse.SUPPRESS)
     args = parser.parse_args()
@@ -2116,6 +2318,8 @@ def main():
         return
     if args.list:
         return list_sessions(args.all)
+    if args.delete:
+        return delete_sessions(args.all)
 
     level, header = "brief", "table"
     if args.full:

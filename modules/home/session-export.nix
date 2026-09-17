@@ -22,8 +22,16 @@ _: {
         export PATH="$PATH:${lib.makeBinPath [ pkgs.bat ]}"
         exec ${pkgs.python3}/bin/python3 ${./session-export/session-export.py} "$@"
       '';
+
+      sessionDelete = pkgs.writeShellScriptBin "session-delete" ''
+        export PATH="$PATH:${lib.makeBinPath [ pkgs.bat ]}"
+        exec ${pkgs.python3}/bin/python3 ${./session-export/session-export.py} --delete "$@"
+      '';
     in
     lib.mkIf (claudeOn || cursorOn) {
-      home.packages = [ sessionExport ];
+      home.packages = [
+        sessionExport
+        sessionDelete
+      ];
     };
 }
