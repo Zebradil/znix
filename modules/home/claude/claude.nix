@@ -26,13 +26,15 @@ let
       options.znix.claude = {
         assetsRoot = lib.mkOption {
           type = lib.types.path;
-          # builtins.path scopes the store copy to ai/ alone, so the home
-          # generation's hash tracks the assets — not every tracked file in the
-          # flake. Same reason as znix.mkRepoLink (modules/home/repo-dir.nix).
-          default = builtins.path {
-            path = inputs.self + "/ai";
-            name = "znix-ai-assets";
-          };
+          # A store-path string with the flake source as context, not a scoped
+          # copy. Consumers readDir/pathExists it at evaluation, which needs a
+          # *valid* store path: `nix flake check --no-build` opens the store
+          # read-only, so a builtins.path copy is only dry-run computed and any
+          # read on it fails with "path '...' is not valid". The flake source
+          # itself is always valid. The scoped copy that keeps the home
+          # generation's hash on ai/ alone is minted where the symlink targets
+          # are built (assetsStore).
+          default = inputs.self + "/ai";
           description = ''
             Root path of the shared, tool-agnostic AI agent asset tree
             (AGENTS.md, skills/, agents/, commands/). Lives at the repo root
@@ -43,19 +45,10 @@ let
 
         extraSkillRoots = lib.mkOption {
           type = lib.types.listOf lib.types.path;
-          default =
-            map
-              (
-                sub:
-                builtins.path {
-                  path = inputs.self + "/vendor/mattpocock-skills/${sub}";
-                  name = "znix-vendor-skills-${sub}";
-                }
-              )
-              [
-                "engineering"
-                "productivity"
-              ];
+          default = map (sub: inputs.self + "/vendor/mattpocock-skills/${sub}") [
+            "engineering"
+            "productivity"
+          ];
           description = ''
             Extra directories whose immediate children are skill bundles, merged
             into each profile's skills/ alongside assetsRoot/skills. Defaults to
@@ -287,6 +280,23 @@ in
         assetsRoot = config.znix.claude.assetsRoot;
         extraSkillRoots = config.znix.claude.extraSkillRoots or [ ];
 
+        # Store copies feed the home.file symlink targets only; every
+        # readDir/pathExists below goes through the root string instead, whose
+        # context is the already-valid flake source (see the assetsRoot option).
+        # Scoping the copy to the asset tree keeps the home generation's hash
+        # tracking the assets, not every tracked file in the flake. Same reason
+        # as znix.mkRepoLink (modules/home/repo-dir.nix).
+        assetsStore = builtins.path {
+          path = assetsRoot;
+          name = "znix-ai-assets";
+        };
+        skillRootStore =
+          root:
+          builtins.path {
+            path = root;
+            name = "znix-skills-${builtins.unsafeDiscardStringContext (baseNameOf root)}";
+          };
+
         # Local LSP plugin, loaded in-place as `znix-lsp@skills-dir` (no
         # marketplace, so it works on company profiles too). See znix.lsp.servers.
         lspServers = config.znix.lsp.servers or { };
@@ -408,7 +418,7 @@ in
         mkCategoryFiles =
           profile: category:
           let
-            dir = "${assetsRoot}/${category}";
+            dir = assetsRoot + "/${category}";
             excluded = profile.excludeAssets.${category};
             stem = n: lib.removeSuffix ".md" n;
             entries = builtins.readDir dir;
@@ -420,7 +430,7 @@ in
             lib.mapAttrs' (
               entryName: _type:
               lib.nameValuePair "${profile.configDir}/${category}/${entryName}" {
-                source = "${dir}/${entryName}";
+                source = "${assetsStore}/${category}/${entryName}";
               }
             ) filtered;
 
@@ -436,10 +446,13 @@ in
               if !builtins.pathExists root then
                 { }
               else
+                let
+                  store = skillRootStore root;
+                in
                 lib.mapAttrs' (
                   entryName: _type:
                   lib.nameValuePair "${profile.configDir}/skills/${entryName}" {
-                    source = "${root}/${entryName}";
+                    source = "${store}/${entryName}";
                   }
                 ) (lib.filterAttrs (n: _: !lib.elem (stem n) excluded) (builtins.readDir root));
           in
@@ -455,7 +468,7 @@ in
             ];
           in
           lib.mapAttrsToList (
-            name: _type: pkgs.writeShellScriptBin name (builtins.readFile "${dir}/${name}")
+            name: _type: pkgs.writeShellScriptBin name (builtins.readFile (dir + "/${name}"))
           ) entries;
 
         wrappers = lib.mapAttrsToList mkWrapper enabled;
@@ -476,8 +489,8 @@ in
                 _: profile:
                 (
                   {
-                    "${profile.configDir}/CLAUDE.md".source = "${assetsRoot}/AGENTS.md";
-                    "${profile.configDir}/statusline-command.sh".source = "${assetsRoot}/statusline-command.sh";
+                    "${profile.configDir}/CLAUDE.md".source = "${assetsStore}/AGENTS.md";
+                    "${profile.configDir}/statusline-command.sh".source = "${assetsStore}/statusline-command.sh";
                     "${profile.configDir}/keybindings.json".source = keybindingsFile;
                   }
                   // lib.optionalAttrs (lspServers != { }) {

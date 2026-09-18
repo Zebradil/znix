@@ -17,6 +17,22 @@ _: {
       assetsRoot = config.znix.claude.assetsRoot;
       extraSkillRoots = config.znix.claude.extraSkillRoots or [ ];
 
+      # Store copies back the symlink targets; eval-time readDir/pathExists go
+      # through the root strings above, whose context is the flake source and
+      # thus always valid. A builtins.path copy is only dry-run computed under
+      # `nix flake check --no-build` (read-only store), so reading it fails
+      # with "path '...' is not valid".
+      assetsStore = builtins.path {
+        path = assetsRoot;
+        name = "znix-ai-assets";
+      };
+      skillRootStore =
+        root:
+        builtins.path {
+          path = root;
+          name = "znix-skills-${builtins.unsafeDiscardStringContext (baseNameOf root)}";
+        };
+
       # Strip Claude-only frontmatter opencode rejects: `tools: [array]` and a
       # bare `model: haiku` (opencode wants `provider/model`).
       mkOpencodeMd =
@@ -37,11 +53,11 @@ _: {
       # Symlink every entry of a source dir (skills: dirs are skills, the loose
       # _pkb-routing.md sibling rides along for relative references).
       mkSymlinkEntries =
-        relBase: srcDir:
+        relBase: srcDir: srcStore:
         lib.optionalAttrs (builtins.pathExists srcDir) (
-          lib.mapAttrs' (name: _: lib.nameValuePair "${relBase}/${name}" { source = "${srcDir}/${name}"; }) (
-            builtins.readDir srcDir
-          )
+          lib.mapAttrs' (
+            name: _: lib.nameValuePair "${relBase}/${name}" { source = "${srcStore}/${name}"; }
+          ) (builtins.readDir srcDir)
         );
 
       # Transform each *.md in a source dir through mkOpencodeMd, then symlink.
@@ -118,11 +134,13 @@ _: {
 
       (lib.mkIf ocEnable {
         home.file = lib.mkMerge [
-          (mkSymlinkEntries ".config/opencode/skills" "${assetsRoot}/skills")
-          (lib.mkMerge (map (mkSymlinkEntries ".config/opencode/skills") extraSkillRoots))
+          (mkSymlinkEntries ".config/opencode/skills" (assetsRoot + "/skills") "${assetsStore}/skills")
+          (lib.mkMerge (
+            map (root: mkSymlinkEntries ".config/opencode/skills" root (skillRootStore root)) extraSkillRoots
+          ))
           (mkTransformedMds ".config/opencode/agents" (assetsRoot + "/agents"))
           (mkTransformedMds ".config/opencode/commands" (assetsRoot + "/commands"))
-          { ".config/opencode/AGENTS.md".source = "${assetsRoot}/AGENTS.md"; }
+          { ".config/opencode/AGENTS.md".source = "${assetsStore}/AGENTS.md"; }
         ];
 
         # Install opencode.json as a real file (not a store symlink): opencode

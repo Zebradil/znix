@@ -11,20 +11,36 @@
       cfg = config.znix.cursor;
       assetsRoot = config.znix.claude.assetsRoot;
       extraSkillRoots = config.znix.claude.extraSkillRoots;
-      ponytailSrc = builtins.path {
-        path = inputs.self + "/vendor/ponytail";
+      ponytailRoot = inputs.self + "/vendor/ponytail";
+      # Store copies back the symlink targets only; eval-time
+      # readDir/pathExists/readFile go through the root strings, whose context
+      # is the flake source and thus always valid. A builtins.path copy is only
+      # dry-run computed under `nix flake check --no-build` (read-only store),
+      # so reading it fails with "path '...' is not valid".
+      assetsStore = builtins.path {
+        path = assetsRoot;
+        name = "znix-ai-assets";
+      };
+      ponytailStore = builtins.path {
+        path = ponytailRoot;
         name = "znix-vendor-ponytail";
       };
+      skillRootStore =
+        root:
+        builtins.path {
+          path = root;
+          name = "znix-skills-${builtins.unsafeDiscardStringContext (baseNameOf root)}";
+        };
       pluginDir = ".cursor/plugins/local/znix";
 
       mkSkillFiles =
-        srcDir: excluded:
+        srcDir: srcStore: excluded:
         lib.optionalAttrs (builtins.pathExists srcDir) (
           lib.mapAttrs'
             (
               name: type:
               lib.nameValuePair ".cursor/skills/${name}" {
-                source = "${srcDir}/${name}";
+                source = "${srcStore}/${name}";
               }
             )
             (
@@ -61,7 +77,7 @@
         alwaysApply: true
         ---
 
-        ${builtins.readFile "${assetsRoot}/AGENTS.md"}
+        ${builtins.readFile (assetsRoot + "/AGENTS.md")}
       '';
       # Same servers as the Claude profiles, in Cursor's mcp.json schema: no
       # `type`, and static OAuth credentials live under `auth` with SCREAMING
@@ -117,19 +133,19 @@
         ];
 
         home.file = lib.mkMerge [
-          (mkSkillFiles "${assetsRoot}/skills" [
+          (mkSkillFiles (assetsRoot + "/skills") "${assetsStore}/skills" [
             "save-convo"
             "save-note"
             "standup"
             "weekly"
             "kick-pr-copilot"
           ])
-          (lib.mkMerge (map (root: mkSkillFiles root [ ]) extraSkillRoots))
-          (mkSkillFiles "${ponytailSrc}/skills" [ ])
+          (lib.mkMerge (map (root: mkSkillFiles root (skillRootStore root) [ ]) extraSkillRoots))
+          (mkSkillFiles (ponytailRoot + "/skills") "${ponytailStore}/skills" [ ])
           {
             "${pluginDir}/.cursor-plugin/plugin.json".source = pluginManifest;
             "${pluginDir}/rules/znix.mdc".source = instructionsRule;
-            "${pluginDir}/rules/ponytail.mdc".source = "${ponytailSrc}/.cursor/rules/ponytail.mdc";
+            "${pluginDir}/rules/ponytail.mdc".source = "${ponytailStore}/.cursor/rules/ponytail.mdc";
             "${pluginDir}/agents/renovate-red.md".source = mkCursorMd (assetsRoot + "/agents/renovate-red.md");
             "${pluginDir}/commands/renovate-sweep.md".source = mkCursorMd (
               assetsRoot + "/commands/renovate-sweep.md"
