@@ -55,6 +55,7 @@ _: {
             ".envrc"
             ".serena/*"
             ".vscode"
+            ".worktrees"
             "__pycache__"
           ];
         };

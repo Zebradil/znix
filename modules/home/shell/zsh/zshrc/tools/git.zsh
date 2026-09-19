@@ -43,6 +43,114 @@ function z::git:rename() {
   fi
 }
 
+# Directory of the main working tree, also when called from inside a worktree.
+function z::git:wt_root() {
+  local common
+  common=$(git rev-parse --path-format=absolute --git-common-dir) || return
+  print -r -- "${common:h}"
+}
+
+# Worktree directory for a branch. Slashes are flattened so that removing a
+# worktree never leaves empty parent directories behind.
+function z::git:wt_dir() {
+  local root
+  root=$(z::git:wt_root) || return
+  print -r -- "$root/.worktrees/${1//\//-}"
+}
+
+# True if the branch tip is contained in any ref other than the branch itself
+# and its remote counterparts.
+function z::git:wt_merged_ref() {
+  local sha
+  sha=$(git rev-parse --verify -q "refs/heads/$1") || return 1
+  local refs=(${(f)"$(git for-each-ref --contains "$sha" --format='%(refname)' refs/heads refs/remotes)"})
+  refs=(${refs:#refs/heads/$1})
+  refs=(${refs:#refs/remotes/*/$1})
+  (( $#refs ))
+}
+
+# True if GitHub reports a merged pull request for the branch. This is the only
+# reliable way to recognise a squash merge: the squashed commit shares no sha
+# and no parent with the branch.
+function z::git:wt_merged_pr() {
+  lib::check_commands gh || return 1
+  [[ $(gh pr view "$1" --json state --jq .state 2>/dev/null) == MERGED ]]
+}
+
+# Lowercase slug: runs of anything but letters and digits collapse into one dash.
+function z::git:wt_slug() {
+  setopt localoptions extendedglob
+  local s=${${1:l}//[^a-z0-9]##/-}
+  print -r -- "${${s#-}%-}"
+}
+
+# wtn [branch-or-description] [base]: create or check out a worktree under
+# .worktrees and cd into it. An existing local or remote branch is used as is,
+# anything else becomes a new wt/<date>-<time>-<slug> branch, so "wtn 'fix flaky
+# check'" lands on wt/260919-2257-fix-flaky-check. To choose a new branch name
+# verbatim, create the branch first and pass it by name.
+function wtn() {
+  local branch=$1
+  local dir
+
+  if git show-ref -q --verify "refs/heads/$branch"; then
+    log::info "checking out existing local branch $branch"
+  elif [[ -n $branch && -n $(git for-each-ref --format=x "refs/remotes/*/$branch") ]]; then
+    log::info "creating $branch to track the remote branch of the same name"
+  else
+    local slug
+    slug=$(z::git:wt_slug "$branch")
+    branch=wt/$(date +%y%m%d-%H%M%S)${slug:+-$slug}
+    log::info "creating new branch $branch from ${2:-HEAD}"
+    dir=$(z::git:wt_dir "$branch") || return
+    git worktree add -b "$branch" "$dir" "${2:-HEAD}" && cd "$dir"
+    return
+  fi
+
+  dir=$(z::git:wt_dir "$branch") || return
+  git worktree add "$dir" "$branch" && cd "$dir"
+}
+
+# wtg [query]: pick a worktree with fzf and cd into it.
+function wtg() {
+  local dir
+  dir=$(git worktree list --porcelain | sed -n 's/^worktree //p' | fzf --query="$1" --select-1) && cd "$dir"
+}
+
+# wtrm [-f|--force] [branch]: remove a worktree and its branch, current one by default.
+# Refuses uncommitted changes and branches whose work exists nowhere else.
+function wtrm() {
+  local force=()
+  [[ $1 == (-f|--force) ]] && { force=(--force); shift }
+
+  local branch=${1:-$(z::git:current_branch)}
+  local dir
+  dir=$(z::git:wt_dir "$branch") || return
+  if [[ ! -d $dir ]]; then
+    log::error "no worktree at $dir"
+    return 1
+  fi
+
+  if (( ! $#force )); then
+    if [[ -n $(git -C "$dir" status --porcelain) ]]; then
+      log::error "$branch has uncommitted changes or untracked files, use --force"
+      return 1
+    fi
+    if z::git:wt_merged_ref "$branch"; then
+      log::info "$branch is merged into another ref"
+    elif z::git:wt_merged_pr "$branch"; then
+      log::info "$branch is merged through a pull request"
+    else
+      log::error "$branch is not merged anywhere, use --force"
+      return 1
+    fi
+  fi
+
+  [[ $PWD/ == $dir/* ]] && cd "$(z::git:wt_root)"
+  # -D, not -d: a squash-merged branch is never "fully merged" to git.
+  git worktree remove $force "$dir" && git branch -D "$branch"
+}
+
 alias grt='cd "$(git rev-parse --show-toplevel || echo .)"'
 
 alias g='git'
