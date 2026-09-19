@@ -58,14 +58,22 @@ function z::git:wt_dir() {
   print -r -- "$root/.worktrees/${1//\//-}"
 }
 
+# Path of the worktree that has the branch checked out, empty if there is none.
+function z::git:wt_find() {
+  git worktree list --porcelain |
+    awk -v b="branch refs/heads/$1" '/^worktree /{p=substr($0,10)} $0==b{print p; exit}'
+}
+
 # True if the branch tip is contained in any ref other than the branch itself
 # and its remote counterparts.
 function z::git:wt_merged_ref() {
+  setopt localoptions extendedglob
   local sha
   sha=$(git rev-parse --verify -q "refs/heads/$1") || return 1
   local refs=(${(f)"$(git for-each-ref --contains "$sha" --format='%(refname)' refs/heads refs/remotes)"})
   refs=(${refs:#refs/heads/$1})
-  refs=(${refs:#refs/remotes/*/$1})
+  # [^/]## so that a remote branch named <remote>/<other>/$1 still counts.
+  refs=(${refs:#refs/remotes/[^/]##/$1})
   (( $#refs ))
 }
 
@@ -88,12 +96,19 @@ function z::git:wt_slug() {
 # .worktrees and cd into it. An existing local or remote branch is used as is,
 # anything else becomes a new wt/<date>-<time>-<slug> branch, so "wtn 'fix flaky
 # check'" lands on wt/260919-2257-fix-flaky-check. To choose a new branch name
-# verbatim, create the branch first and pass it by name.
+# verbatim, create the branch first and pass it by name. base applies to new
+# branches only; an existing branch is checked out where it already points.
 function wtn() {
   local branch=$1
-  local dir
+  local dir new=
 
   if git show-ref -q --verify "refs/heads/$branch"; then
+    dir=$(z::git:wt_find "$branch")
+    if [[ -n $dir ]]; then
+      log::info "$branch is already checked out"
+      cd "$dir"
+      return
+    fi
     log::info "checking out existing local branch $branch"
   elif [[ -n $branch && -n $(git for-each-ref --format=x "refs/remotes/*/$branch") ]]; then
     log::info "creating $branch to track the remote branch of the same name"
@@ -102,19 +117,23 @@ function wtn() {
     slug=$(z::git:wt_slug "$branch")
     branch=wt/$(date +%y%m%d-%H%M%S)${slug:+-$slug}
     log::info "creating new branch $branch from ${2:-HEAD}"
-    dir=$(z::git:wt_dir "$branch") || return
-    git worktree add -b "$branch" "$dir" "${2:-HEAD}" && cd "$dir"
-    return
+    new=1
   fi
 
   dir=$(z::git:wt_dir "$branch") || return
-  git worktree add "$dir" "$branch" && cd "$dir"
+  if [[ -n $new ]]; then
+    git worktree add -b "$branch" "$dir" "${2:-HEAD}"
+  else
+    git worktree add "$dir" "$branch"
+  fi && cd "$dir"
 }
 
 # wtg [query]: pick a worktree with fzf and cd into it.
 function wtg() {
+  lib::check_commands fzf || return 1
   local dir
-  dir=$(git worktree list --porcelain | sed -n 's/^worktree //p' | fzf --query="$1" --select-1) && cd "$dir"
+  dir=$(git worktree list --porcelain | sed -n 's/^worktree //p' |
+    fzf --query="$1" --select-1 --exit-0) && cd "$dir"
 }
 
 # wtrm [-f|--force] [branch]: remove a worktree and its branch, current one by default.
@@ -125,9 +144,9 @@ function wtrm() {
 
   local branch=${1:-$(z::git:current_branch)}
   local dir
-  dir=$(z::git:wt_dir "$branch") || return
-  if [[ ! -d $dir ]]; then
-    log::error "no worktree at $dir"
+  dir=$(z::git:wt_find "$branch")
+  if [[ -z $dir ]]; then
+    log::error "no worktree for $branch"
     return 1
   fi
 
@@ -146,7 +165,9 @@ function wtrm() {
     fi
   fi
 
-  [[ $PWD/ == $dir/* ]] && cd "$(z::git:wt_root)"
+  # :A on both sides: $PWD is logical, git reports resolved paths, and missing the
+  # match would delete the shell's own cwd.
+  [[ ${PWD:A}/ == ${dir:A}/* ]] && cd "$(z::git:wt_root)"
   # -D, not -d: a squash-merged branch is never "fully merged" to git.
   git worktree remove $force "$dir" && git branch -D "$branch"
 }
