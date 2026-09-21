@@ -53,6 +53,10 @@
       url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    pr-autopilot = {
+      url = "github:Zebradil/pr-autopilot";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     sito = {
       url = "github:Zebradil/sito";
       inputs.nixpkgs.follows = "nixpkgs";
