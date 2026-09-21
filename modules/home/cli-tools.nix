@@ -77,6 +77,7 @@ _: {
         nmap
         nodejs
         nvd
+        pr-autopilot
         pciutils
         rage
         rancher

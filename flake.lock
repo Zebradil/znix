@@ -892,6 +892,26 @@
         "type": "github"
       }
     },
+    "pr-autopilot": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1789990900,
+        "narHash": "sha256-VpN1v0bvAkPkQ6APfU8HAxBVEq9mELYUMoN8xrNe/e0=",
+        "owner": "Zebradil",
+        "repo": "pr-autopilot",
+        "rev": "6861c559a3de5e917c2fccd40684641435796b6f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Zebradil",
+        "repo": "pr-autopilot",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "ashell": "ashell",
@@ -913,6 +933,7 @@
         "nix-index-database": "nix-index-database",
         "nixpkgs": "nixpkgs_6",
         "nixvim": "nixvim",
+        "pr-autopilot": "pr-autopilot",
         "sito": "sito",
         "sofka": "sofka",
         "sops-nix": "sops-nix",
