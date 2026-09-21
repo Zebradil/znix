@@ -14,12 +14,12 @@ drift apart. Fixes arrive here through a `flake.lock` bump.
 
 `secrets/cache.yaml` (sops-encrypted) holds everything needed to publish:
 
-| Key | Contents |
-|-----|----------|
-| `cache-s3-url` | `s3://<bucket>?region=<region>` target for `nix copy --to` |
-| `signing-key` | Nix signing private key matching `znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=` |
-| `aws-access-key-id` | AWS access key for the bucket |
-| `aws-secret-access-key` | AWS secret key for the bucket |
+| Key                     | Contents                                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------------- |
+| `cache-s3-url`          | `s3://<bucket>?region=<region>` target for `nix copy --to`                                        |
+| `signing-key`           | Nix signing private key matching `znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=` |
+| `aws-access-key-id`     | AWS access key for the bucket                                                                     |
+| `aws-secret-access-key` | AWS secret key for the bucket                                                                     |
 
 Edit the values with:
 
@@ -68,12 +68,12 @@ NAR, `nix copy` from a local `file://` cache into a fresh empty store — so the
 restore number is decompress + write with no network in it. Two passes, both
 shown:
 
-| store URI query | NAR size | restore | restore CPU | push | push CPU |
-|---|---|---|---|---|---|
-| `compression=xz` (Nix's default) | 237 MB | **7.42 s / 7.14 s** | 98 % | 179 s | 99 % |
-| `compression=xz&parallel-compression=true` | 241 MB | 7.25 s / 7.25 s | 99 % | 23 s | 1694 % |
-| `compression=zstd` | 325 MB | **1.62 s / 1.62 s** | 96 % | 2.4 s | 154 % |
-| `compression=zstd&compression-level=10` | 296 MB | 1.83 s / 1.61 s | 96 % | 12.8 s | 103 % |
+| store URI query                            | NAR size | restore             | restore CPU | push   | push CPU |
+| ------------------------------------------ | -------- | ------------------- | ----------- | ------ | -------- |
+| `compression=xz` (Nix's default)           | 237 MB   | **7.42 s / 7.14 s** | 98 %        | 179 s  | 99 %     |
+| `compression=xz&parallel-compression=true` | 241 MB   | 7.25 s / 7.25 s     | 99 %        | 23 s   | 1694 %   |
+| `compression=zstd`                         | 325 MB   | **1.62 s / 1.62 s** | 96 %        | 2.4 s  | 154 %    |
+| `compression=zstd&compression-level=10`    | 296 MB   | 1.83 s / 1.61 s     | 96 %        | 12.8 s | 103 %    |
 
 zstd restores **4.4x faster** and pushes **14-75x faster**. The restore-CPU
 column is the whole story: every row pins exactly one core. (Push times were
@@ -84,7 +84,7 @@ For scale, the LAN cache serves that NAR at 87-99 MB/s (~750 Mbit), so the xz
 NAR arrives in ~2.5 s and then sits ~7 s in the decompressor. **That is where
 "nix build downloads are slow, under 300 Mbit" comes from**: 237 MB through
 `xz -d` in 6.1 s is 37 MB/s ≈ 296 Mbit/s of compressed stream, and Nix counts
-progress in compressed bytes, so the rate it prints *is* the decompressor's
+progress in compressed bytes, so the rate it prints _is_ the decompressor's
 rate. No link change can move it.
 
 ### `parallel-compression` does not fix it
@@ -112,7 +112,7 @@ On the push side it works exactly as advertised — 1694 % CPU, 179 s down to
 also does not parallelise zstd: `compression-level=10` pushed at 103 %, one
 core.
 
-Changing the *format* is the only lever that reaches clients. zstd costs 25-37 %
+Changing the _format_ is the only lever that reaches clients. zstd costs 25-37 %
 more bytes and pays that back several times over: on the LAN, +0.9 s of transfer
 for −5.5 s of decompression; on the 300 Mbit WAN path to R2 it is still ahead
 (≈12.6 s → ≈9.9 s end to end). `compression-level=10` recovers a third of the
@@ -126,11 +126,11 @@ A second sweep on tuxedo (AMD Ryzen AI 9 365, 20 threads, Determinate Nix
 level. One NAR per timed run: the closure minus the target is seeded into the
 cache first, untimed, so no measurement is diluted by its dependencies.
 
-| rustc 1.95.0, 1059 MB raw | xz | zstd:1 | zstd:6 | zstd:9 | zstd:12 | zstd:19 |
-|---|---|---|---|---|---|---|
-| NAR | 221 MB | 353 MB | 301 MB | 291 MB | 289 MB | 254 MB |
-| push | 205.7 s | 1.5 s | 4.3 s | 9.9 s | 20.1 s | 185.9 s |
-| restore | 6.68 s | 1.49 s | 1.52 s | 1.48 s | 1.47 s | 1.73 s |
+| rustc 1.95.0, 1059 MB raw | xz      | zstd:1 | zstd:6 | zstd:9 | zstd:12 | zstd:19 |
+| ------------------------- | ------- | ------ | ------ | ------ | ------- | ------- |
+| NAR                       | 221 MB  | 353 MB | 301 MB | 291 MB | 289 MB  | 254 MB  |
+| push                      | 205.7 s | 1.5 s  | 4.3 s  | 9.9 s  | 20.1 s  | 185.9 s |
+| restore                   | 6.68 s  | 1.49 s | 1.52 s | 1.48 s | 1.47 s  | 1.73 s  |
 
 **Restore time is flat across every zstd level** — decompression speed is a
 property of the format, not the level — so a higher level costs push time and
@@ -170,12 +170,12 @@ CI lives in **[nix-ci](https://github.com/zebradil/nix-ci)**, a separate repo of
 Actions workflows and composite actions. `.github/workflows/{test,update,update-pr}.yaml` are thin
 callers of its actions:
 
-| Action | Role |
-|---|---|
-| `setup-nix@v1` | installs Nix, adds `znix.zebradil.dev` as a substituter, and registers the signing key as nix.conf `secret-key-files` so every path the runner builds is signed as it is produced |
-| `discover@v1` | enumerates `checks.*` into a build matrix |
-| `build@v1` | builds one attr with `strategy: uncached-leaves` and pushes the closure plus the toplevel's `.drv` recipe; exposes `paths-file` |
-| `update-lock-pr@v1` | the nightly `nix flake update` PR, with the nvd diff and the post-update push |
+| Action              | Role                                                                                                                                                                              |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `setup-nix@v1`      | installs Nix, adds `znix.zebradil.dev` as a substituter, and registers the signing key as nix.conf `secret-key-files` so every path the runner builds is signed as it is produced |
+| `discover@v1`       | enumerates `checks.*` into a build matrix                                                                                                                                         |
+| `build@v1`          | builds one attr with `strategy: uncached-leaves` and pushes the closure plus the toplevel's `.drv` recipe; exposes `paths-file`                                                   |
+| `update-lock-pr@v1` | the nightly `nix flake update` PR, with the dix diff and the post-update push                                                                                                     |
 
 `zebradil/kasha/.github/actions/emit-manifest@v1` is chained after each push to write the
 `roots/znix/<gen>.json` generation manifest. That step is why these workflows call the actions
@@ -187,15 +187,15 @@ nightly kasha GC sweep.
 
 nix-ci has no sops mode: it takes the signing key, S3 URL and AWS credentials as plain inputs. A
 reusable workflow cannot receive secrets produced by a step, and `setup-nix` needs the signing key
-*before* Nix exists (it goes into the installer's nix.conf), so there is no point in the run where a
+_before_ Nix exists (it goes into the installer's nix.conf), so there is no point in the run where a
 sops decrypt could supply it. CI therefore reads three repository secrets and one variable directly:
 
-| Name | Kind | Contents |
-|---|---|---|
-| `CACHE_PRIVATE_KEY` | secret | the `signing-key` value from `secrets/cache.yaml` |
-| `AWS_ACCESS_KEY_ID` | secret | as in `secrets/cache.yaml` |
-| `AWS_SECRET_ACCESS_KEY` | secret | as in `secrets/cache.yaml` |
-| `CACHE_S3_URL` | variable | `cache-s3-url` verbatim, `s3://` scheme included |
+| Name                    | Kind     | Contents                                          |
+| ----------------------- | -------- | ------------------------------------------------- |
+| `CACHE_PRIVATE_KEY`     | secret   | the `signing-key` value from `secrets/cache.yaml` |
+| `AWS_ACCESS_KEY_ID`     | secret   | as in `secrets/cache.yaml`                        |
+| `AWS_SECRET_ACCESS_KEY` | secret   | as in `secrets/cache.yaml`                        |
+| `CACHE_S3_URL`          | variable | `cache-s3-url` verbatim, `s3://` scheme included  |
 
 `CACHE_S3_URL` is a variable, not a secret: it is a bucket name and an endpoint,
 and writing to it takes the AWS credentials, which are secrets. As a variable it

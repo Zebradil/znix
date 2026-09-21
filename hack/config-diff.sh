@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Unified diff of the *configuration files* between the active generation and a
 # freshly built one: what actually lands in etc/, Library/ (launchd plists),
-# home-files/, ... Package version churn is `nvd diff`'s job.
+# home-files/, ... Package version churn is `dix diff`'s job.
 #
 # Store hashes are normalised away by default, so a dependency rebuild that
 # leaves the config text identical produces no output at all. Output is

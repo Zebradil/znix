@@ -44,18 +44,19 @@ _: {
         tmux
 
         # CLI tools
-        ghRenovateTriage
-        ghPrUnresolvedComments
         bashInteractive
         comma
         coreutils
         curl
         dive
+        dix
         duf
         eza
         fd
         formatjson5
         gh
+        ghPrUnresolvedComments
+        ghRenovateTriage
         ghorg
         git
         gnumake
@@ -76,9 +77,8 @@ _: {
         nix-diff
         nmap
         nodejs
-        nvd
-        pr-autopilot
         pciutils
+        pr-autopilot
         rage
         rancher
         repgrep

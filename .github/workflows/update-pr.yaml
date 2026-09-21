@@ -1,6 +1,6 @@
 name: Update Flake Lock (PR)
 
-# Nightly `nix flake update` opened as a PR, with an nvd package diff of what the update really
+# Nightly `nix flake update` opened as a PR, with an dix package diff of what the update really
 # changes and the post-update builds published to the binary cache.
 #
 # Calls the `update-lock-pr` action rather than `zebradil/nix-ci/.github/workflows/update-pr.yaml`,

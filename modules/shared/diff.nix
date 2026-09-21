@@ -15,7 +15,7 @@ let
           supportsDryActivation = true;
           text = ''
             if [ -e /run/current-system ]; then
-              ${pkgs.nvd}/bin/nvd --nix-bin-dir=${config.nix.package}/bin diff /run/current-system "$systemConfig"
+              ${pkgs.dix}/bin/dix --nix-bin-dir=${config.nix.package}/bin diff /run/current-system "$systemConfig"
             fi
           '';
         };
@@ -35,7 +35,7 @@ let
       config = lib.mkIf config.znix.diff.enable {
         system.activationScripts.postActivation.text = ''
           if [ -e /run/current-system ]; then
-            ${pkgs.nvd}/bin/nvd diff /run/current-system "$systemConfig"
+            ${pkgs.dix}/bin/dix diff /run/current-system "$systemConfig"
           fi
         '';
       };
