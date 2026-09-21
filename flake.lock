@@ -899,11 +899,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790001101,
-        "narHash": "sha256-p63i7NNjpG8QGgIW9BQwiFC4YGL9M7wM9Yt81J0c2IU=",
+        "lastModified": 1790007279,
+        "narHash": "sha256-hO2T2GhSmym+4jEpCzoj9F7l3BkZXmQ9Bskd1WBS1mE=",
         "owner": "Zebradil",
         "repo": "pr-autopilot",
-        "rev": "af651359c46dbbceeb65df372a63d65359b4efa2",
+        "rev": "84c10134158b323ba96af44419b41a8c0fe09bc5",
         "type": "github"
       },
       "original": {
