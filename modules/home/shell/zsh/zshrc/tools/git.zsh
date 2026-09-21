@@ -136,40 +136,60 @@ function wtg() {
     fzf --query="$1" --select-1 --exit-0) && cd "$dir"
 }
 
-# wtrm [-f|--force] [branch]: remove a worktree and its branch, current one by default.
-# Refuses uncommitted changes and branches whose work exists nowhere else.
+# wtrm [-f|--force] [branch]: remove a worktree, the current one by default, and
+# its branches: the one checked out in it and the one its directory is named
+# after, which differ once another branch was checked out inside the worktree.
+# The main branch is never deleted. Refuses uncommitted changes and branches
+# whose work exists nowhere else.
 function wtrm() {
   local force=()
   [[ $1 == (-f|--force) ]] && { force=(--force); shift }
 
-  local branch=${1:-$(z::git:current_branch)}
-  local dir
-  dir=$(z::git:wt_find "$branch")
-  if [[ -z $dir ]]; then
-    log::error "no worktree for $branch"
+  local root dir
+  root=$(z::git:wt_root) || return
+  if [[ -n $1 ]]; then
+    dir=$(z::git:wt_find "$1")
+    if [[ -z $dir ]]; then
+      log::error "no worktree for $1"
+      return 1
+    fi
+  else
+    dir=$(git rev-parse --show-toplevel) || return
+  fi
+  if [[ ${dir:A} == ${root:A} ]]; then
+    log::error "refusing to remove the main worktree"
     return 1
   fi
 
+  local b branches=($(git -C "$dir" symbolic-ref -q --short HEAD))
+  for b in ${(f)"$(git for-each-ref --format='%(refname:lstrip=2)' refs/heads)"}; do
+    [[ ${b//\//-} == ${dir:t} ]] && branches+=($b)
+  done
+  branches=(${(u)branches:#$(z::git:main_branch)})
+
   if (( ! $#force )); then
     if [[ -n $(git -C "$dir" status --porcelain) ]]; then
-      log::error "$branch has uncommitted changes or untracked files, use --force"
+      log::error "${dir:t} has uncommitted changes or untracked files, use --force"
       return 1
     fi
-    if z::git:wt_merged_ref "$branch"; then
-      log::info "$branch is merged into another ref"
-    elif z::git:wt_merged_pr "$branch"; then
-      log::info "$branch is merged through a pull request"
-    else
-      log::error "$branch is not merged anywhere, use --force"
-      return 1
-    fi
+    for b in $branches; do
+      if z::git:wt_merged_ref "$b"; then
+        log::info "$b is merged into another ref"
+      elif z::git:wt_merged_pr "$b"; then
+        log::info "$b is merged through a pull request"
+      else
+        log::error "$b is not merged anywhere, use --force"
+        return 1
+      fi
+    done
   fi
 
   # :A on both sides: $PWD is logical, git reports resolved paths, and missing the
   # match would delete the shell's own cwd.
-  [[ ${PWD:A}/ == ${dir:A}/* ]] && cd "$(z::git:wt_root)"
+  [[ ${PWD:A}/ == ${dir:A}/* ]] && cd "$root"
+  git worktree remove $force "$dir" || return
   # -D, not -d: a squash-merged branch is never "fully merged" to git.
-  git worktree remove $force "$dir" && git branch -D "$branch"
+  (( ! $#branches )) || git branch -D $branches
 }
 
 alias grt='cd "$(git rev-parse --show-toplevel || echo .)"'
