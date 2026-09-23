@@ -130,6 +130,11 @@
     mini = {
       enable = true;
       modules.icons = { };
+      # Visual `sa` + char wraps the selection; `c` wraps linewise in a code fence.
+      modules.surround.custom_surroundings.c.output = {
+        left = "```\n";
+        right = "\n```";
+      };
     };
 
     # ─ Markdown ───────────────────────────────────────────────────
@@ -149,7 +154,11 @@
     };
 
     # ─ Editor ─────────────────────────────────────────────────────
-    nvim-autopairs.enable = true;
+    nvim-autopairs = {
+      enable = true;
+      # Pair only before whitespace or end of line.
+      settings.ignored_next_char.__raw = ''"[^%s]"'';
+    };
   };
 
   # ── Extra plugins (no native nixvim module) ──────────────────────

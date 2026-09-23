@@ -126,6 +126,13 @@
       end,
     }):map("<leader>uF")
 
+    -- Code fences are typed literally: drop the ``` rules, and stop the
+    -- third backtick from opening a new `` pair.
+    local npairs = require("nvim-autopairs")
+    npairs.remove_rule("```")
+    npairs.remove_rule("```.*$")
+    npairs.get_rules("`")[1]:with_pair(require("nvim-autopairs.conds").not_before_regex("`"))
+
     -- Autopairs (nvim-autopairs).
     Snacks.toggle({
       name = "Autopairs",
