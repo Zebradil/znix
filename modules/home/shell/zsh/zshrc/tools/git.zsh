@@ -128,6 +128,36 @@ function wtn() {
   fi && cd "$dir"
 }
 
+# Worktrees as "<dir>\t<branch>" lines, the main one first. The branch is empty
+# for a detached HEAD. Prunable worktrees are left out: their directory is gone,
+# git worktree prune cleans them up.
+function z::git:wt_list() {
+  git worktree list --porcelain | awk '
+    /^worktree /{d=substr($0,10); b=""; p=0}
+    /^branch /{b=substr($0,19)}
+    /^prunable/{p=1}
+    /^$/{if (!p) print d "\t" b}'
+}
+
+# wtl: list worktrees with their branch and whether wtrm considers it merged.
+# Queries GitHub for every branch that no other ref contains.
+function wtl() {
+  local lines=(${(f)"$(z::git:wt_list)"}) i dir branch state
+  for i in {1..$#lines}; do
+    dir=${lines[i]%%$'\t'*} branch=${lines[i]#*$'\t'}
+    if (( i == 1 )); then
+      state=main
+    elif [[ -z $branch ]]; then
+      state=detached
+    elif z::git:wt_merged_ref "$branch" || z::git:wt_merged_pr "$branch"; then
+      state=merged
+    else
+      state=unmerged
+    fi
+    printf '%-9s %-40s %s\n' $state ${branch:--} $dir
+  done
+}
+
 # wtg [query]: pick a worktree with fzf and cd into it.
 function wtg() {
   lib::check_commands fzf || return 1
@@ -136,26 +166,13 @@ function wtg() {
     fzf --query="$1" --select-1 --exit-0) && cd "$dir"
 }
 
-# wtrm [-f|--force] [branch]: remove a worktree, the current one by default, and
-# its branches: the one checked out in it and the one its directory is named
-# after, which differ once another branch was checked out inside the worktree.
-# The main branch is never deleted. Refuses uncommitted changes and branches
-# whose work exists nowhere else.
-function wtrm() {
-  local force=()
-  [[ $1 == (-f|--force) ]] && { force=(--force); shift }
-
-  local root dir
+# Remove the worktree at $2 and its branches: the one checked out in it and the
+# one its directory is named after, which differ once another branch was checked
+# out inside the worktree. The main branch is never deleted. $1 is --force or
+# empty.
+function z::git:wt_remove() {
+  local force=(${1:+--force}) dir=$2 root
   root=$(z::git:wt_root) || return
-  if [[ -n $1 ]]; then
-    dir=$(z::git:wt_find "$1")
-    if [[ -z $dir ]]; then
-      log::error "no worktree for $1"
-      return 1
-    fi
-  else
-    dir=$(git rev-parse --show-toplevel) || return
-  fi
   if [[ ${dir:A} == ${root:A} ]]; then
     log::error "refusing to remove the main worktree"
     return 1
@@ -190,6 +207,46 @@ function wtrm() {
   git worktree remove $force "$dir" || return
   # -D, not -d: a squash-merged branch is never "fully merged" to git.
   (( ! $#branches )) || git branch -D $branches
+}
+
+# wtrm [-f|--force] [branch|-]: remove a worktree and its branches (see
+# z::git:wt_remove). Without an argument it removes the current worktree; "-",
+# or no argument in the main checkout, picks any number of worktrees with fzf
+# instead. Refuses uncommitted changes and branches whose work exists nowhere
+# else; a refused pick is skipped and the rest are still removed.
+function wtrm() {
+  local force=
+  [[ $1 == (-f|--force) ]] && { force=1; shift }
+
+  local root dir dirs=()
+  root=$(z::git:wt_root) || return
+  if [[ -z $1 ]]; then
+    dir=$(git rev-parse --show-toplevel) || return
+    [[ ${dir:A} == ${root:A} ]] && set -- -
+  fi
+  if [[ $1 == - ]]; then
+    lib::check_commands fzf || return 1
+    local lines=(${(f)"$(z::git:wt_list)"})
+    # Show the branch first; the path after the tab is what gets removed.
+    dirs=(${(f)"$(print -rl -- ${lines[2,-1]} |
+      awk -F'\t' '{print ($2 == "" ? "(detached)" : $2) "\t" $1}' |
+      fzf --multi --exit-0 --delimiter='\t' | cut -f2)"})
+  elif [[ -n $1 ]]; then
+    dir=$(z::git:wt_find "$1")
+    if [[ -z $dir ]]; then
+      log::error "no worktree for $1"
+      return 1
+    fi
+    dirs=($dir)
+  else
+    dirs=($dir)
+  fi
+
+  local ret=0
+  for dir in $dirs; do
+    z::git:wt_remove "$force" "$dir" || ret=1
+  done
+  return $ret
 }
 
 alias grt='cd "$(git rev-parse --show-toplevel || echo .)"'
