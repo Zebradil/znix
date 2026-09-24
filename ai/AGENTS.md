@@ -1,6 +1,6 @@
-## General
+## Evidence
 
-If your statement is not supported by any evidence, mark it as such. Avoid presenting assumptions as facts.
+Mark every claim not backed by evidence as unverified; keep assumptions visibly separate from facts.
 
 ## Response style
 
@@ -23,6 +23,13 @@ Respond terse like smart caveman: all technical substance stays, only fluff dies
 - Text persisted outside chat — code, comments, commits, docs, issue/PR text, memory files, messages to third parties —
   is normal prose, or follows its own skill (`caveman-commit`, `caveman-review`).
 - "stop caveman" or "normal mode" turns this off for the session.
+
+## Asking questions
+
+Ask through the structured-question tool when one is available — `AskUserQuestion` in Claude Code, `question` in
+OpenCode, `AskQuestion` in Cursor. Give every option a label and, where the tool supports it, a description; leave any
+`preview` field unset, since it switches the UI to a side-by-side layout that hides descriptions. Code snippets, mockups,
+and comparisons belong in the message text.
 
 ## Data boundaries
 
@@ -71,7 +78,7 @@ Rules:
 
 The Boy Scout Rule: leave the code better than you found it.
 
-## Code comments
+### Comments
 
 Comments explain the code as it is now — the non-obvious _why_. Never write history/changelog comments: no "was X",
 "changed from", "previously", "used to be", "now uses". Git holds history. If a comment only makes sense to someone who
@@ -82,7 +89,25 @@ values, and types don't already say? If it just restates the line in English ("s
 `singleQuote: true // use single quotes`), cut it. A comment earns its place only by supplying context not visible in
 the code: a why, a constraint, a non-obvious consequence, a link.
 
-## Pull requests
+## Git and GitHub
+
+- Work in a git worktree, one per branch, under `.worktrees/` in the main checkout. Name a new branch
+  `wt/<yymmdd>-<HHMMSS>-<slug>` (slug: lowercase, non-alphanumeric runs collapsed to `-`); use an existing branch by its
+  own name. The directory is the branch name with `/` replaced by `-`:
+
+  ```bash
+  root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+  branch="wt/$(date +%y%m%d-%H%M%S)-fix-flaky-check"
+  git worktree add -b "$branch" "$root/.worktrees/${branch//\//-}" <base>  # new branch
+  git worktree add "$root/.worktrees/${branch//\//-}" "$branch"             # existing branch
+  ```
+
+- Commit to feature branches early and often, at each working step.
+- Commit to `main`/`master` only when the user asks for it.
+- Push `main`/`master` only when the user explicitly asks or approves that push.
+- Use the `gh` CLI for every GitHub operation: PRs, issues, checks, and raw API calls via `gh api`.
+
+### Pull requests
 
 Keep PR descriptions **concise and reviewer-focused**: what changed, why, and anything reviewers need to know. Avoid
 walls of text.
@@ -99,20 +124,21 @@ Default template (fill in only what's relevant, remove empty sections):
 **Notes for reviewer**: [anything to pay attention to, risks, skipped alternatives]
 ```
 
-## GitHub Interactions
+## Shell environment
 
-Always use the `gh` CLI tool when interacting with GitHub (creating PRs, issues, checking status, etc.) rather than
-using the API directly or other methods.
+- Search with `rg` and `fd`.
+- Get missing tools with `nix shell nixpkgs#<package>`; never install with `brew`.
 
-## Asking questions
+### SSH
 
-Never set the `preview` field on `AskUserQuestion` options. It switches the UI to a side-by-side layout where option
-labels are short and the descriptions are hidden, which is not enough context to choose confidently. Always use the
-plain form: every option carries both a `label` and a `description`. Code snippets, mockups, and comparisons belong in
-the message text instead.
+- SSH keys live in 1Password; each key use is approved by the user in person (Touch ID on Darwin, FIDO on Linux).
+  `ssh-add -l` listing no keys is the normal state and says nothing about key availability.
+- An SSH failure while the user is away usually means the approval went unanswered. Treat it as retryable once the user
+  is back. Conclude access is lost only on clear evidence: network errors, an unreachable host, a rejected key after
+  approval.
 
-## Tools
+### tmux
 
-- use `fd` instead of `find`
-- use `rg` instead of `grep`
-- never install packages with `brew`; use `nix shell nixpkgs#<package>` for any missing tools
+- Run commands that need interactive input you cannot supply (an SSH password prompt, for example) in a tmux session
+  and give the user the exact attach command (`tmux attach -t <name>`) to type it.
+- Prefer a shared tmux session for long or remote work the user may want to follow live.
