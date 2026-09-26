@@ -1,5 +1,4 @@
-{ ... }:
-{
+_: {
   znix.workarounds.dictd-db-mueller = {
     package = "dictdDBs.mueller_eng2rus_pkg";
     systems = [ "aarch64-darwin" ];

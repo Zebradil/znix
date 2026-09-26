@@ -1,5 +1,4 @@
-{ ... }:
-{
+_: {
   znix.workarounds.dictd-db-eng2rus = {
     package = "dictdDBs.eng2rus";
     systems = [ "aarch64-darwin" ];

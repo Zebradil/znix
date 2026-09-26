@@ -1,4 +1,4 @@
-{ ... }:
+_:
 let
   # Shared LSP server map. Single source of truth consumed by both the Claude
   # Code plugin renderer (modules/home/claude) and opencode's native `lsp`

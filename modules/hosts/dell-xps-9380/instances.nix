@@ -32,7 +32,7 @@ in
       networking.hostName = name;
       znix.adguard.enable = h.adguard or false;
       znix.dualNet = {
-        address = h.address;
+        inherit (h) address;
         fallbackAddress = h.fallback;
       };
       znix.k3sNode = {
