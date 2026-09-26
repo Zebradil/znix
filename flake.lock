@@ -935,11 +935,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790413168,
-        "narHash": "sha256-hmq6/ElcCWYHwNE1kUTiCA5HfJOo33Kpfub68V4vKe8=",
+        "lastModified": 1790414266,
+        "narHash": "sha256-YlqpQrSqPufRfmD4RBX6FaQniSbVNv4SlHWseXyhXhc=",
         "owner": "Zebradil",
         "repo": "sito",
-        "rev": "61d072ce38c13ee8f3c80d42b58a27104120ab7c",
+        "rev": "7b02effec25c52451476cb3f53d63e7f79488b3d",
         "type": "github"
       },
       "original": {
