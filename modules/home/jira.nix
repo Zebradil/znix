@@ -40,8 +40,7 @@ _: {
         # must open it with `project IS NOT EMPTY` or match nothing.
         xdg.configFile.".jira/.config.yml".source = yaml.generate "jira-config.yml" {
           installation = "Cloud";
-          server = cfg.server;
-          login = cfg.login;
+          inherit (cfg) server login;
           auth_type = "basic";
         };
       };

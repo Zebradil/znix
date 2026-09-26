@@ -303,7 +303,7 @@ in
         mkClaudeLsp =
           srv:
           {
-            command = srv.command;
+            inherit (srv) command;
             extensionToLanguage = srv.extensions;
           }
           // lib.optionalAttrs (srv.args != [ ]) { inherit (srv) args; }

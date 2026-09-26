@@ -1,5 +1,4 @@
-{ ... }:
-{
+_: {
   # Composes the profile statusline: the znix base line plus one badge per
   # active addon (ponytail). An addon ships a `<addon>-statusline.sh` that
   # prints a coloured badge from a flag file; running them in sequence lets

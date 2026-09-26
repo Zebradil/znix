@@ -214,7 +214,7 @@ _: {
             }) auth.registries;
 
             sops.secrets = lib.genAttrs secretKeys (_: {
-              sopsFile = auth.sopsFile;
+              inherit (auth) sopsFile;
             });
 
             sops.templates."docker-config" = {

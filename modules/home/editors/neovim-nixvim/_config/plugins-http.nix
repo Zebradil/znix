@@ -1,5 +1,4 @@
-{ ... }:
-{
+_: {
   # ─ HTTP / REST client ─────────────────────────────────────────
   # kulala: pure-lua REST client for .http / .rest files (curl backend).
   plugins.kulala = {

@@ -13,6 +13,7 @@
           shellcheck
           sops
           ssh-to-age
+          statix
           nixfmt
           vendir
         ]);

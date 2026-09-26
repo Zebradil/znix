@@ -10,12 +10,14 @@
               pkgs.actionlint
               pkgs.git
               pkgs.shellcheck
+              pkgs.statix
               pkgs.jq
               pkgs.python3
               pkgs.yq-go
             ];
           }
           ''
+            statix check --config ${inputs.self}/statix.toml ${inputs.self}
             actionlint -color ${inputs.self}/.github/workflows/*.y*ml
             shellcheck ${inputs.self}/.github/scripts/*.sh
             shellcheck --shell=bash ${inputs.self}/modules/home/skillsync/*.sh

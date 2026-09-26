@@ -28,7 +28,7 @@ so removing it is a single file deletion.
 A pin:
 
 ```nix
-{ ... }:
+_:
 {
   flake-file.inputs.nixpkgs-pin-mise.url = "github:NixOS/nixpkgs/9bc0289...";
 
@@ -42,7 +42,7 @@ A pin:
 An override:
 
 ```nix
-{ ... }:
+_:
 {
   znix.workarounds.keepassxc = {
     systems = [ "aarch64-darwin" ];
