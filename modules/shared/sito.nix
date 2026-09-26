@@ -5,19 +5,28 @@ let
   # request to the best reachable upstream — kasha box on the LAN, remote
   # cache elsewhere, cache.nixos.org as the last tier. Replaces the static
   # list + connect-timeout approach that made off-LAN builds crawl.
-  settings.tier = [
-    {
-      upstream = [
-        { url = "https://kasha.lan.zebradil.dev"; }
-        { url = "https://znix.zebradil.dev"; }
-      ];
-    }
-    {
-      upstream = [
-        { url = "https://cache.nixos.org"; }
-      ];
-    }
-  ];
+  #
+  # Named so a host can add an upstream to an existing tier, e.g.
+  # services.sito.tiers.private.upstreams.<name>.url = "...".
+  tiers = {
+    private = {
+      priority = 10;
+      upstreams = {
+        kasha = {
+          priority = 10;
+          url = "https://kasha.lan.zebradil.dev";
+        };
+        znix = {
+          priority = 20;
+          url = "https://znix.zebradil.dev";
+        };
+      };
+    };
+    public = {
+      priority = 20;
+      upstreams.nixos.url = "https://cache.nixos.org";
+    };
+  };
 
   # Determinate owns nix.conf on both platforms, so the module's own
   # nix.settings wiring would be inert (darwin) or fight the shared static
@@ -25,7 +34,7 @@ let
   service = {
     enable = true;
     manageSubstituters = false;
-    inherit settings;
+    inherit tiers;
   };
 in
 {
