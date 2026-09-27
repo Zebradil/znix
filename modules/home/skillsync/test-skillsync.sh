@@ -52,3 +52,37 @@ output=$(HOME="$tmp/home" SKILLSYNC_DATA="$tmp/data" SKILLSYNC_CONFIG="$tmp/home
 output=$(HOME="$tmp/home" SKILLSYNC_DATA="$tmp/data" SKILLSYNC_CONFIG="$tmp/home/.config/skillsync/config.yaml" bash "$script" diff source)
 [[ "$output" == *"skill/new-file"* ]]
 [[ "$output" != *"unrelated-file"* ]]
+
+# A source with `path` links bundles from that subdirectory.
+git init --quiet "$tmp/nested"
+git -C "$tmp/nested" config user.email test@example.com
+git -C "$tmp/nested" config user.name test
+mkdir -p "$tmp/nested/skills/deep"
+touch "$tmp/nested/skills/deep/SKILL.md"
+git -C "$tmp/nested" add .
+git -C "$tmp/nested" commit --quiet -m main
+git -C "$tmp/nested" branch -M main
+git clone --quiet --bare "$tmp/nested" "$tmp/nested.git"
+printf '%s\n' \
+  '  nested:' \
+  "    url: $tmp/nested.git" \
+  '    path: skills/' \
+  '    include:' \
+  '      - deep' \
+  >> "$tmp/home/.config/skillsync/config.yaml"
+
+HOME="$tmp/home" SKILLSYNC_DATA="$tmp/data" SKILLSYNC_CONFIG="$tmp/home/.config/skillsync/config.yaml" bash "$script" apply -y
+[[ "$(readlink "$tmp/home/target/deep")" == "$tmp/data/clones/nested/skills/deep" ]]
+[[ -L "$tmp/home/target/skill" ]]
+
+touch "$tmp/nested/skills/deep/new-file" "$tmp/nested/skills/other-file"
+git -C "$tmp/nested" add .
+git -C "$tmp/nested" commit --quiet -m update
+git -C "$tmp/nested" push --quiet "$tmp/nested.git" main
+
+output=$(HOME="$tmp/home" SKILLSYNC_DATA="$tmp/data" SKILLSYNC_CONFIG="$tmp/home/.config/skillsync/config.yaml" bash "$script" diff nested)
+[[ "$output" == *"skills/deep/new-file"* ]]
+[[ "$output" != *"other-file"* ]]
+
+output=$(HOME="$tmp/home" SKILLSYNC_DATA="$tmp/data" SKILLSYNC_CONFIG="$tmp/home/.config/skillsync/config.yaml" bash "$script" status)
+[[ "$output" == *"links: 2 ok, 0 need attention"* ]]

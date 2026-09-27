@@ -50,6 +50,24 @@ sources:
       - setup-nix-flake
 ```
 
+A source whose bundles live in a subdirectory sets `path`; bundles are still linked under their own name:
+
+```yaml
+sources:
+  docs-kit:
+    url: https://github.com/Zebradil/docs-kit.git
+    path: skills # bundles are skills/<name>
+    include:
+      - docs-write
+```
+
+A second, independent config (for example one targeting only the personal Claude profile) runs through the env
+overrides, with its own data dir so each config prunes only its own clones:
+
+```bash
+SKILLSYNC_CONFIG=~/.config/skillsync/personal.yaml SKILLSYNC_DATA=~/.local/share/skillsync-personal skillsync apply
+```
+
 ## Constraints
 
 - A skill bundle name may be included by at most one source (they share a flat namespace in each skills dir).
