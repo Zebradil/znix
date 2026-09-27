@@ -1,14 +1,13 @@
 function z::git:current_branch() {
   local ref
-  ref=$(git symbolic-ref --quiet HEAD 2> /dev/null)
+  ref=$(git symbolic-ref --quiet HEAD 2>/dev/null)
   local ret=$?
   if [[ $ret != 0 ]]; then
-    [[ $ret == 128 ]] && return  # no git repo.
-    ref=$(git rev-parse --short HEAD 2> /dev/null) || return
+    [[ $ret == 128 ]] && return # no git repo.
+    ref=$(git rev-parse --short HEAD 2>/dev/null) || return
   fi
   echo ${ref#refs/heads/}
 }
-
 
 function z::git:repo_name() {
   local repo_path
@@ -60,8 +59,8 @@ function z::git:wt_dir() {
 
 # Path of the worktree that has the branch checked out, empty if there is none.
 function z::git:wt_find() {
-  git worktree list --porcelain |
-    awk -v b="branch refs/heads/$1" '/^worktree /{p=substr($0,10)} $0==b{print p; exit}'
+  git worktree list --porcelain \
+    | awk -v b="branch refs/heads/$1" '/^worktree /{p=substr($0,10)} $0==b{print p; exit}'
 }
 
 # True if the branch tip is contained in any ref other than the branch itself
@@ -74,7 +73,7 @@ function z::git:wt_merged_ref() {
   refs=(${refs:#refs/heads/$1})
   # [^/]## so that a remote branch named <remote>/<other>/$1 still counts.
   refs=(${refs:#refs/remotes/[^/]##/$1})
-  (( $#refs ))
+  (($#refs))
 }
 
 # True if GitHub reports a merged pull request for the branch. This is the only
@@ -145,7 +144,7 @@ function wtl() {
   local lines=(${(f)"$(z::git:wt_list)"}) i dir branch state
   for i in {1..$#lines}; do
     dir=${lines[i]%%$'\t'*} branch=${lines[i]#*$'\t'}
-    if (( i == 1 )); then
+    if ((i == 1)); then
       state=main
     elif [[ -z $branch ]]; then
       state=detached
@@ -162,8 +161,9 @@ function wtl() {
 function wtg() {
   lib::check_commands fzf || return 1
   local dir
-  dir=$(git worktree list --porcelain | sed -n 's/^worktree //p' |
-    fzf --query="$1" --select-1 --exit-0) && cd "$dir"
+  dir=$(git worktree list --porcelain | sed -n 's/^worktree //p' \
+    | sort -r \
+    | fzf --query="$1" --no-sort --select-1 --exit-0) && cd "$dir"
 }
 
 # Remove the worktree at $2 and its branches: the one checked out in it and the
@@ -184,7 +184,7 @@ function z::git:wt_remove() {
   done
   branches=(${(u)branches:#$(z::git:main_branch)})
 
-  if (( ! $#force )); then
+  if ((! $#force)); then
     if [[ -n $(git -C "$dir" status --porcelain) ]]; then
       log::error "${dir:t} has uncommitted changes or untracked files, use --force"
       return 1
@@ -206,7 +206,7 @@ function z::git:wt_remove() {
   [[ ${PWD:A}/ == ${dir:A}/* ]] && cd "$root"
   git worktree remove $force "$dir" || return
   # -D, not -d: a squash-merged branch is never "fully merged" to git.
-  (( ! $#branches )) || git branch -D $branches
+  ((! $#branches)) || git branch -D $branches
 }
 
 # wtrm [-f|--force] [branch|-]: remove a worktree and its branches (see
@@ -216,7 +216,10 @@ function z::git:wt_remove() {
 # else; a refused pick is skipped and the rest are still removed.
 function wtrm() {
   local force=
-  [[ $1 == (-f|--force) ]] && { force=1; shift }
+  [[ $1 == (-f|--force) ]] && {
+    force=1
+    shift
+  }
 
   local root dir dirs=()
   root=$(z::git:wt_root) || return
@@ -228,9 +231,9 @@ function wtrm() {
     lib::check_commands fzf || return 1
     local lines=(${(f)"$(z::git:wt_list)"})
     # Show the branch first; the path after the tab is what gets removed.
-    dirs=(${(f)"$(print -rl -- ${lines[2,-1]} |
-      awk -F'\t' '{print ($2 == "" ? "(detached)" : $2) "\t" $1}' |
-      fzf --multi --exit-0 --delimiter='\t' | cut -f2)"})
+    dirs=(${(f)"$(print -rl -- ${lines[2,-1]} \
+      | awk -F'\t' '{print ($2 == "" ? "(detached)" : $2) "\t" $1}' \
+      | fzf --multi --exit-0 --delimiter='\t' | cut -f2)"})
   elif [[ -n $1 ]]; then
     dir=$(z::git:wt_find "$1")
     if [[ -z $dir ]]; then
