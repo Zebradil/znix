@@ -33,30 +33,38 @@ list_targets() {
 src_url() { src_cfg "$1" '.sources[env(S)].url'; }
 src_ref() { src_cfg "$1" '.sources[env(S)].ref // "main"'; }
 src_include() { src_cfg "$1" '.sources[env(S)].include // [] | .[]'; }
+src_path() {
+  local p
+  p=$(src_cfg "$1" '.sources[env(S)].path // ""')
+  printf '%s\n' "${p%/}"
+}
 
 require_config() {
   [ -f "$CONFIG" ] || die "no config at $CONFIG - nothing to do"
-  yq -e '((.targets | type) == "!!seq") and ((.targets | length) > 0) and ((.targets | map((type == "!!str") and (length > 0)) | all)) and ((.sources | type) == "!!map") and ((.sources | length) > 0) and (.sources | to_entries | map((.key | length > 0) and ((.value | type) == "!!map") and ((.value.url | type) == "!!str") and ((.value.url | length) > 0) and ((.value.include | type) == "!!seq") and ((.value.include | length) > 0) and (.value.include | map((type == "!!str") and (length > 0)) | all)) | all)' "$CONFIG" >/dev/null || die "config: targets must be non-empty strings; sources need url and non-empty include lists"
+  yq -e '((.targets | type) == "!!seq") and ((.targets | length) > 0) and ((.targets | map((type == "!!str") and (length > 0)) | all)) and ((.sources | type) == "!!map") and ((.sources | length) > 0) and (.sources | to_entries | map((.key | length > 0) and ((.value | type) == "!!map") and ((.value.url | type) == "!!str") and ((.value.url | length) > 0) and ((.value.include | type) == "!!seq") and ((.value.include | length) > 0) and (.value.include | map((type == "!!str") and (length > 0)) | all) and ((.value.path // "" | type) == "!!str")) | all)' "$CONFIG" >/dev/null || die "config: targets must be non-empty strings; sources need url, non-empty include lists, and an optional string path"
 }
 
 require_source() {
   [ "$(S="$1" yq -r '.sources | has(env(S))' "$CONFIG")" = "true" ] || die "unknown source: $1"
 }
 
-# DESIRED maps bundle name -> source name, across the whole config.
+# DESIRED maps bundle name -> source name, across the whole config;
+# DIRS maps bundle name -> its directory inside the source clone.
 # Prune always works from the full desired set, so a per-source apply
 # never touches links owned by other sources.
-declare -A DESIRED=()
+declare -A DESIRED=() DIRS=()
 build_desired() {
-  local s b n
+  local s b n p
   while IFS= read -r s; do
     n=0
+    p=$(src_path "$s")
     while IFS= read -r b; do
       n=$((n + 1))
       if [ -n "${DESIRED[$b]:-}" ] && [ "${DESIRED[$b]}" != "$s" ]; then
         die "bundle '$b' included by both '${DESIRED[$b]}' and '$s'"
       fi
       DESIRED[$b]="$s"
+      DIRS[$b]="$CLONES/$s${p:+/$p}/$b"
     done < <(src_include "$s")
     [ "$n" -gt 0 ] || die "source '$s' has an empty include list"
   done < <(list_sources)
@@ -102,7 +110,7 @@ cmd_status() {
   while IFS= read -r t; do
     for b in "${!DESIRED[@]}"; do
       src="${DESIRED[$b]}"
-      dest="$CLONES/$src/$b"
+      dest="${DIRS[$b]}"
       if [ -L "$t/$b" ]; then
         if [ "$(readlink "$t/$b")" = "$dest" ]; then
           ok=$((ok + 1))
@@ -124,7 +132,7 @@ cmd_status() {
 }
 
 cmd_diff() {
-  local only="${1:-}" s dir url ref head next b
+  local only="${1:-}" s dir url ref head next b p
   local -a included
   [ -z "$only" ] || require_source "$only"
   while IFS= read -r s; do
@@ -140,8 +148,9 @@ cmd_diff() {
     git -c "remote.origin.url=$url" -C "$dir" fetch --quiet origin "$ref"
     head=$(git -C "$dir" rev-parse HEAD)
     next=$(git -C "$dir" rev-parse FETCH_HEAD)
+    p=$(src_path "$s")
     included=()
-    while IFS= read -r b; do included+=("$b"); done < <(src_include "$s")
+    while IFS= read -r b; do included+=("${p:+$p/}$b"); done < <(src_include "$s")
     if [ "$head" = "$next" ]; then
       echo "up to date"
       continue
@@ -196,7 +205,7 @@ validate_bundles() {
   local b src dest
   for b in "${!DESIRED[@]}"; do
     src="${DESIRED[$b]}"
-    dest="$CLONES/$src/$b"
+    dest="${DIRS[$b]}"
     [ ! -d "$CLONES/$src/.git" ] || { [ -d "$dest" ] && [ -f "$dest/SKILL.md" ]; } || die "source '$src' has no valid bundle '$b'"
   done
 }
@@ -207,7 +216,7 @@ link_bundles() {
     mkdir -p "$t"
     for b in "${!DESIRED[@]}"; do
       src="${DESIRED[$b]}"
-      dest="$CLONES/$src/$b"
+      dest="${DIRS[$b]}"
       [ -d "$dest" ] || continue
       if [ -L "$t/$b" ]; then
         case "$(readlink "$t/$b")" in
@@ -232,7 +241,7 @@ prune() {
       raw=$(readlink "$e")
       case "$raw" in "$CLONES"/*) ;; *) continue ;; esac
       name=$(basename "$e")
-      if [ -n "${DESIRED[$name]:-}" ] && [ "$raw" = "$CLONES/${DESIRED[$name]}/$name" ]; then
+      if [ -n "${DESIRED[$name]:-}" ] && [ "$raw" = "${DIRS[$name]}" ]; then
         continue
       fi
       victims+=("$e")
