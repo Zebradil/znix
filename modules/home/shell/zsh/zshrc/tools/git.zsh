@@ -138,9 +138,10 @@ function z::git:wt_list() {
     /^$/{if (!p) print d "\t" b}'
 }
 
-# wtl: list worktrees with their branch and whether wtrm considers it merged.
-# Queries GitHub for every branch that no other ref contains.
-function wtl() {
+# Worktrees as "<state> <branch> <dir>" lines in z::git:wt_list order, where
+# state says whether wtrm considers the branch merged. Queries GitHub for every
+# branch that no other ref contains.
+function z::git:wt_status() {
   local lines=(${(f)"$(z::git:wt_list)"}) i dir branch state
   for i in {1..$#lines}; do
     dir=${lines[i]%%$'\t'*} branch=${lines[i]#*$'\t'}
@@ -153,8 +154,13 @@ function wtl() {
     else
       state=unmerged
     fi
-    printf '%-9s %-40s %s\n' $state ${branch:--} $dir
+    echo "$state ${branch:--} $dir"
   done
+}
+
+# wtl: list worktrees with their state (see z::git:wt_status).
+function wtl() {
+  z::git:wt_status | column -t
 }
 
 # wtg [query]: pick a worktree with fzf and cd into it.
@@ -229,11 +235,13 @@ function wtrm() {
   fi
   if [[ $1 == - ]]; then
     lib::check_commands fzf || return 1
-    local lines=(${(f)"$(z::git:wt_list)"})
-    # Show the branch first; the path after the tab is what gets removed.
-    dirs=(${(f)"$(print -rl -- ${lines[2,-1]} \
-      | awk -F'\t' '{print ($2 == "" ? "(detached)" : $2) "\t" $1}' \
-      | fzf --multi --exit-0 --delimiter='\t' | cut -f2)"})
+    local i lines=(${(f)"$(z::git:wt_list)"}) rows=(${(f)"$(z::git:wt_status | column -t)"})
+    # fzf hands back row numbers: column -t pads with spaces, so a directory
+    # containing spaces cannot be cut out of a row.
+    for i in ${(f)"$(print -rl -- ${rows[2,-1]} | awk '{print NR+1 "\t" $0}' \
+      | fzf --multi --exit-0 --delimiter='\t' --with-nth=2.. | cut -f1)"}; do
+      dirs+=(${lines[i]%%$'\t'*})
+    done
   elif [[ -n $1 ]]; then
     dir=$(z::git:wt_find "$1")
     if [[ -z $dir ]]; then
