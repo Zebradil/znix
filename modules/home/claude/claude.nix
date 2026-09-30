@@ -81,7 +81,7 @@ let
             };
             remoteControlAtStartup = true;
             tui = "fullscreen";
-            verbose = true;
+            verbose = false;
           };
           description = ''
             settings.json defaults merged under every profile's settings.
