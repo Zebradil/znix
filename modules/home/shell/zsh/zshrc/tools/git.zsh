@@ -138,11 +138,34 @@ function z::git:wt_list() {
     /^$/{if (!p) print d "\t" b}'
 }
 
-# Worktrees as "<state> <branch> <dir>" lines in z::git:wt_list order, where
-# state says whether wtrm considers the branch merged. Queries GitHub for every
-# branch that no other ref contains.
+# Icon for a worktree state, wrapped in its ANSI color when $2 is non-empty.
+function z::git:wt_icon() {
+  local -A icon=(main ⌂ merged ✓ unmerged ✗ detached '?' dirty ● clean ' ')
+  local -A color=(main 34 merged 32 unmerged 31 detached 35 dirty 33 clean 0)
+  if [[ -n $2 ]]; then
+    print -rn -- $'\e['${color[$1]}m${icon[$1]}$'\e[0m'
+  else
+    print -rn -- ${icon[$1]}
+  fi
+}
+
+# One-line legend of the wt_status icons, colored when $1 is non-empty.
+function z::git:wt_legend() {
+  local s items=()
+  for s in main merged unmerged detached dirty; do
+    items+=("$(z::git:wt_icon $s $1) $s")
+  done
+  print -r -- ${(j: · :)items}
+}
+
+# Worktrees as "<icons> <branch> <dir>" lines in z::git:wt_list order. The first
+# icon says whether wtrm considers the branch merged, the second marks
+# uncommitted changes or untracked files; only a clean merged worktree is
+# removable without --force. Icons are colored when $1 is non-empty. Queries
+# GitHub for every branch that no other ref contains.
 function z::git:wt_status() {
-  local lines=(${(f)"$(z::git:wt_list)"}) i dir branch state
+  local lines=(${(f)"$(z::git:wt_list)"}) i dir branch state dirty w=1
+  local dirs=() branches=() icons=()
   for i in {1..$#lines}; do
     dir=${lines[i]%%$'\t'*} branch=${lines[i]#*$'\t'}
     if ((i == 1)); then
@@ -154,13 +177,25 @@ function z::git:wt_status() {
     else
       state=unmerged
     fi
-    echo "$state ${branch:--} $dir"
+    dirty=clean
+    [[ -n $(git -C "$dir" status --porcelain 2>/dev/null) ]] && dirty=dirty
+    dirs+=("$dir") branches+=("${branch:--}")
+    icons+=("$(z::git:wt_icon $state $1)$(z::git:wt_icon $dirty $1)")
+    ((${#branches[-1]} > w)) && w=${#branches[-1]}
+  done
+  # printf, not column -t: color escapes would count towards column widths.
+  for i in {1..$#dirs}; do
+    printf '%s  %-*s  %s\n' "${icons[i]}" $w "${branches[i]}" "${dirs[i]}"
   done
 }
 
-# wtl: list worktrees with their state (see z::git:wt_status).
+# wtl: list worktrees with their state (see z::git:wt_status), the icon legend
+# on stderr so the table itself stays pipeable.
 function wtl() {
-  z::git:wt_status | column -t
+  local color=
+  [[ -t 1 ]] && color=1
+  z::git:wt_legend $color >&2
+  z::git:wt_status $color
 }
 
 # wtg [query]: pick a worktree with fzf and cd into it.
@@ -235,11 +270,12 @@ function wtrm() {
   fi
   if [[ $1 == - ]]; then
     lib::check_commands fzf || return 1
-    local i lines=(${(f)"$(z::git:wt_list)"}) rows=(${(f)"$(z::git:wt_status | column -t)"})
-    # fzf hands back row numbers: column -t pads with spaces, so a directory
+    local i lines=(${(f)"$(z::git:wt_list)"}) rows=(${(f)"$(z::git:wt_status 1)"})
+    # fzf hands back row numbers: rows are padded with spaces, so a directory
     # containing spaces cannot be cut out of a row.
     for i in ${(f)"$(print -rl -- ${rows[2,-1]} | awk '{print NR+1 "\t" $0}' \
-      | fzf --multi --exit-0 --delimiter='\t' --with-nth=2.. | cut -f1)"}; do
+      | fzf --multi --exit-0 --ansi --header="$(z::git:wt_legend 1)" \
+        --delimiter='\t' --with-nth=2.. | cut -f1)"}; do
       dirs+=(${lines[i]%%$'\t'*})
     done
   elif [[ -n $1 ]]; then
