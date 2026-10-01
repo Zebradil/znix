@@ -205,6 +205,18 @@ requests — where the push is gated off anyway by `PUSH_TO_CACHE`.
 `secrets/cache.yaml` remains the source of truth for the local push and the place to change a value;
 after editing it, mirror the change into the repository secrets with `gh secret set`.
 
+### Onboarding another repository
+
+To let another repository's CI push to the cache, run from a checkout of this flake:
+
+```bash
+nix run .#cache-onboard -- OWNER/REPO   # bare REPO resolves against your gh user
+```
+
+It sets the `CACHE_SIGNING_KEY` (from `SIGNING_KEY`), `AWS_ACCESS_KEY_ID` and
+`AWS_SECRET_ACCESS_KEY` secrets and the `CACHE_S3_URL` variable. Re-run it after
+rotating a credential to refresh every onboarded repository.
+
 ## Rotating a cache credential
 
 Edit `secrets/cache.yaml`, then push the same value to the matching repository secret:

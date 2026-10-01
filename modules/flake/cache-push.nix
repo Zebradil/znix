@@ -31,5 +31,22 @@ _: {
           }
         }/bin/cache-push";
       };
+
+      # `nix run .#cache-onboard -- [OWNER/]REPO` — copy the cache credentials
+      # into another repository's Actions secrets. See docs/cache.md.
+      apps.cache-onboard = {
+        type = "app";
+        program = "${
+          pkgs.writeShellApplication {
+            name = "cache-onboard";
+            runtimeInputs = [
+              pkgs.sops
+              pkgs.git
+              pkgs.gh
+            ];
+            text = builtins.readFile ./scripts/cache-onboard.sh;
+          }
+        }/bin/cache-onboard";
+      };
     };
 }
