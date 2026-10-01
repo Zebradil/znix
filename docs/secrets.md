@@ -44,9 +44,9 @@ sops secrets/hosts/tuxedo/ssh_host_ed25519.key
 
 ## Secret Paths
 
-| Path | Contents |
-|------|----------|
-| `secrets/users/zebradil.yaml` | `password`, `u2f_keys/*` |
-| `secrets/hosts/common.yaml` | `wireless` (PSK) |
-| `secrets/hosts/tuxedo/ssh_host_ed25519.key` | Host SSH private key |
-| `secrets/cache.yaml` | `cache-s3-url`, `signing-key`, `aws-access-key-id`, `aws-secret-access-key` (see [cache.md](cache.md)) |
+| Path                                        | Contents                                                                                               |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `secrets/users/zebradil.yaml`               | `password`, `u2f_keys/*`                                                                               |
+| `secrets/hosts/common.yaml`                 | `wireless` (PSK)                                                                                       |
+| `secrets/hosts/tuxedo/ssh_host_ed25519.key` | Host SSH private key                                                                                   |
+| `secrets/cache.yaml`                        | `CACHE_S3_URL`, `SIGNING_KEY`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (see [cache.md](cache.md)) |

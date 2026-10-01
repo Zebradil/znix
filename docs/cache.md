@@ -16,10 +16,10 @@ drift apart. Fixes arrive here through a `flake.lock` bump.
 
 | Key                     | Contents                                                                                          |
 | ----------------------- | ------------------------------------------------------------------------------------------------- |
-| `cache-s3-url`          | `s3://<bucket>?region=<region>` target for `nix copy --to`                                        |
-| `signing-key`           | Nix signing private key matching `znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=` |
-| `aws-access-key-id`     | AWS access key for the bucket                                                                     |
-| `aws-secret-access-key` | AWS secret key for the bucket                                                                     |
+| `CACHE_S3_URL`          | `s3://<bucket>?region=<region>` target for `nix copy --to`                                        |
+| `SIGNING_KEY`           | Nix signing private key matching `znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=` |
+| `AWS_ACCESS_KEY_ID`     | AWS access key for the bucket                                                                     |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key for the bucket                                                                     |
 
 Edit the values with:
 
@@ -150,12 +150,12 @@ is silently ignored. Nothing in this repo has to set them: both publishers
 append `compression=zstd&compression-level=6` themselves.
 
 - **CI** — nix-ci's `build` and `update-lock-pr` actions append it to
-  `cache-s3-url`; override with their `store-params` input
+  `CACHE_S3_URL`; override with their `store-params` input
 - **local push** — `kasha-cache-push` appends it to `CACHE_S3_URL`; override
   with `CACHE_STORE_PARAMS`
 
 Either one leaves a URL that names a `compression` of its own untouched, so the
-`cache-s3-url` key in `secrets/cache.yaml` and the `CACHE_S3_URL` repository
+`CACHE_S3_URL` key in `secrets/cache.yaml` and the `CACHE_S3_URL` repository
 variable both stay bare bucket URLs.
 
 Existing NARs stay xz; only new pushes change. The two formats coexist in one
@@ -192,10 +192,10 @@ sops decrypt could supply it. CI therefore reads three repository secrets and on
 
 | Name                    | Kind     | Contents                                          |
 | ----------------------- | -------- | ------------------------------------------------- |
-| `CACHE_PRIVATE_KEY`     | secret   | the `signing-key` value from `secrets/cache.yaml` |
+| `CACHE_PRIVATE_KEY`     | secret   | the `SIGNING_KEY` value from `secrets/cache.yaml` |
 | `AWS_ACCESS_KEY_ID`     | secret   | as in `secrets/cache.yaml`                        |
 | `AWS_SECRET_ACCESS_KEY` | secret   | as in `secrets/cache.yaml`                        |
-| `CACHE_S3_URL`          | variable | `cache-s3-url` verbatim, `s3://` scheme included  |
+| `CACHE_S3_URL`          | variable | `CACHE_S3_URL` verbatim, `s3://` scheme included  |
 
 `CACHE_S3_URL` is a variable, not a secret: it is a bucket name and an endpoint,
 and writing to it takes the AWS credentials, which are secrets. As a variable it
@@ -212,5 +212,5 @@ Edit `secrets/cache.yaml`, then push the same value to the matching repository s
 ```bash
 sops secrets/cache.yaml
 gh secret set CACHE_PRIVATE_KEY < /path/to/new-key   # or AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-gh variable set CACHE_S3_URL --body "$(sops decrypt --extract '["cache-s3-url"]' secrets/cache.yaml)"
+gh variable set CACHE_S3_URL --body "$(sops decrypt --extract '["CACHE_S3_URL"]' secrets/cache.yaml)"
 ```

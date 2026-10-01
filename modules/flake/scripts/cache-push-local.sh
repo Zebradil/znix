@@ -24,11 +24,14 @@ workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
 key_file="$workdir/signing.key"
-( umask 077; sops decrypt --extract '["signing-key"]' "$sops_file" > "$key_file" )
+(
+  umask 077
+  sops decrypt --extract '["SIGNING_KEY"]' "$sops_file" >"$key_file"
+)
 
-CACHE_S3_URL="$(sops decrypt --extract '["cache-s3-url"]' "$sops_file")"
-AWS_ACCESS_KEY_ID="$(sops decrypt --extract '["aws-access-key-id"]' "$sops_file")"
-AWS_SECRET_ACCESS_KEY="$(sops decrypt --extract '["aws-secret-access-key"]' "$sops_file")"
+CACHE_S3_URL="$(sops decrypt --extract '["CACHE_S3_URL"]' "$sops_file")"
+AWS_ACCESS_KEY_ID="$(sops decrypt --extract '["AWS_ACCESS_KEY_ID"]' "$sops_file")"
+AWS_SECRET_ACCESS_KEY="$(sops decrypt --extract '["AWS_SECRET_ACCESS_KEY"]' "$sops_file")"
 export CACHE_S3_URL AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
 export CACHE_SIGNING_KEY_FILE="$key_file"
 
