@@ -4,6 +4,20 @@
 
 log::debug "Loading aliases and functions"
 
+# Find files with RipGrep and process them with Perl.
+# Args:
+#   1. pattern: RipGrep pattern, available as $p in Perl expression
+#   2. expression: Perl expression
+# Example: z:rgp 'cache-s3-url|signing-key' 's/($p)/uc $1 =~ tr{-}{_}r/ge'
+z:rgp() {
+  local p="${1:?specify pattern}"
+  local e="${2:?specify expression}"
+  # The explicit "." stops rg from searching stdin when it is a pipe.
+  # xargs and perl have no long flags on macOS; -r keeps GNU xargs from running perl on stdin when nothing matches.
+  rg --files-with-matches --null "$p" . \
+    | Z_RGP_PATTERN="$p" xargs -0 -r perl -pi -e 'BEGIN { $p = $ENV{Z_RGP_PATTERN} }' -e "$e"
+}
+
 z:prefix-lines() {
   local prefix="${1:?specify prefix}"
   while read -r line; do
