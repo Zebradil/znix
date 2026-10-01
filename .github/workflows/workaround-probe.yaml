@@ -61,7 +61,7 @@ jobs:
         with:
           extra-substituters: https://znix.zebradil.dev
           extra-trusted-public-keys: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
-          signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
+          signing-key: ${{ secrets.CACHE_SIGNING_KEY }}
 
       # A failing build is the expected outcome, so the step must not fail the
       # job. `nix build` output is left in the log; only the verdict is exported.

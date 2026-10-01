@@ -192,7 +192,7 @@ sops decrypt could supply it. CI therefore reads three repository secrets and on
 
 | Name                    | Kind     | Contents                                          |
 | ----------------------- | -------- | ------------------------------------------------- |
-| `CACHE_PRIVATE_KEY`     | secret   | the `SIGNING_KEY` value from `secrets/cache.yaml` |
+| `CACHE_SIGNING_KEY`     | secret   | the `SIGNING_KEY` value from `secrets/cache.yaml` |
 | `AWS_ACCESS_KEY_ID`     | secret   | as in `secrets/cache.yaml`                        |
 | `AWS_SECRET_ACCESS_KEY` | secret   | as in `secrets/cache.yaml`                        |
 | `CACHE_S3_URL`          | variable | `CACHE_S3_URL` verbatim, `s3://` scheme included  |
@@ -203,7 +203,7 @@ stays readable after it is set, survives review, and is available to fork pull
 requests — where the push is gated off anyway by `PUSH_TO_CACHE`.
 
 `secrets/cache.yaml` remains the source of truth for the local push and the place to change a value;
-after editing it, mirror the change into the repository secrets with `gh secret set`.
+after editing it, mirror the change into the repository with `cache-onboard` (below).
 
 ### Onboarding another repository
 
@@ -217,12 +217,16 @@ It sets the `CACHE_SIGNING_KEY` (from `SIGNING_KEY`), `AWS_ACCESS_KEY_ID` and
 `AWS_SECRET_ACCESS_KEY` secrets and the `CACHE_S3_URL` variable. Re-run it after
 rotating a credential to refresh every onboarded repository.
 
+Reading from the cache needs no repository setting. nix-ci's `extra-substituters` /
+`extra-trusted-public-keys` (`cache-url` / `cache-public-key` on its wrapper workflows) default
+to empty, and both values are public, so workflows pass `https://znix.zebradil.dev` and the
+public key from `modules/shared/nix-settings.nix` inline.
+
 ## Rotating a cache credential
 
-Edit `secrets/cache.yaml`, then push the same value to the matching repository secret:
+Edit `secrets/cache.yaml`, then re-onboard every repository that pushes to the cache:
 
 ```bash
 sops secrets/cache.yaml
-gh secret set CACHE_PRIVATE_KEY < /path/to/new-key   # or AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-gh variable set CACHE_S3_URL --body "$(sops decrypt --extract '["CACHE_S3_URL"]' secrets/cache.yaml)"
+nix run .#cache-onboard -- zebradil/znix   # and each other onboarded repository
 ```

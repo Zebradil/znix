@@ -51,7 +51,7 @@ jobs:
         with:
           extra-substituters: https://znix.zebradil.dev
           extra-trusted-public-keys: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
-          signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
+          signing-key: ${{ secrets.CACHE_SIGNING_KEY }}
 
       - name: Update flake.lock and open PR
         id: update

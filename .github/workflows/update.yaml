@@ -119,7 +119,7 @@ jobs:
         with:
           extra-substituters: ${{ env.CACHE_PULL_URL }}
           extra-trusted-public-keys: ${{ env.CACHE_PUBLIC_KEY }}
-          signing-key: ${{ secrets.CACHE_PRIVATE_KEY }}
+          signing-key: ${{ secrets.CACHE_SIGNING_KEY }}
 
       - name: Build attr
         id: build
