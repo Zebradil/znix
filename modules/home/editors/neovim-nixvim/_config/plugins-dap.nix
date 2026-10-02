@@ -21,6 +21,7 @@ _: {
             dap_go_enabled = true;
           };
         };
+        python.enable = true;
       };
       settings = {
         output.open_on_run = false;
