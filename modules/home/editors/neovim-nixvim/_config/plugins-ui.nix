@@ -54,7 +54,7 @@
           }
           {
             __unkeyed-1 = "<leader>r";
-            group = "REST";
+            group = "Run";
             icon = "󰆨 ";
           }
           {
