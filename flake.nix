@@ -57,10 +57,7 @@
       url = "github:Zebradil/pr-autopilot";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    sito = {
-      url = "github:Zebradil/sito";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    sito.url = "github:Zebradil/sito";
     sofka = {
       url = "github:nklmilojevic/sofka";
       inputs.nixpkgs.follows = "nixpkgs";

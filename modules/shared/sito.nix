@@ -38,10 +38,7 @@ let
   };
 in
 {
-  flake-file.inputs.sito = {
-    url = "github:Zebradil/sito";
-    inputs.nixpkgs.follows = "nixpkgs";
-  };
+  flake-file.inputs.sito.url = "github:Zebradil/sito";
 
   flake.modules.darwin.sito = {
     imports = [ inputs.sito.darwinModules.default ];
