@@ -4,10 +4,8 @@ name: Build and Publish
 # can realize their toplevel from the cache instead of compiling it. On a manual run it can also
 # refresh flake.lock first and commit it back — but only after the build proves it is good.
 #
-# Explicit jobs rather than `zebradil/nix-ci/.github/workflows/ci.yaml@v1.0.0`, for the same reason as
-# test.yaml: each push needs a kasha generation manifest built from the `build` action's
-# `paths-file`, and the wrapper workflow forwards no outputs. The flake-update/commit pair is also
-# outside anything nix-ci offers.
+# Explicit jobs rather than `zebradil/nix-ci/.github/workflows/ci.yaml`: the flake-update/commit
+# pair is outside anything nix-ci offers.
 
 on:
   push:
@@ -122,36 +120,11 @@ jobs:
           signing-key: ${{ secrets.CACHE_SIGNING_KEY }}
 
       - name: Build attr
-        id: build
         uses: zebradil/nix-ci/.github/actions/build@9c24e195d57be4639a5c85007c0c73eb805604cc # v2.0.1
         with:
           attr: ${{ matrix.attr }}
           strategy: uncached-leaves
           cache-s3-url: ${{ vars.CACHE_S3_URL }}
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
-      - name: Check for pushed paths
-        id: pushed
-        # always(): a partially failed build still pushed what it finished, and those paths need a
-        # manifest or the nightly kasha GC sweep takes them. `paths-file` may name an empty file
-        # when the target was already fully cached; `kasha emit` rejects an empty closure.
-        if: ${{ always() && steps.build.outputs.paths-file != '' }}
-        env:
-          PATHS_FILE: ${{ steps.build.outputs.paths-file }}
-        run: |
-          if [[ -s "$PATHS_FILE" ]]; then
-            echo "any=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Emit kasha manifest
-        if: ${{ always() && steps.pushed.outputs.any == 'true' }}
-        uses: zebradil/kasha/.github/actions/emit-manifest@4e685af9603b3c27f5a59905049e6da3d8f7775f # v0.6.0
-        with:
-          flake: znix
-          paths-file: ${{ steps.build.outputs.paths-file }}
-          attr: ${{ matrix.attr }}
-          s3-url: ${{ vars.CACHE_S3_URL }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
