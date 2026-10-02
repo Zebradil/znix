@@ -2,11 +2,6 @@ name: Update Flake Lock (PR)
 
 # Nightly `nix flake update` opened as a PR, with an dix package diff of what the update really
 # changes and the post-update builds published to the binary cache.
-#
-# Calls the `update-lock-pr` action rather than `zebradil/nix-ci/.github/workflows/update-pr.yaml`,
-# because the closure it pushes needs a kasha generation manifest chained after it — otherwise the
-# nightly kasha GC sweep deletes the NARs it just uploaded. That needs the action's `paths-file`
-# output, and the wrapper workflow forwards no outputs.
 
 on:
   schedule:
@@ -54,7 +49,6 @@ jobs:
           signing-key: ${{ secrets.CACHE_SIGNING_KEY }}
 
       - name: Update flake.lock and open PR
-        id: update
         uses: zebradil/nix-ci/.github/actions/update-lock-pr@9c24e195d57be4639a5c85007c0c73eb805604cc # v2.0.1
         with:
           token: ${{ steps.app-token.outputs.token || github.token }}
@@ -65,21 +59,5 @@ jobs:
             checks.x86_64-linux.tuxedo-build
             checks.aarch64-linux.toddler-build
           cache-s3-url: ${{ env.CACHE_S3_URL }}
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
-      # One manifest per update run, listing the closure the action just pushed. `attr` is the fixed
-      # group name `update` rather than a target: the diff targets vary from run to run, so they
-      # cannot name a stable retention group.
-      - name: Emit kasha manifest
-        if: ${{ always() && steps.update.outputs.paths-file != '' && env.CACHE_S3_URL != '' }}
-        uses: zebradil/kasha/.github/actions/emit-manifest@4e685af9603b3c27f5a59905049e6da3d8f7775f # v0.6.0
-        with:
-          flake: znix
-          paths-file: ${{ steps.update.outputs.paths-file }}
-          attr: update
-          gen: ${{ steps.update.outputs.gen }}
-          branch: ${{ steps.update.outputs.branch }}
-          s3-url: ${{ env.CACHE_S3_URL }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
