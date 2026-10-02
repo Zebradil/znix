@@ -73,7 +73,7 @@ jobs:
       # cannot name a stable retention group.
       - name: Emit kasha manifest
         if: ${{ always() && steps.update.outputs.paths-file != '' && env.CACHE_S3_URL != '' }}
-        uses: zebradil/kasha/.github/actions/emit-manifest@b2bd91080ef092a19be5edb021469e514ba27d7d # v0.5.0
+        uses: zebradil/kasha/.github/actions/emit-manifest@4e685af9603b3c27f5a59905049e6da3d8f7775f # v0.6.0
         with:
           flake: znix
           paths-file: ${{ steps.update.outputs.paths-file }}
