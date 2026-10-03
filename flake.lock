@@ -420,11 +420,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790902512,
-        "narHash": "sha256-/6hYljBInVFTDcBhMWF4Ph7JKFa9ca+k0sLh2/GxnSY=",
+        "lastModified": 1790994112,
+        "narHash": "sha256-PK3ObJbya8JsdZlrubfbcH/Kt85BYyIM4a/xE4cH+8o=",
         "owner": "Zebradil",
         "repo": "gke-kubeconfiger",
-        "rev": "5e8d12c06ec42c3d55a21a6806e9cbe459712cbf",
+        "rev": "e539dcba25c091e6256d7b0385ab74662cf1b5f5",
         "type": "github"
       },
       "original": {
@@ -458,11 +458,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790955005,
-        "narHash": "sha256-EEQKUylD8zuRTmDFX4rbwsHQ+iZhqqOldYcFN8SLcE0=",
+        "lastModified": 1790989254,
+        "narHash": "sha256-ZN+riaeFuE+DZ5zfqJiXlM12jLwZzeIXiNkU1YeHMXI=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "0560d64401a6d5370732a69d08bc4a6b135962d9",
+        "rev": "acd21c5a3420a9d5fd0ed06299b10828267ef9ba",
         "type": "github"
       },
       "original": {
