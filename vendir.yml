@@ -14,7 +14,7 @@ directories:
       - path: .
         git:
           url: https://github.com/mattpocock/skills
-          ref: v1.2.3
+          ref: v1.3.1
         includePaths:
           - skills/engineering/**
           - skills/productivity/**
