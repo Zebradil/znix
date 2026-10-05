@@ -69,7 +69,17 @@
     # Persistence configuration for various pluggable services lives here instead
     # of their corresponding modules because `environment.persistence` only exists
     # on impermanence hosts, evaluation on other hosts would fail otherwise.
-    environment.persistence."/persist".directories = [ "/var/lib/tailscale" ];
+    environment.persistence."/persist".directories = [
+      "/var/lib/tailscale"
+      # DynamicUser cache root, for sito's vmagent queue (modules/shared/sito.nix)
+      # to survive a reboot while offline. Persisted whole because impermanence
+      # would create it 0755 as a parent of a narrower entry, exposing the
+      # dynamic-uid dirs systemd keeps behind it.
+      {
+        directory = "/var/cache/private";
+        mode = "0700";
+      }
+    ];
 
     programs.zsh.enable = true;
 

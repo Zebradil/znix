@@ -967,11 +967,11 @@
         "nixpkgs": "nixpkgs_7"
       },
       "locked": {
-        "lastModified": 1791163212,
-        "narHash": "sha256-wezNWr1MGMCj2C7tsxFZKzWsspzqEQxZVgRcBMlOs5E=",
+        "lastModified": 1791236934,
+        "narHash": "sha256-r7tw5z+yXUL7yKPTUqoDWaHRJG4vOunW//P1GZA7TSA=",
         "owner": "Zebradil",
         "repo": "sito",
-        "rev": "4150eb9dc159266ef56925b3929dbf2a8acbbc47",
+        "rev": "3be6ef21c74a64bb28f3fb8e6d458b6790cbf0e0",
         "type": "github"
       },
       "original": {
