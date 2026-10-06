@@ -41,7 +41,7 @@ let
   # through the cluster vmagent's tailnet ingress — reachable on and off the
   # LAN. That vmagent fans out to vmks (30d retention), which bounds how long
   # an offline laptop's queue is still worth sending.
-  remoteWriteUrl = "https://vmagent.ts.zebradil.dev/api/v1/write";
+  remoteWriteUrl = "https://vmagent.lan.zebradil.dev/api/v1/write";
   scrapeInterval = "10s";
   maxDiskUsage = "1GB";
   # Every host scrapes sito at the same localhost address, so without this
