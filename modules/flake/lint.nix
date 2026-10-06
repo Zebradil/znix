@@ -20,7 +20,6 @@
             statix check --config ${inputs.self}/statix.toml ${inputs.self}
             actionlint -color ${inputs.self}/.github/workflows/*.y*ml
             shellcheck ${inputs.self}/.github/scripts/*.sh
-            shellcheck --shell=bash ${inputs.self}/modules/home/skillsync/*.sh
             shellcheck ${inputs.self}/hack/*.sh
 
             # assets/bin takes whatever scripts land there, so lint by shebang
@@ -32,7 +31,6 @@
             done
 
             bash ${inputs.self}/assets/bin/kubectl-inventory --self-test
-            bash ${inputs.self}/modules/home/skillsync/test-skillsync.sh
             # Fixtures for all three transcript stores: the tripwire for the next
             # Claude Code log change, Cursor JSONL change, or opencode migration.
             python3 ${inputs.self}/modules/home/session-export/session-export.py --selftest

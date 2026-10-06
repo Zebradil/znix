@@ -1,7 +1,8 @@
 # Vendored AI Skills
 
 External agent skills ([mattpocock/skills](https://github.com/mattpocock/skills),
-[DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail)) are vendored
+[DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail),
+[Zebradil/docs-kit](https://github.com/Zebradil/docs-kit)) are vendored
 into the repo with [vendir](https://carvel.dev/vendir/) rather than pulled as
 flake inputs. The synced files are committed, so every upstream update lands as a
 reviewable diff instead of an opaque lock bump.
@@ -17,6 +18,7 @@ vendor/
     productivity/<skill>/
   ponytail/
     hooks/ skills/ commands/ .opencode/ .cursor/
+  docs-kit/<skill>/
 ```
 
 ## How it wires in
@@ -26,6 +28,10 @@ bundle lands directly under `engineering/` or `productivity/`. The
 `znix.claude.extraSkillRoots` option (in `modules/home/claude/claude.nix`)
 defaults to those two directories. Claude, OpenCode, and Cursor symlink bundles
 into their native skill locations. Claude honours per-profile `excludeAssets.skills`.
+
+`docs-kit` is personal-only: `mkPersonalProfile` adds it through the per-profile
+`profiles.<name>.extraSkillRoots`, so neither company profiles nor OpenCode and
+Cursor see it.
 
 No `.nix` change is needed to add or drop a skill from an already-vendored
 source — `vendir sync` rewrites the tree and the modules pick it up. Cursor

@@ -165,6 +165,16 @@ let
                     );
                   };
 
+                  extraSkillRoots = lib.mkOption {
+                    type = lib.types.listOf lib.types.path;
+                    default = [ ];
+                    description = ''
+                      Skill roots for this profile only, merged after the global
+                      znix.claude.extraSkillRoots. Same layout: immediate
+                      children are skill bundles.
+                    '';
+                  };
+
                   excludeAssets = lib.mkOption {
                     default = { };
                     description = "Per-category asset names (without .md) to omit for this profile";
@@ -244,6 +254,7 @@ in
         ponytail = true;
         configDir = ".config/personal-claude";
         command = "claude";
+        extraSkillRoots = [ (inputs.self + "/vendor/docs-kit") ];
         settings = lib.recursiveUpdate {
           permissions.allow = renovatePermissions;
         } settings;
@@ -434,8 +445,8 @@ in
               }
             ) filtered;
 
-        # Symlink skill bundles from extraSkillRoots into the profile's skills/,
-        # honouring the same exclude list as the skills category.
+        # Symlink skill bundles from the global and per-profile extraSkillRoots
+        # into the profile's skills/, honouring the skills exclude list.
         mkExtraSkillFiles =
           profile:
           let
@@ -456,7 +467,7 @@ in
                   }
                 ) (lib.filterAttrs (n: _: !lib.elem (stem n) excluded) (builtins.readDir root));
           in
-          lib.foldl' (acc: root: acc // mkRoot root) { } extraSkillRoots;
+          lib.foldl' (acc: root: acc // mkRoot root) { } (extraSkillRoots ++ profile.extraSkillRoots);
 
         # Package Claude-specific scripts as standalone executables on PATH.
         helperScripts =
