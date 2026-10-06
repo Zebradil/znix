@@ -10,10 +10,10 @@ directories:
   path: vendor/mattpocock-skills
 - contents:
   - git:
-      commitTitle: 'chore: release v4.12.0 (#1031)...'
-      sha: e15862bb04d04285233a164460ced063941d9ef5
+      commitTitle: 'chore: release v4.13.0 (#1041)...'
+      sha: 08e952d7a8057a57ce561ff1330d093fd92eec67
       tags:
-      - v4.12.0
+      - v4.13.0
     path: .
   path: vendor/ponytail
 kind: LockConfig
