@@ -27,8 +27,9 @@ import time
 import unicodedata
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Optional
@@ -44,6 +45,14 @@ CLAUDE_UA = "claude-code/2.1.223"
 # and Copilot don't, so one local rule keeps the three rows comparable.
 WARN_PCT = 80
 
+# Extrapolating less than a day of spend turns one heavy session into a
+# month-long forecast.
+MIN_PROJECTION_SECONDS = 86400
+
+BAR_WIDTH = 20
+EIGHTHS = " ▏▎▍▌▋▊▉"
+GREEN, YELLOW, RED, DIM, BOLD = "32", "33", "31", "2", "1"
+
 
 class Unavailable(Exception):
     """A vendor can't be read for a reason the user can act on."""
@@ -52,31 +61,61 @@ class Unavailable(Exception):
 @dataclass
 class Row:
     vendor: str
-    amount: str = ""
-    pct: Optional[float] = None
-    resets: str = ""
+    used: Decimal = Decimal(0)
+    limit: Optional[Decimal] = None
+    start: Optional[datetime] = None
+    end: Optional[datetime] = None
     error: str = ""
     raw: Any = field(default=None, repr=False)
 
 
+def dec(value: Any) -> Optional[Decimal]:
+    """Vendor amounts can be fractional, and their docs warn off binary floats."""
+    return None if value is None else Decimal(str(value))
+
+
 def money(minor: Any) -> str:
-    """Format a cent-equivalent amount. Vendor amounts can be fractional, and
-    their docs warn off binary floats."""
-    return f"${(Decimal(str(minor)) / 100).quantize(Decimal('0.01')):,}"
+    """Format a cent-equivalent amount."""
+    return f"${(dec(minor) / 100).quantize(Decimal('0.01')):,}"
 
 
 def pct(used: Any, limit: Any) -> Optional[float]:
     if not limit:
         return None
-    return float(Decimal(str(used)) / Decimal(str(limit)) * 100)
+    return float(dec(used) / dec(limit) * 100)
 
 
-def first_of_next_month() -> str:
+def month_bounds(now: datetime) -> tuple:
     """Claude spend caps are monthly and reset at 00:00 UTC on the 1st. The
     payload states the period but not the date."""
-    now = datetime.now(timezone.utc)
-    year, month = (now.year + 1, 1) if now.month == 12 else (now.year, now.month + 1)
-    return f"{year:04d}-{month:02d}-01"
+    start = now.astimezone(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    if start.month == 12:
+        return start, start.replace(year=start.year + 1, month=1)
+    return start, start.replace(month=start.month + 1)
+
+
+def parse_utc(stamp: str) -> datetime:
+    """Vendors send both `2026-11-01` and `2026-11-01T00:00:00.000Z`."""
+    dt = datetime.fromisoformat(stamp)
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def projected(row: Row, now: datetime) -> Optional[Decimal]:
+    """Linear run-rate: spend so far scaled to the whole period."""
+    elapsed = (now - row.start).total_seconds()
+    if elapsed < MIN_PROJECTION_SECONDS:
+        return None
+    return row.used * Decimal((row.end - row.start).total_seconds()) / Decimal(elapsed)
+
+
+def pace(row: Row, now: datetime) -> float:
+    """Share of the period already gone: where an even spender would be."""
+    period = (row.end - row.start).total_seconds()
+    return min(max((now - row.start).total_seconds() / period, 0.0), 1.0)
+
+
+def amount(row: Row) -> str:
+    return money(row.used) if row.limit is None else f"{money(row.used)} / {money(row.limit)}"
 
 
 def _http_json(url: str, headers: dict) -> Any:
@@ -91,11 +130,15 @@ def _jwt_claim(token: str, claim: str) -> Any:
     return json.loads(base64.urlsafe_b64decode(payload))[claim]
 
 
+def dir_digest(config_dir: str) -> str:
+    norm = unicodedata.normalize("NFC", config_dir)
+    return hashlib.sha256(norm.encode()).hexdigest()[:8]
+
+
 def keychain_service(config_dir: str) -> str:
     """Claude Code namespaces its keychain service per config dir: the bare
     name for the default dir, plus `-<sha256(dir)[:8]>` for a CLAUDE_CONFIG_DIR."""
-    norm = unicodedata.normalize("NFC", config_dir)
-    return f"Claude Code-credentials-{hashlib.sha256(norm.encode()).hexdigest()[:8]}"
+    return f"Claude Code-credentials-{dir_digest(config_dir)}"
 
 
 def fetch_claude(config_dir: str) -> Any:
@@ -128,10 +171,9 @@ def row_claude(raw: Any) -> Row:
     spend = raw.get("spend") or {}
     if not spend.get("enabled"):
         raise Unavailable("seat has no spend cap")
-    used = spend["used"]["amount_minor"]
     limit = (spend.get("limit") or {}).get("amount_minor")
-    amount = money(used) if limit is None else f"{money(used)} / {money(limit)}"
-    return Row("claude", amount, pct(used, limit), first_of_next_month())
+    start, end = month_bounds(datetime.now(timezone.utc))
+    return Row("claude", dec(spend["used"]["amount_minor"]), dec(limit), start, end)
 
 
 def fetch_cursor() -> Any:
@@ -160,10 +202,11 @@ def row_cursor(raw: Any) -> Row:
     overall = ((raw.get("individualUsage") or {}).get("overall")) or {}
     if not overall.get("enabled"):
         raise Unavailable("no individual cap on this seat")
-    used, limit = overall["used"], overall.get("limit")
-    amount = money(used) if limit is None else f"{money(used)} / {money(limit)}"
-    resets = (raw.get("billingCycleEnd") or "")[:10] or first_of_next_month()
-    return Row("cursor", amount, pct(used, limit), resets)
+    try:
+        start, end = parse_utc(raw["billingCycleStart"]), parse_utc(raw["billingCycleEnd"])
+    except (KeyError, TypeError, ValueError):
+        start, end = month_bounds(datetime.now(timezone.utc))
+    return Row("cursor", dec(overall["used"]), dec(overall.get("limit")), start, end)
 
 
 def fetch_copilot() -> Any:
@@ -182,19 +225,20 @@ def row_copilot(raw: Any) -> Row:
     quota = (raw.get("quota_snapshots") or {}).get("premium_interactions") or {}
     if not quota.get("has_quota"):
         raise Unavailable("seat has no premium-request quota")
-    used, limit = quota["credits_used"], quota.get("entitlement")
-    if quota.get("unlimited") or not limit:
-        return Row("copilot", money(used), None, raw.get("quota_reset_date", ""))
-    amount = f"{money(used)} / {money(limit)}"
-    return Row("copilot", amount, pct(used, limit), raw.get("quota_reset_date", ""))
+    end = parse_utc(raw.get("quota_reset_date_utc") or raw["quota_reset_date"])
+    # shortcut: assumes the quota resets monthly on the 1st, as business seats
+    # do; read a period start from the payload if GitHub ever ships one.
+    start = month_bounds(end - timedelta(days=1))[0]
+    limit = None if quota.get("unlimited") else dec(quota.get("entitlement")) or None
+    return Row("copilot", dec(quota["credits_used"]), limit, start, end)
 
 
 def _fresh(at: float, now: float) -> bool:
     return 0 <= now - at < CACHE_TTL
 
 
-def cached(name: str, refresh: bool, fetch) -> Any:
-    path = CACHE_DIR / f"{name}.json"
+def cached(key: str, refresh: bool, fetch) -> Any:
+    path = CACHE_DIR / f"{key}.json"
     if not refresh and path.exists():
         try:
             blob = json.loads(path.read_text())
@@ -214,7 +258,11 @@ def describe(exc: Exception) -> str:
     if isinstance(exc, subprocess.CalledProcessError):
         return (exc.stderr or "").strip().splitlines()[0] if exc.stderr else "command failed"
     if isinstance(exc, urllib.error.HTTPError):
-        return f"HTTP {exc.code} — credential may have expired"
+        if exc.code in (401, 403):
+            return f"HTTP {exc.code} — credential may have expired"
+        if exc.code == 429:
+            return "HTTP 429 — rate limited, retry later"
+        return f"HTTP {exc.code}"
     if isinstance(exc, urllib.error.URLError):
         return f"{exc.reason}"
     if isinstance(exc, FileNotFoundError):
@@ -224,9 +272,9 @@ def describe(exc: Exception) -> str:
     return f"{type(exc).__name__}: {exc}"
 
 
-def collect(name: str, fetch, to_row, refresh: bool) -> Row:
+def collect(name: str, key: str, fetch, to_row, refresh: bool) -> Row:
     try:
-        raw = cached(name, refresh, fetch)
+        raw = cached(key, refresh, fetch)
         row = to_row(raw)
         row.raw = raw
         return row
@@ -234,15 +282,58 @@ def collect(name: str, fetch, to_row, refresh: bool) -> Row:
         return Row(name, error=describe(exc))
 
 
-def render(rows: list) -> None:
-    width = max((len(r.amount) for r in rows), default=0)
+def tone(share: Optional[float]) -> str:
+    if share is None:
+        return ""
+    return RED if share >= 100 else YELLOW if share >= WARN_PCT else GREEN
+
+
+def bar(share: float, mark: float, paint) -> str:
+    cells = min(share, 100) / 100 * BAR_WIDTH
+    full, eighth = int(cells), int(cells % 1 * 8)
+    at = min(int(mark * BAR_WIDTH), BAR_WIDTH - 1)
+    out = []
+    for i in range(BAR_WIDTH):
+        if i < full:
+            out.append(paint("█", tone(share)))
+        elif i == full and eighth:
+            out.append(paint(EIGHTHS[eighth], tone(share)))
+        elif i == at:
+            out.append(paint("│", BOLD))
+        else:
+            out.append(paint("░", DIM))
+    return "".join(out)
+
+
+def render(rows: list, now: datetime, color: bool) -> None:
+    def paint(text: str, code: str) -> str:
+        return f"\033[{code}m{text}\033[0m" if color and code else text
+
+    ok = [r for r in rows if not r.error]
+    used_w = max((len(money(r.used)) for r in ok), default=0)
+    limit_w = max((len(money(r.limit)) for r in ok if r.limit), default=0)
+    projs = {r.vendor: projected(r, now) for r in ok}
+    proj_w = max((len(money(p)) for p in projs.values() if p is not None), default=1)
+
     for r in rows:
         if r.error:
-            print(f"{r.vendor:<8} unavailable: {r.error}")
+            print(f"{r.vendor:<8} {paint('unavailable: ' + r.error, DIM)}")
             continue
-        share = "    —" if r.pct is None else f"{r.pct:4.0f}%"
-        warn = "  !" if r.pct is not None and r.pct >= WARN_PCT else ""
-        print(f"{r.vendor:<8} {r.amount:>{width}}  {share}  resets {r.resets}{warn}")
+        share = pct(r.used, r.limit)
+        proj = projs[r.vendor]
+        proj_share = None if proj is None else pct(proj, r.limit)
+        meter = " " * BAR_WIDTH if share is None else bar(share, pace(r, now), paint)
+        share_s = "   —" if share is None else paint(f"{share:3.0f}%", tone(share))
+        limit_s = f" / {money(r.limit):>{limit_w}}" if r.limit else " " * (limit_w + 3)
+        proj_s = paint(f"{'—' if proj is None else money(proj):>{proj_w}}", tone(proj_share))
+        proj_pct = "" if proj_share is None else paint(f" {proj_share:3.0f}%", tone(proj_share))
+        left = max((r.end - now).total_seconds(), 0)
+        left_s = f"{left // 86400:.0f}d" if left >= 86400 else f"{left // 3600:.0f}h"
+        print(
+            f"{r.vendor:<8} {meter} {share_s}  {money(r.used):>{used_w}}{limit_s}"
+            f"  {paint('proj', DIM)} {proj_s}{proj_pct}"
+            f"  {paint(f'resets {r.end:%Y-%m-%d} ({left_s})', DIM)}"
+        )
 
 
 def self_check() -> None:
@@ -265,24 +356,46 @@ def self_check() -> None:
     # Any non-default dir: the digest is what names the keychain entry.
     assert keychain_service("/home/user/.config/example-claude").endswith("-01e206b5")
 
-    assert row_claude(
+    utc = timezone.utc
+    assert month_bounds(datetime(2026, 12, 31, 23, tzinfo=utc)) == (
+        datetime(2026, 12, 1, tzinfo=utc), datetime(2027, 1, 1, tzinfo=utc))
+    assert parse_utc("2026-09-01") == parse_utc("2026-09-01T00:00:00.000Z")
+
+    oct_row = Row("x", Decimal(1000), Decimal(10000),
+                  datetime(2026, 10, 1, tzinfo=utc), datetime(2026, 11, 1, tzinfo=utc))
+    assert projected(oct_row, datetime(2026, 10, 11, tzinfo=utc)) == Decimal(3100)
+    assert projected(oct_row, datetime(2026, 10, 1, 12, tzinfo=utc)) is None
+    assert pace(oct_row, datetime(2026, 9, 1, tzinfo=utc)) == 0.0
+
+    def plain(text, _code):
+        return text
+
+    assert bar(50, 0.75, plain) == "█" * 10 + "░" * 5 + "│" + "░" * 4
+    assert bar(150, 0.1, plain) == "█" * BAR_WIDTH
+    assert bar(2.5, 0.0, plain) == "▌" + "░" * (BAR_WIDTH - 1)  # fill hides the marker
+
+    assert amount(row_claude(
         {"spend": {"enabled": True, "used": {"amount_minor": 20193},
                    "limit": {"amount_minor": 50000}}}
-    ).amount == "$201.93 / $500.00"
-    assert row_cursor(
+    )) == "$201.93 / $500.00"
+    cursor = row_cursor(
         {"individualUsage": {"overall": {"enabled": True, "used": 39, "limit": 30000}},
+         "billingCycleStart": "2026-08-01T00:00:00.000Z",
          "billingCycleEnd": "2026-09-01T00:00:00.000Z"}
-    ).resets == "2026-09-01"
-    assert row_copilot(
+    )
+    assert (cursor.start.day, cursor.end.month) == (1, 9)
+    copilot = row_copilot(
         {"quota_snapshots": {"premium_interactions": {
             "has_quota": True, "credits_used": 1178, "entitlement": 40000}},
-         "quota_reset_date": "2026-09-01"}
-    ).amount == "$11.78 / $400.00"
-    assert row_copilot(
+         "quota_reset_date": "2026-01-01"}
+    )
+    assert amount(copilot) == "$11.78 / $400.00"
+    assert copilot.start == datetime(2025, 12, 1, tzinfo=utc)
+    assert amount(row_copilot(
         {"quota_snapshots": {"premium_interactions": {
             "has_quota": True, "credits_used": 1178, "unlimited": True}},
          "quota_reset_date": "2026-09-01"}
-    ).amount == "$11.78"
+    )) == "$11.78"
     print("ok")
 
 
@@ -302,21 +415,38 @@ def main() -> int:
         self_check()
         return 0
 
-    rows = [
-        collect("claude", lambda: fetch_claude(args.claude_config_dir), row_claude, args.refresh),
-        collect("cursor", fetch_cursor, row_cursor, args.refresh),
-        collect("copilot", fetch_copilot, row_copilot, args.refresh),
+    claude_dir = args.claude_config_dir
+    jobs = [
+        # Keyed per profile so switching --claude-config-dir never shows the
+        # other profile's cached spend.
+        ("claude", f"claude-{dir_digest(claude_dir)}", lambda: fetch_claude(claude_dir), row_claude),
+        ("cursor", "cursor", fetch_cursor, row_cursor),
+        ("copilot", "copilot", fetch_copilot, row_copilot),
     ]
+    with ThreadPoolExecutor(len(jobs)) as pool:
+        rows = list(pool.map(lambda job: collect(*job, args.refresh), jobs))
+    now = datetime.now(timezone.utc)
 
     if args.json:
-        print(json.dumps(
-            {r.vendor: {"error": r.error} if r.error else
-             {"amount": r.amount, "percent": r.pct, "resets": r.resets, "raw": r.raw}
-             for r in rows},
-            indent=2,
-        ))
+        out = {}
+        for r in rows:
+            if r.error:
+                out[r.vendor] = {"error": r.error}
+                continue
+            proj = projected(r, now)
+            out[r.vendor] = {
+                "amount": amount(r),
+                "percent": pct(r.used, r.limit),
+                "projected": None if proj is None else money(proj),
+                "projected_percent": None if proj is None else pct(proj, r.limit),
+                "period_start": r.start.isoformat(),
+                "resets": f"{r.end:%Y-%m-%d}",
+                "raw": r.raw,
+            }
+        print(json.dumps(out, indent=2))
     else:
-        render(rows)
+        color = sys.stdout.isatty() and not os.environ.get("NO_COLOR") and os.environ.get("TERM") != "dumb"
+        render(rows, now, color)
     return 0
 
 
