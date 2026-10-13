@@ -74,7 +74,8 @@ let
             # LSP tool is opt-in even on 2.x; servers wired via the local
             # znix-lsp @skills-dir plugin (see znix.lsp.servers), not a marketplace.
             env.ENABLE_LSP_TOOL = "1";
-            model = "opusplan";
+            model = "opus";
+            effortLevel = "high";
             permissions = {
               defaultMode = "auto";
               additionalDirectories = [ "/nix/store" ];
