@@ -18,7 +18,12 @@ _: {
       cfg = config.znix.aiBudget;
 
       aiBudget = pkgs.writers.writePython3Bin "ai-budget" {
-        flakeIgnore = [ "E501" ];
+        flakeIgnore = [
+          "E501"
+          # Overriding the list drops flake8's defaults; black-formatted code
+          # breaks lines before binary operators.
+          "W503"
+        ];
       } (builtins.readFile ./ai-budget.py);
     in
     {
