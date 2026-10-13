@@ -122,6 +122,22 @@ let
                     description = "settings.json content; statusLine is computed automatically";
                   };
 
+                  theme = lib.mkOption {
+                    type = lib.types.nullOr lib.types.attrs;
+                    default = null;
+                    example = {
+                      base = "dark";
+                      overrides.promptBorder = "rgb(0,127,173)";
+                    };
+                    description = ''
+                      Custom Claude Code theme ({ base, overrides }, optional name)
+                      that tells this profile apart from others at a glance.
+                      Written to themes/<profile name>.json and selected through
+                      settings.theme; override keys are the colour names of the
+                      built-in themes (claude, promptBorder, …).
+                    '';
+                  };
+
                   ponytail = lib.mkEnableOption "ponytail hooks/skills/commands for this profile";
 
                   worklog = lib.mkEnableOption "worklog Stop hook for this profile";
@@ -415,6 +431,7 @@ in
             finalSettings =
               (removeAttrs effective [ "hooks" ])
               // lib.optionalAttrs (mergedHooks != { }) { hooks = mergedHooks; }
+              // lib.optionalAttrs (profile.theme != null) { theme = "custom:${name}"; }
               // {
                 statusLine = {
                   type = "command";
@@ -497,12 +514,17 @@ in
 
             file = lib.mkMerge (
               lib.mapAttrsToList (
-                _: profile:
+                name: profile:
                 (
                   {
                     "${profile.configDir}/CLAUDE.md".source = "${assetsStore}/AGENTS.md";
                     "${profile.configDir}/statusline-command.sh".source = "${assetsStore}/statusline-command.sh";
                     "${profile.configDir}/keybindings.json".source = keybindingsFile;
+                  }
+                  // lib.optionalAttrs (profile.theme != null) {
+                    "${profile.configDir}/themes/${name}.json".text = builtins.toJSON (
+                      { inherit name; } // profile.theme
+                    );
                   }
                   // lib.optionalAttrs (lspServers != { }) {
                     "${profile.configDir}/skills/znix-lsp/.claude-plugin/plugin.json".source = lspPluginJson;
