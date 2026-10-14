@@ -1,6 +1,7 @@
 ---
 name: kick-pr-copilot
 description: Fetch, analyze and implement unresolved PR comments, then push back and resolve
+disable-model-invocation: true
 allowed-tools: Bash(gh *), Bash(gh-pr-unresolved-comments *), Bash(bash */scripts/post-reply.sh*), Read, Grep, Glob
 ---
 

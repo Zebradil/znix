@@ -1,6 +1,7 @@
 ---
 description: Triage every open dependency-update bot PR, auto-merge the green ones, and route red ones to the fix agent.
 model: haiku
+disable-model-invocation: true
 allowed-tools: Bash(gh-renovate-triage:*), Task
 ---
 
