@@ -10,10 +10,10 @@ directories:
   path: vendor/mattpocock-skills
 - contents:
   - git:
-      commitTitle: 'chore: release v5.2.0 (#1113)...'
-      sha: 2961b52fc1fe6a5a87c7a959a79512e5c2f3ffe5
+      commitTitle: 'chore: release v5.3.2 (#1153)...'
+      sha: 16352ac229eb08a9598dcae48fe9f2b342567d86
       tags:
-      - v5.2.0
+      - v5.3.2
     path: .
   path: vendor/ponytail
 - contents:
