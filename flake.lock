@@ -9,11 +9,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1792145599,
-        "narHash": "sha256-MkZ1QcI2rRjo+ku3V+HaLU1JoMqrzw/R1vdMERT3EOM=",
+        "lastModified": 1792229036,
+        "narHash": "sha256-1u2ZU8BbDfqyApYfYNQJlMKio/7/ug6t91IL2werxb8=",
         "owner": "MalpenZibo",
         "repo": "ashell",
-        "rev": "442915f352f6fc499eb383c5a04af9e444bd31a8",
+        "rev": "a429f39e8ec5d862beec2b3a237f478538137eab",
         "type": "github"
       },
       "original": {
@@ -213,11 +213,11 @@
       },
       "locked": {
         "dir": "pkgs/firefox-addons",
-        "lastModified": 1792123413,
-        "narHash": "sha256-US+K5frqRChi1ZLBFzWO9cohq1YbTOrV43KKX8HbpYU=",
+        "lastModified": 1792209768,
+        "narHash": "sha256-+E9YCoDgw3KfNT3wCVjIwuRPDSL8wWYeh6VfX9E2odA=",
         "owner": "rycee",
         "repo": "nur-expressions",
-        "rev": "61c893f4d881d8a15edaa67e295d3df7fd1d9b4d",
+        "rev": "144a88bbccf1fd9a25788355d2fd2b3c97aad432",
         "type": "gitlab"
       },
       "original": {
@@ -988,11 +988,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792176077,
-        "narHash": "sha256-QPFyJi1dO5x+QEzIJWpNCaLSW7HoQCmQ+PpTu/a9yzc=",
+        "lastModified": 1792265581,
+        "narHash": "sha256-ZLtMHPb0b2CF797NwdB0MXp4Eg5jQkPEMNZrJ/e2Q6k=",
         "owner": "nklmilojevic",
         "repo": "sofka",
-        "rev": "f10c89407f3d87aa94a4c007365fff74e5d343b0",
+        "rev": "957201638a70bfe26ac1a6370e86a684680602cd",
         "type": "github"
       },
       "original": {
