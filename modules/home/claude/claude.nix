@@ -45,14 +45,17 @@ let
 
         extraSkillRoots = lib.mkOption {
           type = lib.types.listOf lib.types.path;
-          default = map (sub: inputs.self + "/vendor/mattpocock-skills/${sub}") [
-            "engineering"
-            "productivity"
-          ];
+          default =
+            map (sub: inputs.self + "/vendor/mattpocock-skills/${sub}") [
+              "engineering"
+              "productivity"
+            ]
+            ++ [ (inputs.self + "/vendor/orca-skills") ];
           description = ''
             Extra directories whose immediate children are skill bundles, merged
             into each profile's skills/ alongside assetsRoot/skills. Defaults to
-            the vendir-managed mattpocock/skills tree (see vendir.yml).
+            the vendir-managed mattpocock/skills and stablyai/orca trees (see
+            vendir.yml).
           '';
         };
 
