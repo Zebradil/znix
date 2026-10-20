@@ -120,6 +120,30 @@ let
                     description = "Env var name → shell snippet whose stdout becomes the value";
                   };
 
+                  account = {
+                    email = lib.mkOption {
+                      type = lib.types.nullOr lib.types.str;
+                      default = null;
+                      description = ''
+                        claude.ai account this profile must be signed in to. The
+                        wrapper refuses to start (except `auth` subcommands) when
+                        the config dir holds a login for another email, so a
+                        sign-in that lands in the wrong dir cannot silently mix
+                        accounts.
+                      '';
+                    };
+                    orgUuid = lib.mkOption {
+                      type = lib.types.nullOr lib.types.str;
+                      default = null;
+                      description = ''
+                        Organization UUID the login must belong to (from
+                        `claude auth status`). Checked by the wrapper like
+                        email, and pinned for sign-in via forceLoginMethod and
+                        forceLoginOrgUUID in settings.json.
+                      '';
+                    };
+                  };
+
                   settings = lib.mkOption {
                     type = lib.types.attrs;
                     default = { };
@@ -367,11 +391,45 @@ in
           else
             "${config.home.homeDirectory}/code/github.com/zebradil/know";
 
+        mkAccountGuard =
+          profile:
+          let
+            inherit (profile.account) email orgUuid;
+            want = lib.concatStringsSep ", " (
+              lib.optional (email != null) email ++ lib.optional (orgUuid != null) "org ${orgUuid}"
+            );
+          in
+          lib.optionalString (email != null || orgUuid != null) ''
+            state="$CLAUDE_CONFIG_DIR/.claude.json"
+            # `auth` stays open so a wrong login can be replaced; an absent
+            # oauthAccount (signed out, API key) is left to claude itself.
+            if [ "''${1:-}" != auth ] && [ -r "$state" ]; then
+              rc=0
+              ${pkgs.jq}/bin/jq -e \
+                --arg email ${lib.escapeShellArg (toString email)} \
+                --arg org ${lib.escapeShellArg (toString orgUuid)} \
+                '.oauthAccount == null
+                  or (($email == "" or .oauthAccount.emailAddress == $email)
+                    and ($org == "" or .oauthAccount.organizationUuid == $org))' \
+                "$state" >/dev/null 2>&1 || rc=$?
+              # rc 1 is a mismatch; parse errors (a write in flight) pass through.
+              if [ "$rc" = 1 ]; then
+                actual=$(${pkgs.jq}/bin/jq -r '.oauthAccount | "\(.emailAddress) (\(.organizationName), org \(.organizationUuid))"' "$state")
+                echo "${profile.command}: $CLAUDE_CONFIG_DIR is signed in as $actual; expected ${want}." >&2
+                echo "Fix: ${profile.command} auth logout && ${profile.command} auth login${
+                  lib.optionalString (email != null) " --email ${email}"
+                }" >&2
+                exit 1
+              fi
+            fi
+          '';
+
         mkWrapper =
           _: profile:
           pkgs.writeShellScriptBin profile.command ''
             set -euo pipefail
             export CLAUDE_CONFIG_DIR="$HOME/${profile.configDir}"
+            ${mkAccountGuard profile}
             ${lib.concatStringsSep "\n" (
               lib.mapAttrsToList (k: v: ''export ${k}="$(${v})"'') profile.runtimeEnv
             )}
@@ -436,6 +494,10 @@ in
               (removeAttrs effective [ "hooks" ])
               // lib.optionalAttrs (mergedHooks != { }) { hooks = mergedHooks; }
               // lib.optionalAttrs (profile.theme != null) { theme = "custom:${name}"; }
+              // lib.optionalAttrs (profile.account.orgUuid != null) {
+                forceLoginMethod = "claudeai";
+                forceLoginOrgUUID = profile.account.orgUuid;
+              }
               // {
                 statusLine = {
                   type = "command";
