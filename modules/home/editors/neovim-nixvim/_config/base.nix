@@ -163,7 +163,7 @@
     }):map("<leader>ur")
   '';
 
-  # ── Extra packages (formatters, linters, runtime deps) ──────────
+  # ── Extra packages (formatters, runtime deps) ──────────────────
   extraPackages = with pkgs; [
     # Formatters
     stylua
@@ -173,12 +173,6 @@
     oxfmt
     shfmt
     kulala-fmt # .http / .rest formatter
-
-    # Linters
-    golangci-lint
-    deadnix
-    statix
-    shellcheck
 
     # DAP
     delve
@@ -197,5 +191,14 @@
     nodejs_22
     ripgrep
     fd
+  ];
+
+  # Linters go last on PATH so a project's devshell version wins: lint rules
+  # drift between releases, and the editor should agree with pre-commit and CI.
+  extraPackagesAfter = with pkgs; [
+    golangci-lint
+    deadnix
+    statix
+    shellcheck
   ];
 }

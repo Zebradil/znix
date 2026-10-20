@@ -31,6 +31,7 @@
             done
 
             bash ${inputs.self}/assets/bin/kubectl-inventory --self-test
+            bash ${inputs.self}/modules/home/alertmanager/am-alerts.sh --self-test
             # Fixtures for all three transcript stores: the tripwire for the next
             # Claude Code log change, Cursor JSONL change, or opencode migration.
             python3 ${inputs.self}/modules/home/session-export/session-export.py --selftest

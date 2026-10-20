@@ -22,6 +22,12 @@
       "description": "Vendored sources land as committed trees in vendor/ and feed the agent harnesses — always review the diff",
       "matchManagers": ["vendir"],
       "automerge": false
+    },
+    {
+      "description": "Orca releases several times a day but the vendored skills rarely change, so batch its bumps into one weekly PR",
+      "matchManagers": ["vendir"],
+      "matchPackageNames": ["https://github.com/stablyai/orca"],
+      "schedule": ["* 0-5 * * 1"]
     }
   ],
   "vendir": {

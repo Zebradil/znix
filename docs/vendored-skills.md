@@ -2,6 +2,7 @@
 
 External agent skills ([mattpocock/skills](https://github.com/mattpocock/skills),
 [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail),
+[stablyai/orca](https://github.com/stablyai/orca),
 [Zebradil/docs-kit](https://github.com/Zebradil/docs-kit)) are vendored
 into the repo with [vendir](https://carvel.dev/vendir/) rather than pulled as
 flake inputs. The synced files are committed, so every upstream update lands as a
@@ -18,6 +19,7 @@ vendor/
     productivity/<skill>/
   ponytail/
     hooks/ skills/ commands/ .opencode/ .cursor/
+  orca-skills/<skill>/
   docs-kit/<skill>/
 ```
 
@@ -26,7 +28,7 @@ vendor/
 `vendir.yml` strips the upstream `skills/` prefix (`newRootPath`) so each skill
 bundle lands directly under `engineering/` or `productivity/`. The
 `znix.claude.extraSkillRoots` option (in `modules/home/claude/claude.nix`)
-defaults to those two directories. Claude, OpenCode, and Cursor symlink bundles
+defaults to those two directories plus `vendor/orca-skills`. Claude, OpenCode, and Cursor symlink bundles
 into their native skill locations. Claude honours per-profile `excludeAssets.skills`.
 
 `docs-kit` is personal-only: `mkPersonalProfile` adds it through the per-profile
@@ -66,6 +68,18 @@ vendir sync                            # re-resolves every source
 vendir sync --directory vendor/ponytail # or bump a single source
 git add vendor vendir.lock.yml
 ```
+
+`stablyai/orca` has refs differing only in case, so on a case-insensitive
+filesystem (macOS default) its fetch fails with "references that only differ in
+casing". Sync it with reftable ref storage:
+
+```bash
+GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=init.defaultRefFormat GIT_CONFIG_VALUE_0=reftable \
+  vendir sync --directory vendor/orca-skills
+```
+
+The orca skills are thin stubs that call the `orca` binary (`orca skills get
+...`), which comes from the Orca desktop app, not from Nix.
 
 `vendir sync` (no flag) re-resolves *all* sources, so a bare sync bumps every
 pinned SHA. Use `--directory vendor/<name>` to update one source in isolation

@@ -49,6 +49,13 @@ _: {
         lib.mkEnableOption "sops-rendered homelab kubeconfig in ~/.kube/custom.clusters";
 
       config = lib.mkIf cfg.enable {
+        # One Alertmanager serves the cluster; each entry differs only in the
+        # kubectl context (network path) the agent uses to investigate.
+        znix.alertmanager.environments = lib.mapAttrs (name: _: {
+          url = "https://alertmanager.zebradil.dev";
+          kubeContext = name;
+        }) endpoints;
+
         sops = {
           defaultSopsFile = ../../secrets/homelab-kube.yaml;
 

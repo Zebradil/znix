@@ -37,6 +37,20 @@ directories:
         # Windows-only statusline and host hook-registration manifests are inert.
         excludePaths: [ hooks/*.ps1, hooks/claude-codex-hooks.json, hooks/copilot-hooks.json ]
 
+  - path: vendor/orca-skills
+    contents:
+      # Orca CLI, computer-use and orchestration skills from stablyai/orca.
+      # newRootPath strips "skills/" so bundles land as vendor/orca-skills/<skill>/.
+      - path: .
+        git:
+          url: https://github.com/stablyai/orca
+          ref: v1.4.234
+        includePaths:
+          - skills/orca-cli/**
+          - skills/computer-use/**
+          - skills/orchestration/**
+        newRootPath: skills
+
   - path: vendor/docs-kit
     contents:
       # Documentation skills from Zebradil/docs-kit, for the personal Claude
