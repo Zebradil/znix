@@ -44,7 +44,7 @@ directories:
       - path: .
         git:
           url: https://github.com/stablyai/orca
-          ref: v1.4.232
+          ref: v1.4.235
         includePaths:
           - skills/orca-cli/**
           - skills/computer-use/**

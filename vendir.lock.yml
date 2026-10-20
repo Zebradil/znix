@@ -18,10 +18,10 @@ directories:
   path: vendor/ponytail
 - contents:
   - git:
-      commitTitle: 'release: v1.4.232'
-      sha: 49109f362f057cd2dc3d81cd378cb84d140c3dc5
+      commitTitle: 'release: v1.4.235'
+      sha: 136dc46477b22981afc4cb574b2b29982ce405fe
       tags:
-      - v1.4.232
+      - v1.4.235
     path: .
   path: vendor/orca-skills
 - contents:
