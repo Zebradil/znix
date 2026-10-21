@@ -250,25 +250,36 @@ function z::git:wt_remove() {
   ((! $#branches)) || git branch -D $branches
 }
 
-# wtrm [-f|--force] [branch|-]: remove a worktree and its branches (see
-# z::git:wt_remove). Without an argument it removes the current worktree; "-",
-# or no argument in the main checkout, picks any number of worktrees with fzf
-# instead. Refuses uncommitted changes and branches whose work exists nowhere
-# else; a refused pick is skipped and the rest are still removed.
+# wtrm [-f|--force] [--prune | branch | -]: remove a worktree and its branches
+# (see z::git:wt_remove). Without an argument it removes the current worktree;
+# "-", or no argument in the main checkout, picks any number of worktrees with
+# fzf instead; --prune takes every worktree whose branch is merged (✓ in wtl).
+# Refuses uncommitted changes and branches whose work exists nowhere else; a
+# refused worktree is skipped and the rest are still removed.
 function wtrm() {
-  local force=
-  [[ $1 == (-f|--force) ]] && {
-    force=1
+  local force= prune=
+  while [[ $1 == (-f|--force|--prune) ]]; do
+    [[ $1 == --prune ]] && prune=1 || force=1
     shift
-  }
+  done
 
   local root dir dirs=()
   root=$(z::git:wt_root) || return
-  if [[ -z $1 ]]; then
+  if [[ -z $prune && -z $1 ]]; then
     dir=$(git rev-parse --show-toplevel) || return
     [[ ${dir:A} == ${root:A} ]] && set -- -
   fi
-  if [[ $1 == - ]]; then
+  if [[ -n $prune ]]; then
+    local line branch lines=(${(f)"$(z::git:wt_list)"})
+    for line in ${lines[2,-1]}; do
+      dir=${line%%$'\t'*} branch=${line#*$'\t'}
+      [[ -n $branch ]] || continue
+      if z::git:wt_merged_ref "$branch" || z::git:wt_merged_pr "$branch"; then
+        dirs+=("$dir")
+      fi
+    done
+    ((${#dirs})) || log::info "no merged worktrees"
+  elif [[ $1 == - ]]; then
     lib::check_commands fzf || return 1
     local i lines=(${(f)"$(z::git:wt_list)"}) rows=(${(f)"$(z::git:wt_status 1)"})
     # fzf hands back row numbers: rows are padded with spaces, so a directory
