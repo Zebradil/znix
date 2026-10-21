@@ -128,6 +128,7 @@ Default template (fill in only what's relevant, remove empty sections):
 
 - Search with `rg` and `fd`.
 - Get missing tools with `nix shell nixpkgs#<package>`; never install with `brew`.
+- `sed` and `awk` are GNU versions from Nix, on Darwin too: use `sed -i 's/…/…/'`, never BSD `sed -i ''`.
 
 ### SSH
 
