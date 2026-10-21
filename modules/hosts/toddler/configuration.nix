@@ -9,6 +9,7 @@
         iperf3-server
         nix-settings # kasha binary cache substituter — avoids emulated rebuilds
         openssh
+        pki
         suok # lean admin user
         toddler-blebridge
         toddler-hardware

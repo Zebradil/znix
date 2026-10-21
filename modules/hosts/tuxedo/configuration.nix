@@ -26,6 +26,7 @@
         locale
         nix-settings
         openssh
+        pki
         sito
         sops
         tailscale
