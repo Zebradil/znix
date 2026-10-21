@@ -16,6 +16,7 @@
           k3s-node
           nix-settings
           openssh
+          pki
           sops
           suok
           tailscale
