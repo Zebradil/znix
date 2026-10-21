@@ -60,6 +60,8 @@ _: {
           "ctrl+a>s" = "launch --allow-remote-control kitty +kitten broadcast";
           "ctrl+Tab" = "focus_to_last_used_tab";
         }
+        # kitty's macOS default maps cmd+enter to new_window; no_op hands it to the app (Claude/opencode submit).
+        // lib.optionalAttrs isDarwin { "cmd+enter" = "no_op"; }
         // (builtins.listToAttrs (
           builtins.genList (i: {
             name = "ctrl+a>${toString i}";

@@ -4,6 +4,7 @@ _: {
       lib,
       config,
       pkgs,
+      isDarwin,
       ...
     }:
     let
@@ -110,7 +111,7 @@ _: {
       tuiSettings = {
         "$schema" = "https://opencode.ai/tui.json";
         keybinds = {
-          input_submit = "shift+return";
+          input_submit = if isDarwin then "super+return" else "ctrl+return";
           input_newline = "return";
         };
       };

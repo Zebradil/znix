@@ -327,6 +327,7 @@ in
         lib,
         config,
         pkgs,
+        isDarwin,
         ...
       }:
       let
@@ -370,7 +371,7 @@ in
             lspServers = lib.mapAttrs (_: mkClaudeLsp) lspServers;
           }
         );
-        # Enter inserts a newline; shift/ctrl+enter sends. Matches the opencode TUI binds.
+        # Enter inserts a newline; cmd+enter (Darwin) or ctrl+enter sends. Matches the opencode TUI binds.
         keybindingsFile = pkgs.writeText "claude-keybindings.json" (
           builtins.toJSON {
             "$schema" = "https://www.schemastore.org/claude-code-keybindings.json";
@@ -379,7 +380,7 @@ in
                 context = "Chat";
                 bindings = {
                   "enter" = "chat:newline";
-                  "shift+enter" = "chat:submit";
+                  ${if isDarwin then "cmd+enter" else "ctrl+enter"} = "chat:submit";
                 };
               }
             ];
