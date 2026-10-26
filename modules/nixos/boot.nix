@@ -13,7 +13,6 @@ _: {
             };
             efi.canTouchEfiVariables = true;
           };
-          initrd.systemd.enable = true;
         };
       };
     };
