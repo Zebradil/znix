@@ -127,6 +127,11 @@ _: {
             10250
             19100
             9100
+            # synology-csi controller sidecar metrics (provisioner, attacher). The
+            # controller runs on the host network on whichever node it lands, and
+            # vmagent scrapes it from another node.
+            9820
+            9821
           ];
           allowedUDPPorts = [ 8472 ];
           trustedInterfaces = [
