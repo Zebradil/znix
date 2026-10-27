@@ -117,12 +117,11 @@ _: {
           mutableSettings = false;
           # Would open only the UI port, and the rules above already cover it.
           openFirewall = false;
-          # Sets `settings.http.address` — the UI binds the service address too,
-          # so it is unreachable from anywhere but the LAN.
-          host = cfg.serviceAddress;
-          port = uiPort;
-
           settings = {
+            # The UI binds the service address too, so it is unreachable from
+            # anywhere but the LAN.
+            http.address = "${cfg.serviceAddress}:${toString uiPort}";
+
             # Admin UI login. The hash is a bcrypt of a random, throwaway
             # password unique to this LAN-only UI (repo is public — never inline
             # a reused credential's hash). Rotate freely in the UI; this only
