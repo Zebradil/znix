@@ -58,7 +58,7 @@ Options (see `modules/flake/workarounds.nix` for the full set):
 
 | option | default | meaning |
 | --- | --- | --- |
-| `package` | the attribute name | nixpkgs attribute being replaced; may be nested one level, as in `dictdDBs.eng2rus` |
+| `package` | the attribute name | nixpkgs attribute path being replaced, as in `dictdDBs.eng2rus`; inside an extensible package set such as `linuxKernel.packages.<kernel>`, the override goes through `extend` |
 | `systems` | `null` (all) | systems the breakage affects |
 | `reason` | required | one line, quoted in the removal PR |
 | `pin` | `null` | flake input holding a working nixpkgs revision |
