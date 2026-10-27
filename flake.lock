@@ -6,7 +6,9 @@
         "nixpkgs": [
           "nixpkgs"
         ],
-        "rust-overlay": "rust-overlay"
+        "rust-overlay": [
+          "rust-overlay"
+        ]
       },
       "locked": {
         "lastModified": 1793025843,
@@ -948,6 +950,7 @@
         "nixpkgs": "nixpkgs_6",
         "nixvim": "nixvim",
         "pr-autopilot": "pr-autopilot",
+        "rust-overlay": "rust-overlay",
         "sito": "sito",
         "sofka": "sofka",
         "sops-nix": "sops-nix",
@@ -959,16 +962,15 @@
     "rust-overlay": {
       "inputs": {
         "nixpkgs": [
-          "ashell",
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1780715792,
-        "narHash": "sha256-4+8gPeiPeud89mjo865RwpqmKwa1MThRsq2SvRxo7mg=",
+        "lastModified": 1793086596,
+        "narHash": "sha256-ObKS44vw4IIVpQ69YJzUGjZ0IwnpWoUlwjJSY7gefdo=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "27b7e78c6935293ee868469cc4172e9b8b17823b",
+        "rev": "c7e9d512653a35ef4d5879c3df4d44d7b78d0e6d",
         "type": "github"
       },
       "original": {
