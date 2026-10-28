@@ -54,33 +54,25 @@ let
   packagesIn = ws: lib.unique (map (w: w.package) (lib.attrValues ws));
   applicableOn = system: lib.filterAttrs (_: appliesTo system) workarounds;
 
-  # `package` is an attribute *path*: "mise" or "dictdDBs.eng2rus". Two levels is
-  # the limit, because the overlay has to rebuild the intermediate attrset by
-  # hand (below) and each extra level is another layer of that.
-  pathOf =
-    package:
-    let
-      parts = lib.splitString "." package;
-    in
-    if lib.length parts > 2 then
-      throw "workaround package ${package}: at most one level of nesting is supported"
-    else
-      parts;
+  # `package` is an attribute *path*: "mise", "dictdDBs.eng2rus", or
+  # "linuxKernel.packages.linux_xanmod_latest.tuxedo-drivers".
+  pathOf = lib.splitString ".";
   getPkg = pkgs: package: lib.getAttrFromPath (pathOf package) pkgs;
 
   # One package can carry several workarounds — mise needs one to skip a test
   # that fails on Darwin, and another to put back the cmake that skipping drags
   # out of nativeCheckInputs. They stack in a fixed order: the pin chooses the
   # base package, then every override folds on top in name order. Each still
-  # dies on its own probe.
+  # dies on its own probe. `current` is the package as its enclosing scope sees
+  # it, which inside an extensible package set is not the same as getPkg pkgs.
   apply =
-    pkgs: package: ws:
+    pkgs: package: current: ws:
     let
       pins = lib.filterAttrs (name: w: kindOf name w == "pin") ws;
       overrides = lib.filterAttrs (name: w: kindOf name w == "override") ws;
       base =
         if pins == { } then
-          getPkg pkgs package
+          current
         else if lib.length (lib.attrNames pins) > 1 then
           throw "package ${package}: pinned by ${lib.concatStringsSep " and " (lib.attrNames pins)}, but a package takes at most one pin"
         else
@@ -119,7 +111,7 @@ in
             package = lib.mkOption {
               type = lib.types.str;
               default = name;
-              description = "nixpkgs attribute this workaround replaces; may be nested one level, as in `dictdDBs.eng2rus`.";
+              description = "nixpkgs attribute path this workaround replaces, as in `dictdDBs.eng2rus`.";
             };
 
             systems = lib.mkOption {
@@ -161,25 +153,31 @@ in
       _final: prev:
       let
         ws = applicableOn prev.stdenv.hostPlatform.system;
+        # The workarounded packages as a tree of attribute paths, each leaf
+        # naming its package.
+        tree = lib.foldl' (
+          acc: package: lib.recursiveUpdate acc (lib.setAttrByPath (pathOf package) { __package = package; })
+        ) { } (packagesIn ws);
         # An overlay's attrset is merged into prev with `//`, which is shallow, so
         # returning `{ dictdDBs = { eng2rus = ...; }; }` would drop every other
-        # dictdDB. Group by top-level attribute and rebuild the intermediate
-        # attrset from prev.
-        byTop = lib.groupBy (package: lib.head (pathOf package)) (packagesIn ws);
+        # dictdDB: each intermediate attrset is rebuilt from the original. An
+        # extensible one (a kernel package set) goes through `extend` instead:
+        # NixOS re-extends boot.kernelPackages, which discards a `//` update, and
+        # the package has to come from `super` to be built against the kernel
+        # NixOS overrides in that same set.
+        patch =
+          node:
+          lib.mapAttrs (
+            name: sub:
+            if sub ? __package then
+              apply prev sub.__package node.${name} (workaroundsFor ws sub.__package)
+            else if node.${name} ? extend then
+              node.${name}.extend (_: super: patch super sub)
+            else
+              node.${name} // patch node.${name} sub
+          );
       in
-      lib.mapAttrs (
-        top: packages:
-        if packages == [ top ] then
-          apply prev top (workaroundsFor ws top)
-        else
-          prev.${top}
-          // lib.listToAttrs (
-            map (
-              package:
-              lib.nameValuePair (lib.last (pathOf package)) (apply prev package (workaroundsFor ws package))
-            ) packages
-          )
-      ) byTop;
+      patch prev tree;
 
     # Leave-one-out: every *other* workaround on the package stays applied, so a
     # probe asks "is this one still pulling its weight?" rather than "is vanilla
@@ -191,7 +189,10 @@ in
         pkgs = vanilla system;
         ws = applicableOn system;
       in
-      lib.mapAttrs (name: w: apply pkgs w.package (removeAttrs (workaroundsFor ws w.package) [ name ])) ws
+      lib.mapAttrs (
+        name: w:
+        apply pkgs w.package (getPkg pkgs w.package) (removeAttrs (workaroundsFor ws w.package) [ name ])
+      ) ws
     );
 
     # Plain data for CI: the probe matrix and what a removal PR has to delete.

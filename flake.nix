@@ -6,7 +6,10 @@
   inputs = {
     ashell = {
       url = "github:MalpenZibo/ashell";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        rust-overlay.follows = "rust-overlay";
+      };
     };
     blebridge.url = "github:Zebradil/blebridge";
     colmena = {
@@ -55,6 +58,10 @@
     };
     pr-autopilot = {
       url = "github:Zebradil/pr-autopilot";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     sito.url = "github:Zebradil/sito";

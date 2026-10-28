@@ -4,6 +4,13 @@
     ashell = {
       url = "github:MalpenZibo/ashell";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.rust-overlay.follows = "rust-overlay";
+    };
+    # ashell's own lock pins a rust-overlay that trips nixpkgs'
+    # `stdenv.isLinux` deprecation warning.
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 

@@ -5,6 +5,7 @@ _: {
       base = {
         programs.nushell = {
           enable = true;
+          loadSessionVariables = false;
 
           # Static env vars → rendered as $env.KEY = "value" in env.nu
           environmentVariables = {
