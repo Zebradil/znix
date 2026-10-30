@@ -142,6 +142,16 @@ in
               default = null;
               description = "`pkgs: old: attrs` passed to overrideAttrs.";
             };
+
+            check = lib.mkOption {
+              type = lib.types.nullOr lib.types.raw;
+              default = null;
+              description = ''
+                `pkgs: package: derivation` that builds only once the package no
+                longer needs this workaround. The probe builds it instead of the
+                package, for runtime breakage a plain build cannot see.
+              '';
+            };
           };
         }
       )
@@ -191,7 +201,12 @@ in
       in
       lib.mapAttrs (
         name: w:
-        apply pkgs w.package (getPkg pkgs w.package) (removeAttrs (workaroundsFor ws w.package) [ name ])
+        let
+          probed = apply pkgs w.package (getPkg pkgs w.package) (
+            removeAttrs (workaroundsFor ws w.package) [ name ]
+          );
+        in
+        if w.check == null then probed else w.check pkgs probed
       ) ws
     );
 
