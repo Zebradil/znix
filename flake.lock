@@ -230,11 +230,11 @@
       },
       "locked": {
         "dir": "pkgs/firefox-addons",
-        "lastModified": 1793246567,
-        "narHash": "sha256-ywLMKXURakXhU4yf1PUJubyi05ezGCRImicR71BaaIE=",
+        "lastModified": 1793332954,
+        "narHash": "sha256-gRitnLL2/hNUt5QpgrqIUhhGbhGsIjL0SJIYU0XkCNM=",
         "owner": "rycee",
         "repo": "nur-expressions",
-        "rev": "1c6b0fda2940b5bbfda0bf110590c06a97cacc4f",
+        "rev": "0f3482a1d3619f951843021a944e8b8b153022b0",
         "type": "gitlab"
       },
       "original": {
@@ -437,11 +437,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793232570,
-        "narHash": "sha256-Z1DFf3lGQarDbSvHWa43kUYAVmQFgbZJRpQHKA1MESY=",
+        "lastModified": 1793314151,
+        "narHash": "sha256-1QEM7Mm2Ix1AzeG0EeW0cFkws0HmJHx7Eqnv1FAAFUw=",
         "owner": "Zebradil",
         "repo": "gke-kubeconfiger",
-        "rev": "f74b26af4539340a95ef80f3a6c0061379a50a21",
+        "rev": "42266355934fc852ec06ca25176e592961a759fc",
         "type": "github"
       },
       "original": {
@@ -824,11 +824,11 @@
     },
     "nixpkgs_6": {
       "locked": {
-        "lastModified": 1793195608,
-        "narHash": "sha256-lNZLwWf5tYNKjothaoFq/VZYvzaclmLafjgMdUlpJPQ=",
+        "lastModified": 1793225069,
+        "narHash": "sha256-sx1f99WGrDfJ83KKuQrqGPmot0rnDgmpLJDzpU2oHQQ=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "58deea654ec5dd0644f31c840a07c29fa0592528",
+        "rev": "e62746b0b472753ef019baceab6f1e2e52014980",
         "type": "github"
       },
       "original": {
@@ -966,11 +966,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793174968,
-        "narHash": "sha256-u5nUf4cewaT36iIzG1s/VECktqUMiZaGF5BsgervsvQ=",
+        "lastModified": 1793261817,
+        "narHash": "sha256-fAvtOccUXHVAH5wXK+ABYUUC47W2qTb9T9EefLcS9ME=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "19ecdd08213836b36c4296a3a4f4af5a3d5308db",
+        "rev": "afcefd09c71e63663a46e4ce5e09968584f2c709",
         "type": "github"
       },
       "original": {
@@ -1006,11 +1006,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793092366,
-        "narHash": "sha256-xk5XiZiHE3vxkkpTc+ZoeVBr9phSOiqp8AOCngzahRo=",
+        "lastModified": 1793264986,
+        "narHash": "sha256-7GzszM1fMXYMjtixJwyLqxXatG4/FGDrLSRF5JRBKdY=",
         "owner": "nklmilojevic",
         "repo": "sofka",
-        "rev": "97b5e670dd58e8a0929d4e6786aeced411728762",
+        "rev": "287d4fd685ff2257cbe663cd091d45b85d0522c0",
         "type": "github"
       },
       "original": {
