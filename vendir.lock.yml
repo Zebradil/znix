@@ -2,10 +2,10 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'Merge pull request #1160 from mattpocock/changeset-release/main...'
-      sha: 24fe0ef7737efae15c87225755e9f6f5965e4888
+      commitTitle: 'chore: version skills (#1161)...'
+      sha: d1478fcb140db0b93c0c8df17bcfd311844749d0
       tags:
-      - v1.3.1
+      - v1.3.2
     path: .
   path: vendor/mattpocock-skills
 - contents:
