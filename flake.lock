@@ -984,11 +984,11 @@
         "nixpkgs": "nixpkgs_7"
       },
       "locked": {
-        "lastModified": 1792669692,
-        "narHash": "sha256-e2C8mcWrIqsoVObjiSVwrNeeHvPaGWQuY8rJiU/rnhw=",
+        "lastModified": 1793660530,
+        "narHash": "sha256-mlE3iuD+hqhdyw+d+WQ3X7EhnSjwjVWGiCmYCvXwvow=",
         "owner": "Zebradil",
         "repo": "sito",
-        "rev": "feb7933df6ee113736b8645a34c14c1270cea115",
+        "rev": "7927830010142b04bbbcae2816e75c58442574f7",
         "type": "github"
       },
       "original": {
