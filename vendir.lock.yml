@@ -2,26 +2,26 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'Merge pull request #1160 from mattpocock/changeset-release/main...'
-      sha: 24fe0ef7737efae15c87225755e9f6f5965e4888
+      commitTitle: 'chore: version skills (#1161)...'
+      sha: d1478fcb140db0b93c0c8df17bcfd311844749d0
       tags:
-      - v1.3.1
+      - v1.3.2
     path: .
   path: vendor/mattpocock-skills
 - contents:
   - git:
-      commitTitle: 'chore: release v5.3.2 (#1153)...'
-      sha: 16352ac229eb08a9598dcae48fe9f2b342567d86
+      commitTitle: 'chore: release v5.3.3 (#1307)...'
+      sha: 7801d061243d7b753bad0e0b3c057cd250b11755
       tags:
-      - v5.3.2
+      - v5.3.3
     path: .
   path: vendor/ponytail
 - contents:
   - git:
-      commitTitle: 'release: v1.4.241'
-      sha: 041baf356b368d773f333e76375ce860fba2481b
+      commitTitle: 'release: v1.4.246'
+      sha: 55ccff19ad4cd8ba28b6f3d2be798c1e626a2c2c
       tags:
-      - v1.4.241
+      - v1.4.246
     path: .
   path: vendor/orca-skills
 - contents:
