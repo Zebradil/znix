@@ -63,6 +63,7 @@ Options (see `modules/flake/workarounds.nix` for the full set):
 | `reason` | required | one line, quoted in the removal PR |
 | `pin` | `null` | flake input holding a working nixpkgs revision |
 | `override` | `null` | `pkgs: old: attrs`, passed to `overrideAttrs` |
+| `check` | `null` | `pkgs: package: drv` that builds only once `package` no longer needs the workaround; the probe builds it in place of the package |
 
 Set exactly one of `pin` / `override`.
 
@@ -149,7 +150,9 @@ To remove one by hand: delete the file, then `nix run .#write-flake` and
 
 - The probe answers "does it build?", not "does it work?". A workaround that
   patches *runtime* behaviour would be reported as removable while still being
-  needed — see `docs/adr/0004-workaround-probes.md`.
+  needed — see `docs/adr/0004-workaround-probes.md` — unless it sets `check`,
+  a derivation that fails while the breakage is still there
+  (`claude-code-darwin-ca` inspects the upstream wrapper).
 - Each pin instantiates a separate nixpkgs; Nix deduplicates store paths, so the
   overhead is minor for temporary use.
 - One package takes at most one pin, so it cannot be pinned to different
