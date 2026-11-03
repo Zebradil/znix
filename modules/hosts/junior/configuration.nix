@@ -131,6 +131,8 @@
           "--etcd-expose-metrics=true"
           "--kube-controller-manager-arg=bind-address=${ip}"
           "--kube-scheduler-arg=bind-address=${ip}"
+          # Exposes /debug/pprof on the API server to profile its memory (#222).
+          "--kube-apiserver-arg=profiling=true"
         ];
       };
 
