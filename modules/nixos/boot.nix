@@ -10,6 +10,8 @@ _: {
             systemd-boot = {
               enable = true;
               consoleMode = "max";
+              # Keeps the 512M ESP from filling with one kernel+initrd per generation.
+              configurationLimit = 10;
             };
             efi.canTouchEfiVariables = true;
           };
