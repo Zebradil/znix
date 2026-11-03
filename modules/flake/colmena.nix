@@ -11,11 +11,11 @@ let
   systemMap = config.flake.nixosSystemMap;
 
   deployMeta = {
-    toddler = {
-      targetHost = "toddler";
-      targetUser = "suok";
-      tags = [ "appliance" ];
-    };
+    # toddler = {
+    #   targetHost = "toddler";
+    #   targetUser = "suok";
+    #   tags = [ "appliance" ];
+    # };
     # k3s server. Tagged only "server" (not "k3s") so `apply --on @k3s` sweeps
     # the agent fleet without ever rolling the control plane by accident.
     junior = {
