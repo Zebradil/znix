@@ -113,6 +113,17 @@ detect_external() {
 
 external=$(detect_external)
 
+# hl.monitor merges into the output's existing rule, so enabling resets
+# `disabled` and `mirror` explicitly; otherwise a prior disable/mirror sticks.
+set_monitor() {
+  local mon="$1" mode="$2" position="$3" scale="$4" mirror="${5:-}"
+  hyprctl eval "hl.monitor({ output = \"$mon\", mode = \"$mode\", position = \"$position\", scale = \"$scale\", mirror = \"$mirror\", disabled = false })"
+}
+
+disable_monitor() {
+  hyprctl eval "hl.monitor({ output = \"$1\", disabled = true })"
+}
+
 # Re-enable a disabled monitor so hyprctl can configure it.
 ensure_enabled() {
   local mon="$1" disabled scale="1"
@@ -121,9 +132,9 @@ ensure_enabled() {
   fi
   disabled=$(hyprctl monitors all -j | jq -r --arg n "$mon" '.[] | select(.name == $n) | .disabled' 2>/dev/null)
   # Only bootstrap when disabled - avoids racing the caller's subsequent
-  # hyprctl keyword monitor call, which would otherwise clobber the real scale.
+  # set_monitor call, which would otherwise clobber the real scale.
   if [[ $disabled == "true" ]]; then
-    hyprctl keyword monitor "$mon, preferred, auto, $scale"
+    set_monitor "$mon" preferred auto "$scale"
     sleep 0.3
   fi
 }
@@ -140,31 +151,31 @@ apply_preset() {
   case "$1" in
   single)
     ensure_enabled "$INTERNAL"
-    hyprctl keyword monitor "$INTERNAL, preferred, auto, $INTERNAL_SCALE"
-    [[ -n $external ]] && hyprctl keyword monitor "$external, disable"
+    set_monitor "$INTERNAL" preferred auto "$INTERNAL_SCALE"
+    [[ -n $external ]] && disable_monitor "$external"
     notify-send "Display" "Single (integrated only)"
     ;;
   external-only)
     require_external
     ensure_enabled "$external"
-    hyprctl keyword monitor "$external, preferred, auto, 1"
-    hyprctl keyword monitor "$INTERNAL, disable"
+    set_monitor "$external" preferred auto 1
+    disable_monitor "$INTERNAL"
     notify-send "Display" "External only"
     ;;
   extended)
     require_external
     ensure_enabled "$external"
     ensure_enabled "$INTERNAL"
-    hyprctl keyword monitor "$external, preferred, 0x0, 1"
-    hyprctl keyword monitor "$INTERNAL, preferred, auto-down-right, $INTERNAL_SCALE"
+    set_monitor "$external" preferred 0x0 1
+    set_monitor "$INTERNAL" preferred auto-down "$INTERNAL_SCALE"
     notify-send "Display" "Extended (external + integrated)"
     ;;
   mirror)
     require_external
     ensure_enabled "$external"
     ensure_enabled "$INTERNAL"
-    hyprctl keyword monitor "$external, preferred, auto, 1"
-    hyprctl keyword monitor "$INTERNAL, preferred, auto, $INTERNAL_SCALE, mirror, $external"
+    set_monitor "$external" preferred auto 1
+    set_monitor "$INTERNAL" preferred auto "$INTERNAL_SCALE" "$external"
     notify-send "Display" "Mirror"
     ;;
   *)

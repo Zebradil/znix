@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 {
   home.pointerCursor = {
     enable = true;
@@ -47,19 +47,28 @@
   };
 
   wayland.windowManager.hyprland.settings = {
-    general = {
+    config.general = {
       gaps_in = 0;
       gaps_out = 0;
       border_size = 2;
     };
-    env = [
-      "XCURSOR_SIZE,24"
-      "HYPRCURSOR_SIZE,24"
-      "HYPRCURSOR_THEME,catppuccin-mocha-dark-cursors"
-      "GTK_THEME,catppuccin-mocha-mauve-standard"
-    ];
-    workspace = [
-      "w[tv1], border:false"
-    ];
+    env =
+      lib.mapAttrsToList
+        (name: value: {
+          _args = [
+            name
+            value
+          ];
+        })
+        {
+          XCURSOR_SIZE = "24";
+          HYPRCURSOR_SIZE = "24";
+          HYPRCURSOR_THEME = "catppuccin-mocha-dark-cursors";
+          GTK_THEME = "catppuccin-mocha-mauve-standard";
+        };
+    workspace_rule = {
+      workspace = "w[tv1]";
+      no_border = true;
+    };
   };
 }

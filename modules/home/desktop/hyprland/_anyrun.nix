@@ -1,5 +1,6 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 let
+  hl = import ./_lua.nix { inherit lib; };
   # Shared CSS — applied both to the main launcher and the picker overlay.
   # Explicit resets instead of `all: unset` to avoid breaking GTK4 internals.
   css = /* css */ ''
@@ -149,7 +150,7 @@ in
   ];
 
   wayland.windowManager.hyprland.settings.bind = [
-    "$mod SHIFT, W, exec, hypr-exec wifi-picker"
-    "$mod SHIFT, P, exec, hypr-exec perf-picker"
+    (hl.bindExec "SUPER + SHIFT + W" "hypr-exec wifi-picker")
+    (hl.bindExec "SUPER + SHIFT + P" "hypr-exec perf-picker")
   ];
 }

@@ -1,5 +1,6 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 let
+  hl = import ./_lua.nix { inherit lib; };
   anyrun-pick = import ./_anyrun-pick.nix { inherit pkgs; };
 
   monitor-switch = pkgs.writeShellApplication {
@@ -61,12 +62,10 @@ in
     ExecStartPost=${monitor-switch-default}/bin/monitor-switch-default
   '';
 
-  wayland.windowManager.hyprland.settings.bind = [
-    "$mod, P, exec, hypr-exec monitor-switch --pick"
-  ];
-  wayland.windowManager.hyprland.settings.exec-once = [
-    "hypr-exec monitor-switch --default"
-  ];
+  wayland.windowManager.hyprland.settings = {
+    bind = [ (hl.bindExec "SUPER + P" "hypr-exec monitor-switch --pick") ];
+    on = [ (hl.onStart "hypr-exec monitor-switch --default") ];
+  };
 
   systemd.user.services.monitor-switch-daemon = {
     Unit = {

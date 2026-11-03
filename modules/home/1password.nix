@@ -63,7 +63,9 @@ _: {
 
       nixos = {
         programs.ssh.settings."*".IdentityAgent = "~/.1password/agent.sock";
-        wayland.windowManager.hyprland.settings.exec-once = [ "${lib.getExe onePasswordStartup}" ];
+        wayland.windowManager.hyprland.settings.on = [
+          ((import ./desktop/hyprland/_lua.nix { inherit lib; }).onStart (lib.getExe onePasswordStartup))
+        ];
       };
 
       impermanence = lib.mkIf config.znix.impermanence.enable {

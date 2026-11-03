@@ -52,26 +52,31 @@
         binds:
         let
           toCyrillic =
-            s:
+            b:
             let
-              parts = lib.splitString "," s;
-              key = lib.toLower (lib.trim (builtins.elemAt parts 1));
-              rest = builtins.tail (builtins.tail parts);
+              parts = lib.splitString " + " (builtins.head b._args);
+              key = lib.toLower (lib.last parts);
             in
-            if builtins.length parts >= 3 && cyrillicMap ? ${key} then
-              [
-                (lib.concatStringsSep "," (
-                  [
-                    (builtins.head parts)
-                    (" " + cyrillicMap.${key})
-                  ]
-                  ++ rest
-                ))
-              ]
-            else
-              [ ];
+            lib.optional (cyrillicMap ? ${key}) (
+              b
+              // {
+                _args = [
+                  (lib.concatStringsSep " + " (lib.init parts ++ [ cyrillicMap.${key} ]))
+                ]
+                ++ builtins.tail b._args;
+              }
+            );
         in
         binds ++ lib.concatMap toCyrillic binds;
+      hl = import ./_lua.nix { inherit lib; };
+      inherit (hl) bind bindExec bindOpts;
+      menu = "hypr-exec anyrun";
+      terminal = "kitty";
+      setLayout = layout: "function() hl.config({ general = { layout = \"${layout}\" } }) end";
+      repeatLocked = bindOpts {
+        repeating = true;
+        locked = true;
+      };
     in
     lib.optionalAttrs (!isDarwin) {
       imports = [
@@ -143,91 +148,82 @@
       ];
       wayland.windowManager.hyprland = {
         enable = true;
-        # Home Manager 26.05 defaults to Lua configs, but the currently pinned
-        # Hyprland release on this host still expects hyprlang in hyprland.conf.
-        configType = "hyprlang";
+        configType = "lua";
         plugins = with pkgs; [
           # hyprlandPlugins.hyprbars
         ];
-        settings = {
-          "$menu" = "hypr-exec anyrun";
-          "$terminal" = "kitty";
-          "$browser" = "firefox";
+        settings.bind =
+          withCyrillic [
+            (bindExec "SUPER + Space" menu)
 
-          "$mod" = "SUPER";
-          bind =
-            withCyrillic [
-              "$mod, Space, exec, $menu"
+            (bind "SUPER + F" "hl.dsp.window.fullscreen()")
+            (bind "SUPER + SHIFT + Q" "hl.dsp.window.close()")
 
-              "$mod, F, fullscreen"
-              "$mod SHIFT, Q, killactive"
+            (bind "SUPER + SHIFT + F" "hl.dsp.window.float({ action = \"toggle\" })")
+            (bindExec "SUPER + SHIFT + CTRL + L" "hypr-exec loginctl lock-session")
 
-              "$mod SHIFT, F, togglefloating"
-              "$mod SHIFT CTRL, L, exec, hypr-exec loginctl lock-session"
+            (bindExec "SUPER + E" "hypr-exec ${terminal} -e yazi")
 
-              "$mod, E, exec, hypr-exec $terminal -e yazi"
-
-              # Focus movement
-              "$mod, l, movefocus, l"
-              "$mod, h, movefocus, r"
-              "$mod, k, movefocus, u"
-              "$mod, j, movefocus, d"
-              # Window movement
-              "$mod SHIFT, l, movewindow, l"
-              "$mod SHIFT, h, movewindow, r"
-              "$mod SHIFT, k, movewindow, u"
-              "$mod SHIFT, j, movewindow, d"
-            ]
-            ++ [
-              # Focus movement (arrow keys work across all layouts)
-              "$mod, left, movefocus, l"
-              "$mod, right, movefocus, r"
-              "$mod, up, movefocus, u"
-              "$mod, down, movefocus, d"
-              # Window movement
-              "$mod SHIFT, left, movewindow, l"
-              "$mod SHIFT, right, movewindow, r"
-              "$mod SHIFT, up, movewindow, u"
-              "$mod SHIFT, down, movewindow, d"
-              # Media playback
-              ", XF86AudioPlay, exec, hypr-exec playerctl play-pause"
-              ", XF86AudioNext, exec, hypr-exec playerctl next"
-              ", XF86AudioPrev, exec, hypr-exec playerctl previous"
-              ", XF86AudioStop, exec, hypr-exec playerctl stop"
-              # Volume toggles (no repeat needed)
-              ", XF86AudioMute, exec, hypr-exec swayosd-client --output-volume mute-toggle"
-              ", XF86AudioMicMute, exec, hypr-exec swayosd-client --input-volume mute-toggle"
-              # Layout switching
-              "$mod, comma, exec, hypr-exec hyprctl keyword general:layout master"
-              "$mod, period, exec, hypr-exec hyprctl keyword general:layout dwindle"
-            ]
-            ++ (
-              # workspaces
-              # binds $mod + [shift +] {1..9} to [move to] workspace {1..9}
-              builtins.concatLists (
-                builtins.genList (
-                  i:
-                  let
-                    ws = i + 1;
-                  in
-                  [
-                    "$mod, code:1${toString i}, workspace, ${toString ws}"
-                    "$mod SHIFT, code:1${toString i}, movetoworkspace, ${toString ws}"
-                  ]
-                ) 9
-              )
-            );
-          # Repeat-on-hold bindings
-          bindel = [
-            "$mod, XF86MonBrightnessUp, exec, kbd-brightness raise"
-            "$mod, XF86MonBrightnessDown, exec, kbd-brightness lower"
-            ", XF86MonBrightnessUp, exec, swayosd-client --brightness raise"
-            ", XF86MonBrightnessDown, exec, swayosd-client --brightness lower"
-            ", XF86AudioRaiseVolume, exec, swayosd-client --output-volume raise"
-            ", XF86AudioLowerVolume, exec, swayosd-client --output-volume lower"
-          ];
-        };
+            # Focus movement
+            (bind "SUPER + l" "hl.dsp.focus({ direction = \"left\" })")
+            (bind "SUPER + h" "hl.dsp.focus({ direction = \"right\" })")
+            (bind "SUPER + k" "hl.dsp.focus({ direction = \"up\" })")
+            (bind "SUPER + j" "hl.dsp.focus({ direction = \"down\" })")
+            # Window movement
+            (bind "SUPER + SHIFT + l" "hl.dsp.window.move({ direction = \"left\" })")
+            (bind "SUPER + SHIFT + h" "hl.dsp.window.move({ direction = \"right\" })")
+            (bind "SUPER + SHIFT + k" "hl.dsp.window.move({ direction = \"up\" })")
+            (bind "SUPER + SHIFT + j" "hl.dsp.window.move({ direction = \"down\" })")
+          ]
+          ++ [
+            # Focus movement (arrow keys work across all layouts)
+            (bind "SUPER + left" "hl.dsp.focus({ direction = \"left\" })")
+            (bind "SUPER + right" "hl.dsp.focus({ direction = \"right\" })")
+            (bind "SUPER + up" "hl.dsp.focus({ direction = \"up\" })")
+            (bind "SUPER + down" "hl.dsp.focus({ direction = \"down\" })")
+            # Window movement
+            (bind "SUPER + SHIFT + left" "hl.dsp.window.move({ direction = \"left\" })")
+            (bind "SUPER + SHIFT + right" "hl.dsp.window.move({ direction = \"right\" })")
+            (bind "SUPER + SHIFT + up" "hl.dsp.window.move({ direction = \"up\" })")
+            (bind "SUPER + SHIFT + down" "hl.dsp.window.move({ direction = \"down\" })")
+            # Media playback
+            (bindExec "XF86AudioPlay" "hypr-exec playerctl play-pause")
+            (bindExec "XF86AudioNext" "hypr-exec playerctl next")
+            (bindExec "XF86AudioPrev" "hypr-exec playerctl previous")
+            (bindExec "XF86AudioStop" "hypr-exec playerctl stop")
+            # Volume toggles (no repeat needed)
+            (bindExec "XF86AudioMute" "hypr-exec swayosd-client --output-volume mute-toggle")
+            (bindExec "XF86AudioMicMute" "hypr-exec swayosd-client --input-volume mute-toggle")
+            # Layout switching
+            (bind "SUPER + comma" (setLayout "master"))
+            (bind "SUPER + period" (setLayout "dwindle"))
+            # Repeat-on-hold bindings
+            (repeatLocked "SUPER + XF86MonBrightnessUp" (hl.exec "kbd-brightness raise"))
+            (repeatLocked "SUPER + XF86MonBrightnessDown" (hl.exec "kbd-brightness lower"))
+            (repeatLocked "XF86MonBrightnessUp" (hl.exec "swayosd-client --brightness raise"))
+            (repeatLocked "XF86MonBrightnessDown" (hl.exec "swayosd-client --brightness lower"))
+            (repeatLocked "XF86AudioRaiseVolume" (hl.exec "swayosd-client --output-volume raise"))
+            (repeatLocked "XF86AudioLowerVolume" (hl.exec "swayosd-client --output-volume lower"))
+          ]
+          ++ (
+            # SUPER + [SHIFT +] {1..9} focuses [moves the window to] workspace {1..9}
+            builtins.concatLists (
+              builtins.genList (
+                i:
+                let
+                  ws = toString (i + 1);
+                in
+                [
+                  (bind "SUPER + code:1${toString i}" "hl.dsp.focus({ workspace = ${ws} })")
+                  (bind "SUPER + SHIFT + code:1${toString i}" "hl.dsp.window.move({ workspace = ${ws} })")
+                ]
+              ) 9
+            )
+          );
       };
+      # Hyprland writes a default hyprland.lua when it starts before activation
+      # created the link; overwrite it instead of failing activation.
+      xdg.configFile."hypr/hyprland.lua".force = true;
       services = {
         network-manager-applet.enable = true;
         blueman-applet.enable = true;

@@ -1,4 +1,7 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
+let
+  hl = import ./_lua.nix { inherit lib; };
+in
 {
   home.packages = with pkgs; [
     grimblast
@@ -6,8 +9,8 @@
     libnotify
   ];
   wayland.windowManager.hyprland.settings.bind = [
-    ", Print, exec, hypr-exec grimblast --notify copysave area"
-    "$mod, Print, exec, hypr-exec grimblast --notify copysave output"
-    "$mod SHIFT, Print, exec, hypr-exec grimblast --notify copysave active"
+    (hl.bindExec "Print" "hypr-exec grimblast --notify copysave area")
+    (hl.bindExec "SUPER + Print" "hypr-exec grimblast --notify copysave output")
+    (hl.bindExec "SUPER + SHIFT + Print" "hypr-exec grimblast --notify copysave active")
   ];
 }
