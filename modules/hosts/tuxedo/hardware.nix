@@ -51,15 +51,18 @@
           # 2. Disable Panel Self Refresh (PSR)
           # Uncomment if you still experience micro-stutters or flickers when the
           # screen wakes up from a static state (e.g., when moving the mouse).
-          # "amdgpu.dcdebugmask=0x10"
+          # Add bit 0x10 to the dcdebugmask below; a second dcdebugmask= overrides the first.
 
           # 3. Disable FreeSync / Variable Refresh Rate (VRR) LFC Flicker
           # Uncomment if you use VRR and experience brightness flickers caused by
           # Low Framerate Compensation (LFC) suddenly altering the panel's voltage.
           # "amdgpu.freesync_video=0"
 
-          # disable DCN 3.5 IPS: fixes external-DP black flashes on Strix over Thunderbolt
-          "amdgpu.dcdebugmask=0x800"
+          # dcdebugmask is a bitmask; every bit goes into this one value:
+          # 0x800 disables DCN 3.5 IPS: fixes external-DP black flashes on Strix over Thunderbolt.
+          # 0x400 disables Panel Replay: kernel 7.2 logs handle_hpd_irq_replay_sink DPCD read
+          #       failures on eDP, suspected cause of periodic backlight dips.
+          "amdgpu.dcdebugmask=0xc00"
         ];
         initrd = {
           availableKernelModules = [
