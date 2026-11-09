@@ -169,7 +169,8 @@ function z::git:wt_status() {
   local lines=(${(f)"$(z::git:wt_list)"}) i dir branch w=1 tmp
   local dirs=() branches=()
   tmp=$(mktemp -d) || return
-  trap 'rm -rf -- "$tmp"' EXIT
+  # Expanded now: the trap runs after the local $tmp is gone.
+  trap "rm -rf -- ${(q)tmp}" EXIT
   for i in {1..$#lines}; do
     dir=${lines[i]%%$'\t'*} branch=${lines[i]#*$'\t'}
     dirs+=("$dir") branches+=("${branch:--}")
