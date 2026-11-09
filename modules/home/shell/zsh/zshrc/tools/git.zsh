@@ -164,28 +164,39 @@ function z::git:wt_legend() {
 # removable without --force. Icons are colored when $1 is non-empty. Queries
 # GitHub for every branch that no other ref contains.
 function z::git:wt_status() {
-  local lines=(${(f)"$(z::git:wt_list)"}) i dir branch state dirty w=1
-  local dirs=() branches=() icons=()
+  # nomonitor keeps the shell from printing a job notice per background check.
+  setopt localoptions nomonitor
+  local lines=(${(f)"$(z::git:wt_list)"}) i dir branch w=1 tmp
+  local dirs=() branches=()
+  tmp=$(mktemp -d) || return
+  trap 'rm -rf -- "$tmp"' EXIT
   for i in {1..$#lines}; do
     dir=${lines[i]%%$'\t'*} branch=${lines[i]#*$'\t'}
-    if ((i == 1)); then
-      state=main
-    elif [[ -z $branch ]]; then
-      state=detached
-    elif z::git:wt_merged_ref "$branch" || z::git:wt_merged_pr "$branch"; then
-      state=merged
-    else
-      state=unmerged
-    fi
-    dirty=clean
-    [[ -n $(git -C "$dir" status --porcelain 2>/dev/null) ]] && dirty=dirty
     dirs+=("$dir") branches+=("${branch:--}")
-    icons+=("$(z::git:wt_icon $state $1)$(z::git:wt_icon $dirty $1)")
     ((${#branches[-1]} > w)) && w=${#branches[-1]}
+    # One subshell per worktree: the gh query and git status dominate the
+    # runtime, so the worktrees are checked concurrently.
+    # shortcut: no concurrency cap, add one if hundreds of worktrees hit gh rate limits.
+    (
+      local state dirty=clean
+      if ((i == 1)); then
+        state=main
+      elif [[ -z $branch ]]; then
+        state=detached
+      elif z::git:wt_merged_ref "$branch" || z::git:wt_merged_pr "$branch"; then
+        state=merged
+      else
+        state=unmerged
+      fi
+      [[ -n $(git -C "$dir" status --porcelain 2>/dev/null) ]] && dirty=dirty
+      z::git:wt_icon $state $1
+      z::git:wt_icon $dirty $1
+    ) >"$tmp/$i" &
   done
+  wait
   # printf, not column -t: color escapes would count towards column widths.
   for i in {1..$#dirs}; do
-    printf '%s  %-*s  %s\n' "${icons[i]}" $w "${branches[i]}" "${dirs[i]}"
+    printf '%s  %-*s  %s\n' "$(<"$tmp/$i")" $w "${branches[i]}" "${dirs[i]}"
   done
 }
 
