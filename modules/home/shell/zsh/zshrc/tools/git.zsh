@@ -158,28 +158,24 @@ function z::git:wt_legend() {
   print -r -- ${(j: · :)items}
 }
 
-# Worktrees as "<icons> <branch> <dir>" lines in z::git:wt_list order. The first
-# icon says whether wtrm considers the branch merged, the second marks
-# uncommitted changes or untracked files; only a clean merged worktree is
-# removable without --force. Icons are colored when $1 is non-empty. Queries
+# Worktrees as "<state>\t<dirty>\t<dir>\t<branch>" lines in z::git:wt_list
+# order. state is main, detached, merged (as wtrm judges it) or unmerged; dirty
+# is dirty for uncommitted changes or untracked files, clean otherwise. Queries
 # GitHub for every branch that no other ref contains.
-function z::git:wt_status() {
+function z::git:wt_states() {
   # nomonitor keeps the shell from printing a job notice per background check.
   setopt localoptions nomonitor
-  local lines=(${(f)"$(z::git:wt_list)"}) i dir branch w=1 tmp
-  local dirs=() branches=()
+  local lines=(${(f)"$(z::git:wt_list)"}) i tmp
+  (($#lines)) || return
   tmp=$(mktemp -d) || return
   # Expanded now: the trap runs after the local $tmp is gone.
   trap "rm -rf -- ${(q)tmp}" EXIT
   for i in {1..$#lines}; do
-    dir=${lines[i]%%$'\t'*} branch=${lines[i]#*$'\t'}
-    dirs+=("$dir") branches+=("${branch:--}")
-    ((${#branches[-1]} > w)) && w=${#branches[-1]}
     # One subshell per worktree: the gh query and git status dominate the
     # runtime, so the worktrees are checked concurrently.
     # shortcut: no concurrency cap, add one if hundreds of worktrees hit gh rate limits.
     (
-      local state dirty=clean
+      local dir=${lines[i]%%$'\t'*} branch=${lines[i]#*$'\t'} state dirty=clean
       if ((i == 1)); then
         state=main
       elif [[ -z $branch ]]; then
@@ -190,14 +186,31 @@ function z::git:wt_status() {
         state=unmerged
       fi
       [[ -n $(git -C "$dir" status --porcelain 2>/dev/null) ]] && dirty=dirty
-      z::git:wt_icon $state $1
-      z::git:wt_icon $dirty $1
+      print -r -- "$state"$'\t'"$dirty"$'\t'"${lines[i]}"
     ) >"$tmp/$i" &
   done
   wait
+  cat -- "$tmp"/{1..$#lines}
+}
+
+# Worktrees as "<icons> <branch> <dir>" lines in z::git:wt_list order. The first
+# icon is the wt_states state, the second marks a dirty worktree; only a clean
+# merged worktree is removable without --force. Icons are colored when $1 is
+# non-empty.
+function z::git:wt_status() {
+  local line state dirty dir branch i w=1 icons=() dirs=() branches=()
+  local rows
+  rows=$(z::git:wt_states) || return
+  for line in ${(f)rows}; do
+    # Tab is IFS whitespace, so an empty branch collapses away; it comes last.
+    IFS=$'\t' read -r state dirty dir branch <<<"$line"
+    icons+=("$(z::git:wt_icon $state $1)$(z::git:wt_icon $dirty $1)")
+    dirs+=("$dir") branches+=("${branch:--}")
+    ((${#branches[-1]} > w)) && w=${#branches[-1]}
+  done
   # printf, not column -t: color escapes would count towards column widths.
   for i in {1..$#dirs}; do
-    printf '%s  %-*s  %s\n' "$(<"$tmp/$i")" $w "${branches[i]}" "${dirs[i]}"
+    printf '%s  %-*s  %s\n' "${icons[i]}" $w "${branches[i]}" "${dirs[i]}"
   done
 }
 
@@ -282,13 +295,10 @@ function wtrm() {
     [[ ${dir:A} == ${root:A} ]] && set -- -
   fi
   if [[ -n $prune ]]; then
-    local line branch lines=(${(f)"$(z::git:wt_list)"})
-    for line in ${lines[2,-1]}; do
-      dir=${line%%$'\t'*} branch=${line#*$'\t'}
-      [[ -n $branch ]] || continue
-      if z::git:wt_merged_ref "$branch" || z::git:wt_merged_pr "$branch"; then
-        dirs+=("$dir")
-      fi
+    local line state dirty branch
+    for line in ${(f)"$(z::git:wt_states)"}; do
+      IFS=$'\t' read -r state dirty dir branch <<<"$line"
+      [[ $state == merged ]] && dirs+=("$dir")
     done
     ((${#dirs})) || log::info "no merged worktrees"
   elif [[ $1 == - ]]; then
