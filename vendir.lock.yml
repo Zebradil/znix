@@ -19,17 +19,17 @@ directories:
 - contents:
   - git:
       commitTitle: 'release: v1.4.256'
-      sha: baed35a2a2def0b84615c589042e75df97b3a5d5
+      sha: 6ea47e7342dbf44fb3842c598aaac0be9af76180
       tags:
       - v1.4.256
     path: .
   path: vendor/orca-skills
 - contents:
   - git:
-      commitTitle: 'chore(main): release 0.9.0 (#56)...'
-      sha: 7dbeea0addaa9883f7f5970894e88cb59e69dcbd
+      commitTitle: 'chore(main): release 0.10.0 (#58)...'
+      sha: e04a15a93b590de8c2924f57dda548418b490029
       tags:
-      - v0.9.0
+      - v0.10.0
     path: .
   path: vendor/docs-kit
 kind: LockConfig

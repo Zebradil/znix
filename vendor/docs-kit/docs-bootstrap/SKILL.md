@@ -9,7 +9,7 @@ Add docs-kit to the consuming project (the current repository) and open one PR. 
 
 Every step is **fill-only**: it creates what is missing and leaves what exists byte-identical, whether a file, a `site.yaml` field or comment, or a page. A second run on a bootstrapped project therefore ends with no commit and no PR; say so and stop.
 
-`docs/` holding another site generator (a `package.json` without `@zebradil/starlight-kit`, `mkdocs.yml`, `book.toml`, a Docusaurus config): stop and ask the owner. Unrelated files in `docs/` (ADRs, notes) stay where they are.
+`docs/` holding another site generator (a `package.json` without `@zebradil/docs-kit`, `mkdocs.yml`, `book.toml`, a Docusaurus config): stop and ask the owner. Unrelated files in `docs/` (ADRs, notes) stay where they are.
 
 ## 1. Worktree and kit ref
 
@@ -17,7 +17,7 @@ Work in a git worktree on a feature branch, following the project's `AGENTS.md`/
 
 `REF`, the kit version, in this order:
 
-1. The ref in an existing `docs/package.json` (`github:Zebradil/docs-kit#<REF>`).
+1. The version in an existing `docs/package.json`: `v` + the `@zebradil/docs-kit` version, or `<REF>` of a `github:Zebradil/docs-kit#<REF>` spec from before the kit was on npm.
 2. A tag or commit SHA the user named.
 3. The latest release tag:
    ```sh
@@ -28,21 +28,21 @@ No ref from any of the three: stop and reply "docs-kit has no release tag yet: p
 
 ## 2. Skeleton
 
-Create each missing file:
+Create each missing file. `VERSION` is `REF` without the leading `v`. The kit is on npm from 0.10.0: an older `REF` is a git dependency, `github:Zebradil/docs-kit#<REF>`; name it in the PR as an owner-review item.
 
 | File | Content |
 |---|---|
-| `docs/package.json` | `{ "private": true, "type": "module", "scripts": { "build": "astro build" }, "dependencies": { "@zebradil/starlight-kit": "github:Zebradil/docs-kit#<REF>" } }`, formatted |
-| `docs/astro.config.mjs` | `import docsKit from '@zebradil/starlight-kit';` blank line `export default docsKit({ site: 'site.yaml' });` |
-| `docs/src/content.config.mjs` | `export { collections } from '@zebradil/starlight-kit/content';` |
+| `docs/package.json` | `{ "private": true, "type": "module", "scripts": { "build": "astro build" }, "dependencies": { "@zebradil/docs-kit": "<VERSION>" } }`, formatted |
+| `docs/astro.config.mjs` | `import docsKit from '@zebradil/docs-kit';` blank line `export default docsKit({ site: 'site.yaml' });` |
+| `docs/src/content.config.mjs` | `export { collections } from '@zebradil/docs-kit/content';` |
 | `docs/.gitignore` | `node_modules/`, `dist/`, `.astro/`, one per line |
 | `docs/src/content/docs/getting-started.md` | Only when no `getting-started.md`/`.mdx` exists (the build fails without one): front matter `title: Getting started` and a one-line `description`, body a `:::note` saying it is a placeholder for docs-write |
 
-Install from `docs/`: `npm ci` when `package-lock.json` exists, `npm install` otherwise (it writes the lock). The kit then sits in `docs/node_modules/@zebradil/starlight-kit`, with the schema, validator and `help2md` of exactly `REF`.
+Install from `docs/`: `npm ci` when `package-lock.json` exists, `npm install` otherwise (it writes the lock). The kit then sits in `docs/node_modules/@zebradil/docs-kit`, with the schema, validator and `help2md` of exactly `VERSION`.
 
 ## 3. site.yaml
 
-Missing: write `docs/site.yaml`, first line `# yaml-language-server: $schema=node_modules/@zebradil/starlight-kit/schema/site.schema.json`. Present: add only the fields the validator reports missing.
+Missing: write `docs/site.yaml`, first line `# yaml-language-server: $schema=node_modules/@zebradil/docs-kit/schema/site.schema.json`. Present: add only the fields the validator reports missing.
 
 Field sources, first hit wins. `docs/.audit.md` with a `fix-by: docs-bootstrap` gap carries draft values in its evidence; take them, rechecked against the sources below.
 
@@ -63,7 +63,7 @@ Field sources, first hit wins. `docs/.audit.md` with a `fix-by: docs-bootstrap` 
 
 A value not copied verbatim from a source, or a command not run, is **guessed**: end its line with `# guessed: <source and why>`. The PR lists every guessed value for the owner.
 
-Done when, from `docs/`, `node node_modules/@zebradil/starlight-kit/schema/validate.mjs site.yaml` prints `site.yaml: ok`.
+Done when, from `docs/`, `node node_modules/@zebradil/docs-kit/schema/validate.mjs site.yaml` prints `site.yaml: ok`.
 
 ## 4. CLI reference
 
@@ -104,14 +104,14 @@ Keep `uses:` on its own line: Renovate reads it line by line and misses a flow m
 
 ## 6. Renovate
 
-Skip when the project has no Renovate config (`renovate.json(5)`, `.github/renovate.json(5)`, `.renovaterc*`, `renovate` in the root `package.json`); name that in the PR, since nothing then bumps the kit. Renovate's default managers already track both pins as the package `Zebradil/docs-kit` on the `github-tags` datasource: npm reads `docs/package.json`, github-actions reads the workflow's `uses:`. When the config sets `enabledManagers`, add `npm` and `github-actions` to it.
+Skip when the project has no Renovate config (`renovate.json(5)`, `.github/renovate.json(5)`, `.renovaterc*`, `renovate` in the root `package.json`); name that in the PR, since nothing then bumps the kit. Renovate's default managers already track both pins: npm reads `@zebradil/docs-kit` in `docs/package.json` (npm datasource), github-actions reads `Zebradil/docs-kit` in the workflow's `uses:` (github-tags datasource). When the config sets `enabledManagers`, add `npm` and `github-actions` to it.
 
-Append one rule as the last `packageRules` entry, so it wins over an existing github-actions group, unless a rule already matches `Zebradil/docs-kit`:
+Append one rule as the last `packageRules` entry, so it wins over an existing github-actions group, unless a rule already matches both names (extend a rule that matches only `Zebradil/docs-kit`):
 
 ```json5
 // docs/package.json and .github/workflows/docs.yml pin the same docs-kit tag: the workflow
 // runs the help2md the package installs. Last, so it wins over other groups.
-{ description: "Bump the docs-kit package and its reusable workflow together", matchPackageNames: ["Zebradil/docs-kit"], groupName: "docs-kit" },
+{ description: "Bump the docs-kit package and its reusable workflow together", matchPackageNames: ["@zebradil/docs-kit", "Zebradil/docs-kit"], groupName: "docs-kit" },
 ```
 
 Validate: `npx --yes --package renovate -- renovate-config-validator <config file>`.
