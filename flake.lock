@@ -11,11 +11,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793085954,
-        "narHash": "sha256-3EfS51mkASJXZ3xHEGWvy2XtWDHYcF4Q8yDNyhTVaS0=",
+        "lastModified": 1794330298,
+        "narHash": "sha256-W5qfH8ywv2QPtKDrFU+KFffT4zUUmtFg27Bzg4XDBZU=",
         "owner": "MalpenZibo",
         "repo": "ashell",
-        "rev": "b9469737b967aae727e49ca8f070ddebe1257e8e",
+        "rev": "d29acf73d3b18dd04113c192b7d2986c37b016af",
         "type": "github"
       },
       "original": {
