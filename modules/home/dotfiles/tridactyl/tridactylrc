@@ -1,8 +1,29 @@
 " vim: set filetype=tridactyl
 
+" Make this file the single source of truth: drop settings changed at runtime
+" (keeps commandline history), then reapply everything below.
+sanitise tridactylconfig tridactylsync
+
 unbind --mode=n <C-f>
 
+" Stray keystrokes outside an input field must never close tabs, reload pages,
+" or quit the browser. Ctrl-w still closes the current tab.
+unbind --mode=n d
+unbind --mode=n D
+unbind --mode=n gx0
+unbind --mode=n gx$
+unbind --mode=n r
+unbind --mode=n R
+unbind --mode=n ZZ
+
+" Show the pending key prefix, so an unintended sequence is visible.
+set modeindicatorshowkeys true
+
+" Ignore mode on these sites; <S-Escape> switches back to normal mode.
 blacklistadd calendar.google.com
 blacklistadd mail.google.com
 blacklistadd docs.google.com
 blacklistadd youtube.com
+
+" For sites where Tridactyl should be off entirely (applies on page reload):
+" seturl ^https?://app\.example\.com superignore true
