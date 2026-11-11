@@ -5,10 +5,42 @@ _: {
       lib,
       ...
     }:
+    let
+      cfg = config.znix.wireless;
+      secrets = lib.unique (lib.mapAttrsToList (_: net: net.pskSecret) cfg.networks);
+      # ensureProfiles substitutes $VAR from the environment file, so the name must be a shell identifier.
+      envVar =
+        secret:
+        "PSK_"
+        + lib.concatMapStrings (c: if builtins.match "[A-Za-z0-9_]" c != null then c else "_") (
+          lib.stringToCharacters secret
+        );
+    in
     {
-      options.znix.wireless.enable = lib.mkEnableOption "wireless networking";
+      options.znix.wireless = {
+        enable = lib.mkEnableOption "wireless networking";
 
-      config = lib.mkIf config.znix.wireless.enable {
+        networks = lib.mkOption {
+          description = ''
+            WPA-PSK networks to declare as NetworkManager profiles, keyed by SSID.
+            Networks joined ad hoc through nm-applet are saved alongside these in
+            /etc/NetworkManager/system-connections.
+          '';
+          type = lib.types.attrsOf (
+            lib.types.submodule {
+              options.pskSecret = lib.mkOption {
+                type = lib.types.str;
+                description = "Key in secrets/hosts/common.yaml holding the passphrase.";
+              };
+            }
+          );
+          default = { };
+        };
+      };
+
+      config = lib.mkIf cfg.enable {
+        znix.wireless.networks.DUST.pskSecret = lib.mkDefault "wireless";
+
         hardware.bluetooth.enable = true;
         services = {
           blueman.enable = true;
@@ -26,38 +58,19 @@ _: {
           };
         };
 
-        sops.secrets.wireless = {
+        sops.secrets = lib.genAttrs secrets (_: {
           sopsFile = ../../secrets/hosts/common.yaml;
-        };
+        });
 
-        sops.templates."wifi-env".content = ''
-          WIFI_PSK=${config.sops.placeholder.wireless}
-        '';
-
-        # On a multi-AP SSID, iwd can end up on a distant AP — its autoconnect_quick path only
-        # probes the frequencies cached in /var/lib/iwd/.known_network.freq, and a BSS that
-        # recently failed to associate is skipped even when it is by far the strongest. The
-        # stock thresholds (-70 / -76) are low enough that the resulting mediocre-but-usable
-        # link never triggers a corrective roam scan. See docs/wifi-troubleshooting.md.
-        networking.wireless.iwd.settings = {
-          General = {
-            RoamThreshold = -55;
-            RoamThreshold5G = -65;
-          };
-
-          # iwd ranks candidate BSSes by the data rate it estimates from their RSSI, so a
-          # close 2.4 GHz radio can outrank a 5 GHz one that is still perfectly usable.
-          # Halving the 2.4 GHz rank leaves it as a fallback for when 5 GHz is genuinely
-          # bad. Not 0.0 — that disables the band outright, scanning included.
-          Rank.BandModifier2_4GHz = "0.5";
-        };
+        sops.templates."wifi-env".content = lib.concatMapStrings (
+          secret: "${envVar secret}=${config.sops.placeholder.${secret}}\n"
+        ) secrets;
 
         networking.networkmanager = {
           enable = true;
-          wifi.backend = "iwd";
           ensureProfiles = {
             environmentFiles = [ config.sops.templates."wifi-env".path ];
-            profiles = lib.genAttrs [ "DUST" ] (ssid: {
+            profiles = lib.mapAttrs (ssid: net: {
               connection = {
                 id = ssid;
                 type = "wifi";
@@ -68,11 +81,11 @@ _: {
               };
               wifi-security = {
                 key-mgmt = "wpa-psk";
-                psk = "$WIFI_PSK";
+                psk = "\$${envVar net.pskSecret}";
               };
               ipv4.method = "auto";
               ipv6.method = "auto";
-            });
+            }) cfg.networks;
           };
         };
 
