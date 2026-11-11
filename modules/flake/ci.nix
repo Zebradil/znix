@@ -17,6 +17,8 @@
       zebradil-tuxedo-home-build = inputs.self.homeConfigurations."zebradil@tuxedo".activationPackage;
 
       junior-build = inputs.self.nixosConfigurations.junior.config.system.build.toplevel;
+
+      daddy-build = inputs.self.nixosConfigurations.daddy.config.system.build.toplevel;
     }
     // builtins.listToAttrs (
       builtins.genList (

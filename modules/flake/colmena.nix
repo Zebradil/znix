@@ -23,6 +23,15 @@ let
       targetUser = "suok";
       tags = [ "server" ];
     };
+    daddy = {
+      targetHost = lib.head (
+        lib.splitString "/" (
+          lib.head config.flake.nixosConfigurations.daddy.config.systemd.network.networks."10-enp6s0".address
+        )
+      );
+      targetUser = "suok";
+      tags = [ "appliance" ];
+    };
   }
   // lib.genAttrs [ "d1" "d2" "d3" ] (host: {
     targetHost = lib.head (
