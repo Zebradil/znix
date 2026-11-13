@@ -3,6 +3,16 @@
   lib,
   ...
 }:
+let
+  # znix's own workaround modules always apply. A flake that passes itself as
+  # `flake` adds its own on top.
+  workaroundModules =
+    class: flake:
+    [ inputs.self.modules.${class}.workarounds ]
+    ++ lib.optional (
+      flake.outPath != inputs.self.outPath && flake ? modules.${class}.workarounds
+    ) flake.modules.${class}.workarounds;
+in
 {
   # Helper functions for creating system / home-manager configurations
 
@@ -53,7 +63,8 @@
           modules = [
             flake.modules.nixos.${name}
             { nixpkgs.hostPlatform = lib.mkDefault system; }
-          ];
+          ]
+          ++ workaroundModules "nixos" flake;
         };
       };
 
@@ -67,7 +78,8 @@
           modules = [
             flake.modules.darwin.${name}
             { nixpkgs.hostPlatform = lib.mkDefault system; }
-          ];
+          ]
+          ++ workaroundModules "darwin" flake;
         };
       };
 

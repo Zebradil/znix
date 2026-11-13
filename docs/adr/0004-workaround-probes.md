@@ -1,6 +1,6 @@
 # Probing workarounds for removal
 
-Status: accepted
+Status: superseded by [ADR 0007](0007-workarounds-framework.md)
 
 Packages broken in `nixpkgs-unstable` get worked around here — pinned to an
 older revision, or patched with `overrideAttrs`. Every one is meant to be

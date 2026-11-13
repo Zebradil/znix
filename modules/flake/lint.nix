@@ -19,7 +19,6 @@
           ''
             statix check --config ${inputs.self}/statix.toml ${inputs.self}
             actionlint -color ${inputs.self}/.github/workflows/*.y*ml
-            shellcheck ${inputs.self}/.github/scripts/*.sh
             shellcheck ${inputs.self}/hack/*.sh
 
             # assets/bin takes whatever scripts land there, so lint by shebang
@@ -35,8 +34,6 @@
             # Fixtures for all three transcript stores: the tripwire for the next
             # Claude Code log change, Cursor JSONL change, or opencode migration.
             python3 ${inputs.self}/modules/home/session-export/session-export.py --selftest
-            bash ${inputs.self}/.github/scripts/workaround-matrix.sh --self-test
-            bash ${inputs.self}/.github/scripts/workaround-propose.sh --self-test
             touch $out
           '';
     };

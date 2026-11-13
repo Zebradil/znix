@@ -93,3 +93,11 @@ etymology that is rarely wanted), and a ru→en dictionary — nixpkgs packages
 none, and Russian words are looked up as phrases rather than defined.
 
 LLM-backed translation was scoped out of this decision.
+
+## Amendment: the index fix became workaround entries
+
+[ADR 0007](0007-workarounds-framework.md) gave every workaround an explicit
+probe, so the re-sort above no longer has to stay outside the framework. Each
+affected database is now an `override` entry (`dictd-index-<db>`) whose probe
+compares the upstream index's entry order with `dictfmt -I`'s. `mueller-base`
+was already sorted and needs none.
