@@ -38,7 +38,6 @@ _: {
         difftastic
         htop
         jnv
-        k9s
         lazygit
         sofka
         tmux
