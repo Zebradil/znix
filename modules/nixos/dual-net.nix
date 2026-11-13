@@ -39,6 +39,9 @@ _: {
 
       config = lib.mkIf cfg.enable {
         networking = {
+          # Search `lan` rather than any fallback domain so unresolved local
+          # subdomains don't leak upstream (#237).
+          search = [ "lan" ];
           useDHCP = false;
           wireless.iwd.enable = true;
           nameservers = [ cfg.gateway ];
