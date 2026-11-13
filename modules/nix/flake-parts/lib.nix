@@ -4,13 +4,20 @@
   ...
 }:
 let
-  # znix's own workaround modules always apply. A flake that passes itself as
-  # `flake` adds its own on top.
+  # znix's own workarounds always apply (its overlay through
+  # overlays.default). A flake that passes itself as `flake` adds its own
+  # class module and overlay on top.
+  isConsumer = flake: flake.outPath != inputs.self.outPath;
+  consumerOverlays =
+    flake: lib.optional (isConsumer flake && flake ? overlays.workarounds) flake.overlays.workarounds;
   workaroundModules =
     class: flake:
-    [ inputs.self.modules.${class}.workarounds ]
+    [
+      inputs.self.modules.${class}.workarounds
+      { nixpkgs.overlays = consumerOverlays flake; }
+    ]
     ++ lib.optional (
-      flake.outPath != inputs.self.outPath && flake ? modules.${class}.workarounds
+      isConsumer flake && flake ? modules.${class}.workarounds
     ) flake.modules.${class}.workarounds;
 in
 {
@@ -91,7 +98,9 @@ in
     # Omitting either would resolve files to different store paths than the
     # system switch. `standalone = true` flips the HM impermanence import.
     # `extraModules` lets an external flake sweep its own homeManager module
-    # registry in on top of znix's (znix's set is always included).
+    # registry in on top of znix's (znix's set is always included); that sweep
+    # also carries its homeManager.workarounds. `flake` adds that flake's
+    # workarounds overlay, which nixpkgs.overlays cannot: pkgs is built here.
     mkHomeManager =
       system: key:
       {
@@ -100,12 +109,13 @@ in
         isDarwin ? false,
         excludeModules ? [ ],
         extraModules ? [ ],
+        flake ? inputs.self,
       }:
       {
         ${key} = inputs.home-manager.lib.homeManagerConfiguration {
           pkgs = import nixpkgs {
             inherit system;
-            overlays = [ inputs.self.overlays.default ];
+            overlays = [ inputs.self.overlays.default ] ++ consumerOverlays flake;
             config.allowUnfree = true;
           };
           extraSpecialArgs = {

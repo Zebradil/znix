@@ -172,6 +172,12 @@ module.
 1. Import the module: `imports = [ inputs.znix.flakeModules.workarounds ];`.
 2. Add `overlays.workarounds` to every pkgs the flake builds, once.
 3. Import `modules.<class>.workarounds` into every configuration of that class.
+
+   A flake that builds its configurations with znix's `lib.mkNixos`,
+   `lib.mkDarwin`, or `lib.mkHomeManager` gets steps 2 and 3 by passing
+   `flake = inputs.self`. `mkHomeManager` adds only the overlay; the flake's
+   own homeManager modules, `workarounds` among them, come in through
+   `extraModules`.
 4. Copy `.github/workflows/workarounds.yaml` and adjust the runner mapping, the
    Nix setup, the cache, and the token to the repository.
 
