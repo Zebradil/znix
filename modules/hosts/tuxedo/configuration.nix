@@ -24,6 +24,7 @@
         impermanence
         laptop
         locale
+        nix-builder-client
         nix-settings
         openssh
         pki

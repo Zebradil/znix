@@ -7,6 +7,7 @@ keys:
       - &d2 age1hcr6466ujfhtzw7nzlqu9guk4yu8yx3kvevsr2va68grrd4ar5pskgr804
       - &d3 age1xvracjzswt8l8tefkzreqj2wyf7ht3cqdsjel34svnep2vvhrpnsq9zqnz
       - &junior age1cdrsgrxdhhxzj8gzpdfw5n57w2lfzavrqjg8p968z82pjur0f5ss0t34d7
+      - &daddy age1awknhznlmhdpydp2ee7zv0jz524tfr5cpdyp5puvc8ka762vsgks3288tc
   # CI (GitHub Actions); private key stored as the SOPS_AGE_KEY repo secret
   - ci:
       - &github-ci age1avy74tmpl5tws934r0rs9rxgcul2k3d942xmn4heh4t0xuf584msr7cewl
@@ -35,6 +36,7 @@ creation_rules:
           - *d2
           - *d3
           - *junior
+          - *daddy
   - path_regex: secrets/cache\.ya?ml$
     key_groups:
       - age:
