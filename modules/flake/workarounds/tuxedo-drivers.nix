@@ -1,5 +1,5 @@
 _: {
-  znix.workarounds.tuxedo-drivers = {
+  workarounds.tuxedo-drivers = {
     package = "linuxKernel.packages.linux_xanmod_latest.tuxedo-drivers";
     systems = [ "x86_64-linux" ];
     reason = "tuxedo-drivers' Makefile re-passes $(MAKEFLAGS) through the shell unquoted, which breaks on the kernel's `cmd_sign=...$(space)$@` make flag.";

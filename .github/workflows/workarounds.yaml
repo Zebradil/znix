@@ -1,13 +1,12 @@
-name: Workaround Probe
+name: Workarounds
 
-# Weekly check on whether the temporary workarounds in modules/flake/workarounds/
-# are still earning their place. For each one it builds the *vanilla* nixpkgs
-# package — no overlays — and a build that SUCCEEDS is the alarm: upstream is
-# fixed and the workaround can go. Successes are pushed to the cache, because
-# the vanilla path is what every host wants the moment the workaround is dropped.
+# Scheduled check on whether each entry in modules/flake/workarounds/ is still
+# needed, judged against the inputs the flake would move to next. A probe that
+# BUILDS is the alarm: upstream is fixed, and the entry gets a removal PR that
+# also carries the updated lock. See docs/workarounds.md.
 #
-# Deliberately standalone: its pass condition is inverted relative to every other
-# workflow here, and it must never be able to block the nightly lock update.
+# Standalone: its pass condition is inverted relative to every other workflow
+# here, and it must never block the nightly lock update.
 
 on:
   schedule:
@@ -22,7 +21,7 @@ permissions:
   contents: read
 
 jobs:
-  matrix:
+  candidate:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
@@ -34,6 +33,16 @@ jobs:
       - name: Setup Nix
         uses: zebradil/nix-ci/.github/actions/setup-nix@fa4ea864c879251657017bb0e4aed9009c0d8b2b # v2.0.2
 
+      - name: Update inputs
+        run: nix flake update
+
+      - name: Upload candidate lock
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: candidate-lock
+          path: flake.lock
+          retention-days: 7
+
       - name: Build probe matrix
         id: matrix
         env:
@@ -41,20 +50,25 @@ jobs:
             x86_64-linux:ubuntu-latest
             aarch64-linux:ubuntu-24.04-arm
             aarch64-darwin:macos-26
-        run: .github/scripts/workaround-matrix.sh
+        run: nix run .#workarounds -- matrix
 
   probe:
-    needs: matrix
-    if: ${{ needs.matrix.outputs.has-targets == 'true' }}
+    needs: candidate
+    if: ${{ needs.candidate.outputs.has-targets == 'true' }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.matrix.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.candidate.outputs.matrix) }}
     runs-on: ${{ matrix.runner }}
     env:
       CACHE_S3_URL: ${{ vars.CACHE_S3_URL }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download candidate lock
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: candidate-lock
 
       - name: Setup Nix
         uses: zebradil/nix-ci/.github/actions/setup-nix@fa4ea864c879251657017bb0e4aed9009c0d8b2b # v2.0.2
@@ -63,64 +77,40 @@ jobs:
           extra-trusted-public-keys: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
           signing-key: ${{ secrets.CACHE_SIGNING_KEY }}
 
-      # A failing build is the expected outcome, so the step must not fail the
-      # job. `nix build` output is left in the log; only the verdict is exported.
-      - name: Probe vanilla package
-        id: probe
+      - name: Probe
         env:
           NAME: ${{ matrix.name }}
           SYSTEM: ${{ matrix.system }}
-        run: |
-          if nix build --no-link --print-out-paths ".#workaroundProbes.${SYSTEM}.${NAME}" > "$RUNNER_TEMP/paths"; then
-            echo "ok=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::${NAME} builds unaided on ${SYSTEM} — workaround may be removable"
-          else
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            : > "$RUNNER_TEMP/paths"
-            echo "::notice::${NAME} still fails on ${SYSTEM} — workaround still needed"
-          fi
-
-      # Verdict first, cache second: a missing artifact reads as "still broken",
-      # so a cache-push failure must not be able to bury an ok=true verdict.
-      - name: Record verdict
-        env:
-          NAME: ${{ matrix.name }}
-          SYSTEM: ${{ matrix.system }}
-          OK: ${{ steps.probe.outputs.ok }}
-        run: |
-          jq -n --arg n "$NAME" --arg s "$SYSTEM" --argjson ok "$OK" \
-            '{name: $n, system: $s, ok: $ok}' \
-            > "$RUNNER_TEMP/${NAME}__${SYSTEM}.json"
+        run: nix run .#workarounds -- probe "$NAME" "$SYSTEM" "$RUNNER_TEMP/verdicts"
 
       - name: Upload verdict
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: probe-${{ matrix.name }}-${{ matrix.system }}
-          path: ${{ runner.temp }}/${{ matrix.name }}__${{ matrix.system }}.json
+          name: verdict-${{ matrix.name }}-${{ matrix.system }}
+          path: ${{ runner.temp }}/verdicts/${{ matrix.name }}__${{ matrix.system }}.json
           retention-days: 7
 
-      # No manifest: a vanilla probe build is not a znix generation, and the paths are already
-      # reachable from cache.nixos.org — this only warms the LAN cache for the removal PR.
-      # No signing step either: setup-nix registers the key as nix.conf `secret-key-files`.
+      # A successful probe builds what every host pulls once the entry is gone,
+      # so warm the cache with it. setup-nix already signs via secret-key-files.
       - name: Push to cache
-        if: ${{ steps.probe.outputs.ok == 'true' && env.CACHE_S3_URL != '' }}
+        if: ${{ env.CACHE_S3_URL != '' }}
         env:
+          VERDICT: ${{ runner.temp }}/verdicts/${{ matrix.name }}__${{ matrix.system }}.json
           S3_URL: ${{ env.CACHE_S3_URL }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          # `compression` is a store setting, so it only travels as a URL query parameter — the
-          # same zstd default nix-ci's build action applies to every other push.
+          # `compression` is a store setting, so it only travels as a URL query parameter.
           case "$S3_URL" in
             *compression=*) ;;
             *\?*) S3_URL="$S3_URL&compression=zstd&compression-level=6" ;;
             *) S3_URL="$S3_URL?compression=zstd&compression-level=6" ;;
           esac
-          xargs -r -a "$RUNNER_TEMP/paths" nix copy --to "$S3_URL"
+          jq -r '.paths[]' "$VERDICT" | xargs -r nix copy --to "$S3_URL"
 
   propose:
-    needs: [matrix, probe]
-    if: ${{ always() && needs.matrix.outputs.has-targets == 'true' }}
+    needs: [candidate, probe]
+    if: ${{ always() && needs.candidate.outputs.has-targets == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -144,21 +134,25 @@ jobs:
         with:
           token: ${{ steps.app_token.outputs.token || github.token }}
 
+      - name: Download candidate lock
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: candidate-lock
+
+      - name: Download verdicts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: verdict-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/verdicts
+
       - name: Setup Nix
         uses: zebradil/nix-ci/.github/actions/setup-nix@fa4ea864c879251657017bb0e4aed9009c0d8b2b # v2.0.2
         with:
           extra-substituters: https://znix.zebradil.dev
           extra-trusted-public-keys: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
 
-      - name: Download verdicts
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          pattern: probe-*
-          merge-multiple: true
-          path: ${{ runner.temp }}/verdicts
-
       - name: Open or close removal PRs
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token || github.token }}
-          RESULTS_DIR: ${{ runner.temp }}/verdicts
-        run: .github/scripts/workaround-propose.sh
+        run: nix run .#workarounds -- propose "$RUNNER_TEMP/verdicts"
