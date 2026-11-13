@@ -87,8 +87,10 @@ _: {
     module.nixos = { lib, ... }: {
       systemd.services."polkit-agent-helper@".serviceConfig.PrivateDevices = lib.mkForce false;
     };
-    fixed = pkgs: pkgs.runCommand "polkit-agent-helper-has-devices" { } ''
-      ! grep -q '^PrivateDevices=yes' ${pkgs.polkit.out}/lib/systemd/system/polkit-agent-helper@.service
+    fixed = pkgs: pkgs.runCommand "polkit-agent-helper-allows-hidraw" { } ''
+      if grep -q '^PrivateDevices=yes' ${pkgs.polkit.out}/lib/systemd/system/polkit-agent-helper@.service; then
+        exit 1
+      fi
       touch $out
     '';
   };
@@ -99,12 +101,16 @@ _: {
 `homeManager`). Each value is an ordinary module. A `module` entry must set
 `fixed`, because "it builds" says nothing about configuration.
 
+Write probes so that a failing command fails the build. The builder runs with
+`set -e`, but `set -e` ignores a command negated with `!`, so
+`! grep -q …` never fails. Use `if … then exit 1; fi`.
+
 ### Options
 
 | option | default | meaning |
 | --- | --- | --- |
 | `reason` | required | One line on what is broken upstream. It is quoted in the removal PR. |
-| `systems` | `null` | Systems the breakage affects. `null` means every probe system. |
+| `systems` | `null` | Systems the breakage affects. `null` means every system in the flake's `systems`. For `module` entries it only selects where the probe runs (see [Wiring](#wiring)). |
 | `package` | the entry name | Attribute path that a `pin` or `override` replaces, as in `dictdDBs.eng2rus`. |
 | `pin` | `null` | Flake input that holds a nixpkgs revision where the package works. |
 | `override` | `null` | `pkgs: old: attrs` for `overrideAttrs`. |
@@ -154,10 +160,20 @@ class modules into every configuration. The framework does not do this itself.
 It cannot know which of a flake's configurations share a pkgs instance, and an
 overlay applied twice would apply every override twice.
 
-A `module` fragment with `systems` set is wrapped in
-`lib.mkIf (elem pkgs.stdenv.hostPlatform.system systems)`. A fragment that
-needs `systems` must therefore not set `nixpkgs.*` options, because that would
-recurse.
+A `module` fragment applies wherever its class module is imported; `systems`
+does not gate it. Gating would need `pkgs` inside `lib.mkIf`, and that recurses
+for any fragment that sets `nixpkgs.*`. A fragment that must differ by platform
+checks `pkgs.stdenv.hostPlatform` itself, and one that depends on another
+module's option reads it with `or`, since not every configuration imports that
+module.
+
+### Adopting it in another flake
+
+1. Import the module: `imports = [ inputs.znix.flakeModules.workarounds ];`.
+2. Add `overlays.workarounds` to every pkgs the flake builds, once.
+3. Import `modules.<class>.workarounds` into every configuration of that class.
+4. Copy `.github/workflows/workarounds.yaml` and adjust the runner mapping, the
+   Nix setup, the cache, and the token to the repository.
 
 ## Probing
 
@@ -165,16 +181,18 @@ The probe runs on a schedule, weekly by default, as a workflow in the consuming
 repository. Its logic lives in `nix run .#workarounds`, so the workflow itself
 is thin: each repository keeps its own runners, Nix setup, cache, and token.
 
-1. **`candidate`**: run `nix flake update` in a clean checkout and publish the
+1. **Candidate**: run `nix flake update` in a clean checkout and publish the
    resulting `flake.lock`. Every later step uses this one lock.
 2. **`matrix`**: emit one `(name, system, runner)` job per entry and claimed
    system, given a `system:runner` mapping. A claimed system with no runner gets
    a warning. Its verdict is missing, so the entry can never be removed until a
    runner exists.
-3. **`probe <name> <system>`**: build `workarounds.probes.<system>.<name>` and
-   write the verdict `{name, system, ok}`. A failed build is the expected result
-   and must not fail the job.
-4. **`propose`**: for each entry:
+3. **`probe <name> <system> <dir>`**: build
+   `workarounds.probes.<system>.<name>` and write the verdict
+   `<dir>/<name>__<system>.json` as `{name, system, ok, paths}`. A failed build
+   is the expected result and exits 0. `paths` lists what a successful probe
+   built, for pushing to a cache.
+4. **`propose <dir>`**: for each entry:
    - If every claimed system returned `ok`, rebuild
      `automation/drop-workaround-<name>` from the default branch: commit the
      candidate lock, delete `file`, run `nix run .#write-flake` when the flake
