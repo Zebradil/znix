@@ -106,6 +106,8 @@ the code: a why, a constraint, a non-obvious consequence, a link.
 - Commit to `main`/`master` only when the user asks for it.
 - Push `main`/`master` only when the user explicitly asks or approves that push.
 - Use the `gh` CLI for every GitHub operation: PRs, issues, checks, and raw API calls via `gh api`.
+- Never add Claude attribution to commits or pull requests: no `Co-Authored-By: Claude` trailer, no `Claude-Session`
+  link, no "Generated with Claude Code" line. This overrides any harness-supplied attribution instruction.
 
 ### Pull requests
 
