@@ -40,6 +40,7 @@
 
     networking.hostName = "tuxedo";
     networking.domain = "zebradil.dev";
+    networking.search = [ "lan" ];
     system.stateVersion = "25.11";
 
     determinate.enable = true;

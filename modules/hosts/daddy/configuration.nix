@@ -102,6 +102,10 @@
       networking = {
         hostName = "daddy";
         domain = "zebradil.dev";
+        # Search `lan` rather than `zebradil.dev` so unresolved local subdomains
+        # (like kasha.lan.zebradil.dev on AAAA) don't search .zebradil.dev and hit
+        # Cloudflare's public wildcard (#237).
+        search = [ "lan" ];
         useDHCP = false;
         nameservers = [ "192.168.0.1" ];
       };
