@@ -206,6 +206,10 @@ is thin: each repository keeps its own runners, Nix setup, cache, and token.
      the PR if none is open.
    - Otherwise, close any open removal PR for that entry and delete its branch.
 
+   `propose` writes a table to the job summary: every entry, its verdict on
+   each system, and what happened. `matrix` writes a one-line summary when
+   there is nothing to probe.
+
 ### Why the candidate lock
 
 A workaround often breaks once upstream fixes the problem it works around.
@@ -255,3 +259,6 @@ is the lock update that works.
 - The probe pkgs come from the input named `nixpkgs`. A configuration built
   from a different nixpkgs input is not probed separately.
 - Each pin instantiates its own nixpkgs. The store deduplicates shared paths.
+- A pin of a package that stdenv itself depends on (`jq` on Darwin, compilers,
+  coreutils) breaks stdenv's bootstrap assertion, and nothing evaluates. Use an
+  `override` for those.
