@@ -45,6 +45,23 @@ is_fixed() {
 	done
 }
 
+# One system's verdict as the run summary shows it.
+verdict_text() {
+	local verdict="$3/${1}__${2}.json"
+	if [[ ! -f $verdict ]]; then
+		echo "no verdict"
+	elif [[ $(jq -r .ok "$verdict") == true ]]; then
+		echo "fixed"
+	else
+		echo "still needed"
+	fi
+}
+
+# Markdown for the job summary page; a local run prints it to stderr.
+summary() {
+	cat >>"${GITHUB_STEP_SUMMARY:-/dev/stderr}"
+}
+
 runner_mapping_json() {
 	local pair json='{}'
 	for pair in $1; do
@@ -73,6 +90,15 @@ cmd_matrix() {
 		echo "has_targets=$([[ $count -gt 0 ]] && echo true || echo false)"
 	} >>"${GITHUB_OUTPUT:-/dev/stdout}"
 	echo "::notice::workarounds: $count probe target(s)"
+
+	# propose, which writes the full summary, is skipped when nothing is probed.
+	if [[ $count -eq 0 ]]; then
+		if [[ $(jq length <<<"$registry") -eq 0 ]]; then
+			printf '### Workarounds\n\nNo workarounds declared.\n' | summary
+		else
+			printf '### Workarounds\n\nNo workaround claims a system in the runner mapping, so nothing was probed.\n' | summary
+		fi
+	fi
 }
 
 # A failed build is the expected outcome, so this exits 0 either way; only an
@@ -126,7 +152,7 @@ has_write_flake() {
 
 # Returns 0 even on failure: one entry failing to reach GitHub (rate limit, org
 # policy) must not strand the others. A branch pushed without its PR is retried
-# on the next run.
+# on the next run. Sets the caller's `result` for the run summary.
 propose_removal() {
 	local name=$1 file=$2 reason=$3 base=$4 candidate=$5 pr=$6 branch="automation/drop-workaround-$1"
 
@@ -144,6 +170,7 @@ propose_removal() {
 				-m "Its probe builds against the updated inputs, so upstream no longer needs it."
 	}; then
 		echo "::warning::workarounds: could not remove '${name}' cleanly, skipping"
+		result="fixed, but removing it failed (see the log)"
 		git reset --quiet --hard
 		git switch --quiet --force "$base"
 		return 0
@@ -151,16 +178,24 @@ propose_removal() {
 
 	# Rebuilt on the current base every run, even with a PR open: the removal is
 	# only meaningful against today's candidate lock.
-	if ! git push --quiet --force origin "$branch" ||
-		! { [[ -n $pr ]] || gh pr create --base "$base" --head "$branch" \
-			--title "chore: drop the ${name} workaround" --body "$(pr_body "$name" "$file" "$reason")"; }; then
+	local url
+	if ! git push --quiet --force origin "$branch"; then
+		echo "::warning::workarounds: could not push ${branch}, skipping"
+		result="fixed, but pushing \`${branch}\` failed"
+	elif [[ -n $pr ]]; then
+		result="removal PR #${pr} refreshed"
+	elif url=$(gh pr create --base "$base" --head "$branch" \
+		--title "chore: drop the ${name} workaround" --body "$(pr_body "$name" "$file" "$reason")"); then
+		result="removal PR opened: ${url}"
+	else
 		echo "::warning::workarounds: could not open the removal PR for '${name}', skipping"
+		result="fixed, but opening the PR failed; \`${branch}\` is pushed"
 	fi
 	git switch --quiet --force "$base"
 }
 
 cmd_propose() {
-	local dir=${1:?verdict dir} registry base candidate name pr
+	local dir=${1:?verdict dir} registry base candidate name pr result system probes rows=
 	registry=$(nix eval --json .#workarounds.registry)
 	base=$(git rev-parse --abbrev-ref HEAD)
 
@@ -175,18 +210,37 @@ cmd_propose() {
 
 	for name in $(jq -r 'keys[]' <<<"$registry"); do
 		pr=$(gh pr list --head "automation/drop-workaround-${name}" --state open --json number --jq '.[0].number // empty')
+		result="still needed"
 		if is_fixed "$name" "$registry" "$dir"; then
 			propose_removal "$name" \
 				"$(jq -r --arg n "$name" '.[$n].file' <<<"$registry")" \
 				"$(jq -r --arg n "$name" '.[$n].reason' <<<"$registry")" \
 				"$base" "$candidate" "$pr"
-			echo "::notice::workarounds: removal PR for '${name}' ${pr:+#$pr }is up to date"
+			echo "::notice::workarounds: ${name}: ${result}"
 		elif [[ -n $pr ]]; then
 			gh pr close "$pr" --delete-branch --comment \
 				"The probe for \`${name}\` fails again, so upstream still needs this workaround. A later probe reopens it if that changes."
 			echo "::notice::workarounds: closed stale PR #${pr} for '${name}'"
+			result="still needed; stale removal PR #${pr} closed"
 		fi
+
+		probes=
+		for system in $(jq -r --arg n "$name" '.[$n].systems[]' <<<"$registry"); do
+			probes+="${probes:+<br>}${system}: $(verdict_text "$name" "$system" "$dir")"
+		done
+		rows+="| \`${name}\` | $(jq -r --arg n "$name" '.[$n].kind' <<<"$registry") | ${probes} | ${result} |"$'\n'
 	done
+
+	summary <<-MD
+		### Workarounds
+
+		Probed against the updated inputs (\`nix flake update\`). A probe that fails
+		means upstream still needs the workaround, which is the normal state.
+
+		| Workaround | Kind | Probe | Result |
+		| --- | --- | --- | --- |
+		${rows}
+	MD
 }
 
 # --- self-test -----------------------------------------------------------------
@@ -219,6 +273,9 @@ cmd_self_test() {
 	! is_fixed partial "$registry" "$dir" || fail "one system still broken must block removal"
 	! is_fixed missing "$registry" "$dir" || fail "a missing verdict must block removal"
 	! is_fixed failed "$registry" "$dir" || fail "a failed probe must block removal"
+	[[ $(verdict_text all-ok s1 "$dir") == fixed ]] || fail "verdict text for ok"
+	[[ $(verdict_text partial s2 "$dir") == "still needed" ]] || fail "verdict text for a failed probe"
+	[[ $(verdict_text missing s2 "$dir") == "no verdict" ]] || fail "verdict text for a missing verdict"
 	rm -rf "$dir"
 
 	echo "self-test OK"
