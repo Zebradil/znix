@@ -503,6 +503,9 @@ in
                 statusLine = {
                   type = "command";
                   command = "bash ${config.home.homeDirectory}/${profile.configDir}/statusline-command.sh";
+                  # Status-line events stop while the main session idles on background subagents; the timer keeps
+                  # the saved rate limits fresh for the orchestrate-implementation watcher.
+                  refreshInterval = 60;
                 };
               };
           in
