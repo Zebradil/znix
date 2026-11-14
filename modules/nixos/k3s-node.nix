@@ -107,12 +107,14 @@ _: {
         services.logind.settings.Login.InhibitDelayMaxSec =
           config.services.k3s.gracefulNodeShutdown.shutdownGracePeriod;
 
-        # A switch must never restart k3s: a kubelet restart has torn down and
-        # re-staged the iSCSI volumes of running pods, leaving containers on dead
-        # devices (#249). Any nixpkgs bump rebuilds k3s, so "only on k3s changes"
-        # still means almost every deploy. Changes (package, flags,
-        # registries.yaml, which k3s reads only at start) apply when the node is
-        # cycled — see docs/adr/0008-k3s-restart-only-when-drained.md.
+        # A switch must never restart k3s. One deploy restarted the server and the
+        # agents together; a restarted kubelet asked the fresh apiserver for its
+        # PVCs before the node authorizer had synced, got "forbidden", and
+        # unmounted the iSCSI volumes of pods that kept running (#249). Any
+        # nixpkgs bump rebuilds k3s, so restarts would hit almost every deploy.
+        # Changes (package, flags, registries.yaml, which k3s reads only at
+        # start) apply when the node is cycled — see
+        # docs/adr/0008-k3s-restart-only-when-drained.md.
         systemd.services.k3s.restartIfChanged = false;
 
         # synology-csi's node plugin needs iscsiadm on the host.
