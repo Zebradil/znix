@@ -107,15 +107,14 @@ _: {
         services.logind.settings.Login.InhibitDelayMaxSec =
           config.services.k3s.gracefulNodeShutdown.shutdownGracePeriod;
 
-        # A switch must never restart k3s. One deploy restarted the server and the
-        # agents together; a restarted kubelet asked the fresh apiserver for its
-        # PVCs before the node authorizer had synced, got "forbidden", and
-        # unmounted the iSCSI volumes of pods that kept running (#249). Any
-        # nixpkgs bump rebuilds k3s, so restarts would hit almost every deploy.
-        # Changes (package, flags, registries.yaml, which k3s reads only at
-        # start) apply when the node is cycled — see
-        # docs/adr/0008-k3s-restart-only-when-drained.md.
-        systemd.services.k3s.restartIfChanged = false;
+        # k3s reads registries.yaml only at start. Restart when the encrypted
+        # secrets file changes so password rotation and secret edits take effect
+        # (structural edits to the template above are rare -> restart by hand).
+        # Never let one deploy restart k3s on the server and the agents together:
+        # see docs/adr/0008-k3s-rolling-reboots.md.
+        systemd.services.k3s.restartTriggers = [
+          config.sops.secrets.oci-registry-password.sopsFile
+        ];
 
         # kured's reboot sentinel; it runs in the host mount namespace, so it
         # calls this by its /run/current-system path.
