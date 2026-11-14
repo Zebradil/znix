@@ -91,14 +91,29 @@ _: {
           package = pkgs.k3s_1_36;
           tokenFile = config.sops.secrets.k3s-token.path;
           extraFlags = [ "--kubelet-arg=resolv-conf=/etc/rancher/k3s/resolv.conf" ];
+          # On reboot/poweroff, kubelet stops pods and tears their volumes down
+          # while iscsid and the network are still up. Without this, containers
+          # die in systemd's final kill spree, after the iSCSI path is gone.
+          gracefulNodeShutdown = {
+            enable = true;
+            shutdownGracePeriod = "90s";
+            shutdownGracePeriodCriticalPods = "30s";
+          };
         };
 
-        # k3s reads registries.yaml only at start. Restart when the encrypted
-        # secrets file changes so password rotation and secret edits take effect
-        # (structural edits to the template above are rare -> restart by hand).
-        systemd.services.k3s.restartTriggers = [
-          config.sops.secrets.oci-registry-password.sopsFile
-        ];
+        # kubelet delays shutdown with a logind inhibitor lock, which logind caps
+        # at InhibitDelayMaxSec (default 5s). Set it here, else kubelet rewrites
+        # logind config under /etc at runtime to raise it.
+        services.logind.settings.Login.InhibitDelayMaxSec =
+          config.services.k3s.gracefulNodeShutdown.shutdownGracePeriod;
+
+        # A switch must never restart k3s: a kubelet restart has torn down and
+        # re-staged the iSCSI volumes of running pods, leaving containers on dead
+        # devices (#249). Any nixpkgs bump rebuilds k3s, so "only on k3s changes"
+        # still means almost every deploy. Changes (package, flags,
+        # registries.yaml, which k3s reads only at start) apply when the node is
+        # cycled — see docs/adr/0008-k3s-restart-only-when-drained.md.
+        systemd.services.k3s.restartIfChanged = false;
 
         # synology-csi's node plugin needs iscsiadm on the host.
         services.openiscsi = {
