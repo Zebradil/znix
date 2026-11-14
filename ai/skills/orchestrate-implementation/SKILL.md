@@ -5,7 +5,7 @@ description:
   implementer and one reviewer subagent per milestone in git worktrees, usage-limit checks with a self-scheduled
   wake-up after the five-hour reset, and acceptance checks on real machines. Use when the user asks to implement a
   spec or a large feature that will not fit one session, to "orchestrate subagents", or to resume such work after a
-  usage reset.
+  usage reset. Claude Code only: it relies on its subagents, SendMessage, CronCreate and status-line data.
 ---
 
 # orchestrate-implementation
@@ -35,7 +35,7 @@ subagent's transcript file.
 
 1. **Worktree.** A branch `wt/<yymmdd-HHMMSS>-<slug>` from `main` in `.worktrees/`.
 2. **Implementer** (Opus; effort `xhigh` for subtle milestones, `high` otherwise; background). The prompt gives: the
-   worktree and "do not touch main or other worktrees"; commit conventions with the session's trailer lines; what to
+   worktree and "do not touch main or other worktrees"; commit conventions from the global instructions (no attribution trailers); what to
    read (glossary, architecture, ADRs, the spec sections by number, not the whole spec); the toolchain; which modules
    it owns; the scope as a numbered list with the hand-over notes for it; done-when (tests, lint, format, package
    build); and the final message: a word limit (200–300), no code, public API, deviations and spec ambiguities with
@@ -72,22 +72,10 @@ subagent's transcript file.
 The five-hour window ends a session abruptly, and a session resumed later starts with cold caches. Pause before the
 limit inside the same session and wake it up after the reset.
 
-**Prerequisite: a status-line tap.** Claude Code passes the rate limits to the status-line command on stdin. Wrap the
-regular status line so it also saves them (the user must approve the settings change; never edit settings without
-their explicit permission):
-
-```bash
-#!/usr/bin/env bash
-# statusline-tap.sh: saves the rate limits, then renders the regular status line unchanged.
-input=$(cat)
-state="$CLAUDE_CONFIG_DIR/state"
-printf '%s' "$input" | jq -c --arg t "$(date +%s)" '{t: ($t | tonumber), rate_limits}' >"$state/rate-limits.json.tmp" 2>/dev/null &&
-  mv "$state/rate-limits.json.tmp" "$state/rate-limits.json"
-printf '%s' "$input" | bash "$CLAUDE_CONFIG_DIR/statusline-command.sh"
-```
-
-with `"statusLine": {"type": "command", "command": "bash <config dir>/statusline-tap.sh"}` in the profile's
-`settings.json` (`<config dir>` is the profile directory). The file fills in at the next status-line refresh.
+**Source.** Claude Code passes the rate limits to the status-line command on stdin. The znix status line
+(`ai/statusline-command.sh`) saves them to `$CLAUDE_CONFIG_DIR/state/rate-limits.json` as `{t, rate_limits}`, and the
+profile's `refreshInterval` re-runs it every 60 s: without the timer, status-line events stop while the main session
+waits on background subagents, and the file goes stale. Outside znix, a status-line command needs both parts.
 
 **Read it** before spawning agents and after each milestone:
 
@@ -95,14 +83,24 @@ with `"statusLine": {"type": "command", "command": "bash <config dir>/statusline
 jq -c '{age_s: (now - .t | floor), rate_limits}' "$CLAUDE_CONFIG_DIR/state/rate-limits.json"
 ```
 
-`rate_limits.five_hour.used_percentage` and `.resets_at` (epoch seconds) matter; a missing `five_hour` means the window
-just reset. Convert the epoch with `/bin/date -r <epoch>` on macOS (GNU `date` from Nix takes `-d @<epoch>`).
+`rate_limits.five_hour.used_percentage` (0 to 100, may be a decimal) and `.resets_at` (epoch seconds) matter.
+`rate_limits` appears only after the session's first API response, and Claude Code drops a window once its `resets_at`
+passes, so a missing `five_hour` in a fresh file means the window reset. An `age_s` above a few minutes means the
+status line is not saving: check `statusLine` in `settings.json` before trusting the numbers. Convert the epoch with
+`/bin/date -r <epoch>` on macOS (GNU `date` from Nix takes `-d @<epoch>`).
 
-**Watch it** with a background command that exits at 80 % and so notifies the session:
+**Watch it** with a background command that exits, and so notifies the session, at 80 % or when the file is missing or
+older than ten minutes:
 
 ```bash
 f="$CLAUDE_CONFIG_DIR/state/rate-limits.json"
-until [ "$(jq -r '.rate_limits.five_hour.used_percentage // 0' "$f")" -ge 80 ]; do sleep 60; done
+while :; do
+  read -r age pct < <(jq -r '"\(now - .t | floor) \(.rate_limits.five_hour.used_percentage // 0 | floor)"' "$f") ||
+    { echo "no usage file: $f"; exit 1; }
+  [ "$age" -gt 600 ] && { echo "usage file stale: ${age}s"; exit 1; }
+  [ "$pct" -ge 80 ] && break
+  sleep 60
+done
 jq -c '{age_s: (now - .t | floor), rate_limits}' "$f"
 ```
 

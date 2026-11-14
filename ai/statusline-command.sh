@@ -4,6 +4,16 @@
 set -euo pipefail
 
 input=$(cat)
+
+# Saves the rate limits for the orchestrate-implementation skill, which pauses before the five-hour limit.
+# Claude Code sends rate_limits only after the session's first API response.
+if [ -n "${CLAUDE_CONFIG_DIR:-}" ] && echo "$input" | jq -e '.rate_limits' >/dev/null 2>&1; then
+  state="$CLAUDE_CONFIG_DIR/state"
+  { mkdir -p "$state" &&
+    echo "$input" | jq -c '{t: (now | floor), rate_limits}' >"$state/rate-limits.json.$$" &&
+    mv "$state/rate-limits.json.$$" "$state/rate-limits.json"; } 2>/dev/null || true
+fi
+
 cwd=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // ""')
 model=$(echo "$input" | jq -r '.model.display_name // ""')
 effort=$(echo "$input" | jq -r '.effort.level // ""')
