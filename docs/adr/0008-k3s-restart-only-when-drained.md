@@ -38,31 +38,38 @@ together on almost every nixpkgs bump.
   30s of it for critical pods), with logind's `InhibitDelayMaxSec` raised to
   match. On reboot or poweroff, kubelet stops pods and unmounts their volumes before
   systemd stops iscsid and the network.
-- Pending k3s changes are applied by **cycling the node**: drain, restart or reboot,
-  uncordon, one node at a time.
+- Pending changes are applied by a **rolling reboot**: drain, reboot into the new
+  generation, wait for Ready, uncordon, one node at a time. Two drivers do this:
+  - **`nix run .#k3s-roll`** (hands-on). It is synchronous and runs from a
+    machine with cluster-admin `kubectl`. It does the server first.
+  - **kured** (unattended, in myks-homelab). After `colmena apply boot`, kured
+    reboots every node whose `k3s-reboot-required` sentinel reports a pending
+    generation, one at a time under its cluster lock.
 
-## Procedure: cycle a node
+## Procedure
 
-From a machine with cluster-admin `kubectl`:
-
-```bash
-node=d2
-kubectl drain "$node" --ignore-daemonsets --delete-emptydir-data
-ssh "$node" sudo systemctl restart k3s   # or: sudo reboot
-kubectl wait --for=condition=Ready "node/$node" --timeout=5m
-kubectl uncordon "$node"
-```
-
-To check whether a node is running an older k3s than its current generation, compare
-the running binary with the one the unit starts:
+Hands-on, all nodes (control-plane first) or the named ones:
 
 ```bash
-readlink /proc/"$(systemctl show -p MainPID --value k3s)"/exe
-systemctl show -p ExecStart --value k3s | grep -o '/nix/store/[^ ;]*'
+nix run .#k3s-roll                    # server, then agents
+nix run .#k3s-roll -- d2 d3           # only these, in this order
+nix run .#k3s-roll -- d2 -- --verbose # extra args go to `colmena apply`
 ```
 
-This catches package changes only. Changes to flags or `registries.yaml` leave
-the binary the same. After any change to `k3s-node`, cycle every node.
+Unattended: `colmena apply boot` (or `switch`) and let kured roll the fleet.
+
+`k3s-reboot-required` (on every k3s node) exits 0 when the generation selected for
+next boot differs from the booted one in the kernel, initrd, kernel modules,
+systemd, or `k3s.service`. It cannot see a k3s that was restarted by hand after
+the switch. Such a node gets one extra reboot. Changes to `registries.yaml`
+alone are not detected: run `k3s-roll` on the affected nodes.
+
+`k3s-roll` and kured must not run at the same time, because they do not share a lock.
+Suspend kured during a hands-on roll, or let kured finish its queue first.
+
+After a **k3s minor upgrade**, roll the server by hand first
+(`nix run .#k3s-roll -- junior`). kured reboots nodes in no particular order and
+could start a newer agent against an older server.
 
 ## Considered options
 
@@ -72,10 +79,14 @@ the binary the same. After any change to `k3s-node`, cycle every node.
 - **Tune restart triggers so k3s restarts only on real changes.** Rejected. A
   nixpkgs bump is a real change to the unit, and a k3s upgrade still restarts it
   under live pods.
-- **`colmena apply boot --reboot -p 1` for every fleet upgrade.** Works with graceful
-  shutdown, but pods are killed rather than evicted (PDBs are ignored, and pods are not
-  rescheduled before the node goes down). It stays available for bulk upgrades. The
-  drain procedure is the default.
+- **`colmena apply --reboot --parallel 1` alone.** colmena has no pre- or
+  post-activation hooks, so it cannot drain. Graceful shutdown would kill pods
+  instead of evicting them (PDBs ignored, no rescheduling before the node goes
+  down), and colmena moves on as soon as SSH answers, not when the node is Ready.
+  `k3s-roll` wraps it per node.
+- **kured only.** It runs unattended, but it cannot order the server first and
+  failures surface later. It is kept for routine rollouts, with `k3s-roll` for
+  hands-on rollouts and k3s minor upgrades.
 
 ## Consequences
 

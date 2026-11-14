@@ -30,6 +30,17 @@
             done
 
             bash ${inputs.self}/assets/bin/kubectl-inventory --self-test
+
+            # k3s-reboot-required: identical generations -> 1, new k3s unit -> 0.
+            for g in a b c; do
+              mkdir -p gen/$g/etc/systemd/system
+              for p in kernel initrd kernel-modules systemd; do ln -s /store/$p gen/$g/$p; done
+            done
+            ln -s /store/k3s-old gen/a/etc/systemd/system/k3s.service
+            ln -s /store/k3s-old gen/b/etc/systemd/system/k3s.service
+            ln -s /store/k3s-new gen/c/etc/systemd/system/k3s.service
+            if bash ${inputs.self}/modules/nixos/k3s-reboot-required.sh gen/b gen/a; then exit 1; fi
+            bash ${inputs.self}/modules/nixos/k3s-reboot-required.sh gen/c gen/a
             bash ${inputs.self}/modules/home/alertmanager/am-alerts.sh --self-test
             # Fixtures for all three transcript stores: the tripwire for the next
             # Claude Code log change, Cursor JSONL change, or opencode migration.

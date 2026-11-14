@@ -117,6 +117,15 @@ _: {
         # docs/adr/0008-k3s-restart-only-when-drained.md.
         systemd.services.k3s.restartIfChanged = false;
 
+        # kured's reboot sentinel; it runs in the host mount namespace, so it
+        # calls this by its /run/current-system path.
+        environment.systemPackages = [
+          (pkgs.writeShellApplication {
+            name = "k3s-reboot-required";
+            text = builtins.readFile ./k3s-reboot-required.sh;
+          })
+        ];
+
         # synology-csi's node plugin needs iscsiadm on the host.
         services.openiscsi = {
           enable = true;
