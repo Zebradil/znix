@@ -14,6 +14,10 @@
       url = "github:Zebradil/pr-autopilot";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    scry = {
+      url = "github:Zebradil/scry";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     sofka = {
       url = "github:nklmilojevic/sofka";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -34,6 +38,7 @@
     (final: _prev: {
       inherit (inputs.gke-kubeconfiger.packages.${final.stdenv.hostPlatform.system}) gke-kubeconfiger;
       inherit (inputs.pr-autopilot.packages.${final.stdenv.hostPlatform.system}) pr-autopilot;
+      scry = inputs.scry.packages.${final.stdenv.hostPlatform.system}.default;
     })
     config.flake.overlays.workarounds
   ];

@@ -951,6 +951,7 @@
         "nixvim": "nixvim",
         "pr-autopilot": "pr-autopilot",
         "rust-overlay": "rust-overlay",
+        "scry": "scry",
         "sito": "sito",
         "sofka": "sofka",
         "sops-nix": "sops-nix",
@@ -976,6 +977,26 @@
       "original": {
         "owner": "oxalica",
         "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "scry": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1794671973,
+        "narHash": "sha256-GVdgXNDNPf2Ok/5mau3apxt34xuy7NAR8LBLCB7dsFE=",
+        "owner": "Zebradil",
+        "repo": "scry",
+        "rev": "986fd4668d9aa129039ea1b4fc3e3a3e94ca8d76",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Zebradil",
+        "repo": "scry",
         "type": "github"
       }
     },

@@ -83,6 +83,7 @@ _: {
         repgrep
         ripgrep
         rsync
+        scry
         sd
         skopeo
         sops

@@ -64,6 +64,10 @@
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    scry = {
+      url = "github:Zebradil/scry";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     sito.url = "github:Zebradil/sito";
     sofka = {
       url = "github:nklmilojevic/sofka";
