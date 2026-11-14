@@ -4,7 +4,12 @@
   # builder now; kasha box and Jellyfin later. Durable data stays on the
   # Synology; the single HDD here holds only what can be lost or re-fetched.
   flake.modules.nixos.daddy =
-    { config, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
       ip = "192.168.0.101";
       iface = "enp6s0";
@@ -97,6 +102,16 @@
           enable = true;
           openFirewall = true;
         };
+      };
+
+      # Unprivileged test account with fish as its login shell, for checking
+      # tools that run commands over SSH (scry acceptance check 8). No sudo, no
+      # wheel; nothing on this host depends on it.
+      programs.fish.enable = true;
+      users.users.fishtest = {
+        isNormalUser = true;
+        shell = pkgs.fish;
+        openssh.authorizedKeys.keys = lib.splitString "\n" (builtins.readFile ../../users/zebradil/ssh.pub);
       };
 
       networking = {
