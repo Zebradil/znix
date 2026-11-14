@@ -23,7 +23,8 @@ subagent's transcript file.
 3. Write three documents and commit them:
    - `docs/roadmap.md`: a milestone table (scope, spec sections, depends on, status) and a dated log.
    - `docs/handover.md`: "Where things stand" first (milestones done; for each one in flight: worktree, branch,
-     commit or uncommitted state, backups, next step), then how each milestone runs, notes per milestone (APIs the
+     agent IDs, commit or uncommitted state, backups, next step; the watcher's task ID and any wake-up's cron job ID),
+     then how each milestone runs, notes per milestone (APIs the
      next milestone needs, review findings still open), the usage-limit policy, cautions, and a prompt for a new
      session. Keep it current after every merge and before every pause: it is the fallback if the session dies.
    - `docs/architecture.md`: module ownership per milestone, data flow, seams, error model, testing.
@@ -116,6 +117,52 @@ hand-over. Then schedule a one-shot `CronCreate` a few minutes after `resets_at`
 
 Cron jobs live only as long as the session: if it exits, the hand-over and its new-session prompt take over. Stop the
 watcher with `TaskStop` when the work is done.
+
+## Context and compaction
+
+The orchestrator runs for days and its context only grows. The model cannot run `/compact` itself: it is not available
+through the Skill tool, and built-in commands in a scheduled prompt arrive as plain text. Make compaction come early
+and carry the hand-over instead. At the start, with the user's approval, write the target repository's
+`.claude/settings.local.json` (not committed):
+
+```json
+{
+  "autoCompactWindow": 300000,
+  "hooks": {
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Keep verbatim: each milestone in flight with its worktree, branch, agent IDs and next step; the watcher task ID; cron job IDs; open review findings; the usage-limit policy.'"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "awk '/^## /{p=($0==\"## Where things stand\")} p' \"$CLAUDE_PROJECT_DIR/docs/handover.md\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+- `autoCompactWindow` (tokens, 100000 to 1000000) compacts long before the model's limit; without it a 1M-context
+  model compacts at about 967K tokens. The user can also start the session with `--autocompact <tokens>`.
+- The `PreCompact` hook's output steers the compaction summary. The `SessionStart` hook with matcher `compact` adds
+  "Where things stand" to the compacted context, so the hand-over must be current before the window fills.
+- Whether a running session picks up a new `settings.local.json` is unverified: check with `/hooks`, or ask the user
+  to restart with `--continue`.
+- The status line's `context_window.used_percentage` is measured against the full window, not `autoCompactWindow`,
+  so it does not tell when compaction will run.
+- Subagents have their own windows and compact on their own; a fresh implementer per milestone keeps them small.
 
 ## Permissions in auto mode
 
