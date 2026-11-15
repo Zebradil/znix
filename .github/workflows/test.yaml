@@ -37,10 +37,11 @@ jobs:
       - name: Pre-instantiate checks
         # A `*-build` check is a system toplevel whose closure pulls in source paths created during
         # evaluation (home.file sources scoped via builtins.path). `nix flake check --no-build`
-        # evaluates a check's outPath but never instantiates it, so under lazy trees those paths are
-        # known by hash yet never written to the store -> "path '...' is not valid". Forcing each
-        # drvPath instantiates without building, which materializes them. One eval for all checks,
-        # reusing a single flake evaluation instead of cold-loading it per attribute.
+        # evaluates a check's outPath but never instantiates it, so those paths are known by hash
+        # yet never written to the store -> "path '...' is not valid". Happens on upstream Nix 2.35
+        # as well as under Determinate's lazy trees. Forcing each drvPath instantiates without
+        # building, which materializes them. One eval for all checks, reusing a single flake
+        # evaluation instead of cold-loading it per attribute.
         run: |
           system=$(nix eval --raw --impure --expr builtins.currentSystem)
           nix eval --json ".#checks.${system}" \
