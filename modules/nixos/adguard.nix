@@ -47,16 +47,14 @@ _: {
           };
         };
 
-        # `arp_ignore = 0` lets whichever link a request arrived on answer for
-        # the service address — but it never tells a client which link is
-        # *live*. On a dual-net host both links answer, so a client caches
-        # whichever reply won the race and then keeps that entry alive by
-        # unicast-probing the same MAC. Land on the standby link's MAC while
-        # that path is unhealthy and DNS blackholes for that client alone until
-        # its ARP cache ages out (20 minutes on macOS) — the resolver looks
-        # perfectly healthy throughout, and restarting it changes nothing. The
-        # same gap makes a real wired-link failover invisible to every client
-        # that already has an entry.
+        # `arp_ignore = 0` lets a physical link answer for the service address,
+        # and `dual-net`'s `arp_filter` limits that to the link holding the
+        # route back. Neither tells a client that already has an entry when the
+        # live link changes: it keeps the entry alive by unicast-probing the
+        # same MAC. After a wired-link failover that MAC is dead, and DNS
+        # blackholes for that client alone until its ARP cache ages out
+        # (20 minutes on macOS) — the resolver looks perfectly healthy
+        # throughout, and restarting it changes nothing.
         #
         # A gratuitous ARP out the link currently holding the default route
         # repins every cache to the live path. Route metrics (`dual-net`) make

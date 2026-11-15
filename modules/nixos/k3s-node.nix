@@ -90,7 +90,14 @@ _: {
           enable = true;
           package = pkgs.k3s_1_36;
           tokenFile = config.sops.secrets.k3s-token.path;
-          extraFlags = [ "--kubelet-arg=resolv-conf=/etc/rancher/k3s/resolv.conf" ];
+          extraFlags = [
+            "--kubelet-arg=resolv-conf=/etc/rancher/k3s/resolv.conf"
+            # Without it the node IP is autodetected on every status sync. A
+            # dual-net host has a wired and a WiFi address on the same subnet, so
+            # detection flaps between them, and hostNetwork pods (node-exporter,
+            # CSI) keep whichever address was current when their status synced.
+            "--node-ip=${cfg.selfLan}"
+          ];
           # On reboot/poweroff, kubelet stops pods and tears their volumes down
           # while iscsid and the network are still up. Without this, containers
           # die in systemd's final kill spree, after the iSCSI path is gone.

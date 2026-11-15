@@ -49,6 +49,14 @@ _: {
 
         services.resolved.enable = false;
 
+        # Both links sit on the same subnet, and Linux answers ARP for any local
+        # address on any link by default. A LAN client then caches whichever
+        # reply won the race, often the WiFi MAC, and sends to this host over
+        # WiFi while replies leave wired. arp_filter answers only on the link the
+        # kernel would route the reply through: wired while it is up, WiFi
+        # after failover.
+        boot.kernel.sysctl."net.ipv4.conf.all.arp_filter" = 1;
+
         systemd.network = {
           enable = true;
 
