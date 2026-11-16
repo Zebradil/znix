@@ -4,7 +4,7 @@
   # builder now; kasha box and Jellyfin later. Durable data stays on the
   # Synology; the single HDD here holds only what can be lost or re-fetched.
   flake.modules.nixos.daddy =
-    { config, ... }:
+    { config, lib, ... }:
     let
       ip = "192.168.0.101";
       iface = "enp6s0";
@@ -74,17 +74,40 @@
         };
       };
 
-      sops.secrets.tailscale-authkey.sopsFile = ../../../secrets/hosts/k3s.yaml;
-      sops.secrets.kasha-env = {
-        sopsFile = secrets;
-        restartUnits = [ "kasha.service" ];
+      # One sops key per value; env files are assembled here, so a value never
+      # has to be edited as part of a multi-line blob.
+      sops.secrets =
+        lib.genAttrs
+          [
+            "aws-access-key-id"
+            "aws-secret-access-key"
+            "kasha-token"
+            "kasha-remote"
+            "acme-email"
+            "acme-cloudflare-token"
+          ]
+          (_: {
+            sopsFile = secrets;
+          })
+        // {
+          tailscale-authkey.sopsFile = ../../../secrets/hosts/k3s.yaml;
+        };
+      sops.templates = with config.sops.placeholder; {
+        kasha-env = {
+          # KASHA_REMOTE is here too: its endpoint names the R2 account.
+          content = ''
+            AWS_ACCESS_KEY_ID=${aws-access-key-id}
+            AWS_SECRET_ACCESS_KEY=${aws-secret-access-key}
+            KASHA_TOKEN=${kasha-token}
+            KASHA_REMOTE=${kasha-remote}
+          '';
+          restartUnits = [ "kasha.service" ];
+        };
+        acme-env.content = ''
+          LEGO_EMAIL=${acme-email}
+          CLOUDFLARE_DNS_API_TOKEN=${acme-cloudflare-token}
+        '';
       };
-      sops.secrets.acme-email.sopsFile = secrets;
-      sops.secrets.acme-cloudflare-token.sopsFile = secrets;
-      sops.templates.acme-env.content = ''
-        LEGO_EMAIL=${config.sops.placeholder.acme-email}
-        CLOUDFLARE_DNS_API_TOKEN=${config.sops.placeholder.acme-cloudflare-token}
-      '';
 
       # The LAN kasha box, served directly as kasha.lan.zebradil.dev: caddy
       # terminates TLS and streams to kasha without buffering NARs on the SSD.
@@ -133,8 +156,7 @@
           KASHA_PULL_THROUGH = "true";
           KASHA_REENCODE = "true";
         };
-        # KASHA_TOKEN, AWS_* and KASHA_REMOTE (its endpoint names the R2 account).
-        environmentFile = config.sops.secrets.kasha-env.path;
+        environmentFile = config.sops.templates.kasha-env.path;
       };
       systemd.services.kasha.serviceConfig.MemoryMax = "3G";
       # Plain HTTP only for the k3s nodes (junior, d1-d3): vmagent scrapes the
