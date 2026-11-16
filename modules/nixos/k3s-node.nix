@@ -153,6 +153,13 @@ _: {
           "L+ /usr/bin/iscsiadm - - - - /run/current-system/sw/sbin/iscsiadm"
         ];
 
+        # Native rather than a cluster DaemonSet, so SMART's raw disk access needs
+        # no privileged pod. vmagent scrapes it through a static target.
+        services.prometheus.exporters.smartctl = {
+          enable = true;
+          openFirewall = true;
+        };
+
         # Open kubelet (server -> agent), metrics and flannel VXLAN, and trust the CNI/overlay interfaces.
         networking.firewall = {
           allowedTCPPorts = [
