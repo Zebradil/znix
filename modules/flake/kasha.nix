@@ -2,11 +2,10 @@
 {
   # kasha is pulled as a flake for the cache-producer tooling it owns: `kasha
   # emit` (generation-manifest format) and kasha-cache-push (resolve -> sign ->
-  # push).
+  # push), and for `nixosModules.box`, which runs the box on daddy.
   # Nothing here vendors a copy that could drift from the box that consumes it.
   # Pinned via flake.lock (renovate bumps it). The consumer side reads from the
-  # box via nix-settings' extra-substituters, not kasha's modules, so its
-  # nixosModules are intentionally out of reach.
+  # box via nix-settings' extra-substituters, not `nixosModules.consumer`.
   flake-file.inputs.kasha = {
     url = "github:Zebradil/kasha";
     inputs.nixpkgs.follows = "nixpkgs";
