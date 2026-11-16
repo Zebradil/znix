@@ -15,7 +15,8 @@ RT-AX53U router (192.168.0.1/16, OpenWrt, MT7621) ── WAN 300/150
   │              ├─ toddler Pi (192.168.0.20)
   │              └─ Dell dock ── USB-C/TB ── work MacBook (DHCP, 192.168.1.x)
   │
-  └─ junior (192.168.0.100, k3s server / ingress / kasha)
+  └─ junior (192.168.0.100, k3s server / ingress)
+     daddy (192.168.0.101, Nix remote builder / kasha box)
      d1/d2/d3 (192.168.0.111-113, k3s agents, USB 3.0 NICs)
      Synology NAS (192.168.0.30, iSCSI target for the k3s PVCs)
 ```
