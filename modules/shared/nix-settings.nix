@@ -42,13 +42,12 @@ let
     { config, lib, ... }:
     let
       usingDeterminate = config.determinate.enable or false;
-      # NixOS's own nix module appends cache.nixos.org and its key whenever it
-      # manages nix.conf; repeating them here would list both twice.
-      nixosDefaults = [
+      # NixOS's own nix module adds cache.nixos.org and its key (Determinate
+      # hosts included); repeating them here would list both twice.
+      withoutNixosDefaults = lib.subtractLists [
         "https://cache.nixos.org/"
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       ];
-      withoutNixosDefaults = lib.filter (x: usingDeterminate || !lib.elem x nixosDefaults);
     in
     {
       nixpkgs = {
