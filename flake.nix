@@ -38,10 +38,7 @@
     };
     impermanence.url = "github:nix-community/impermanence";
     import-tree.url = "github:denful/import-tree";
-    kasha = {
-      url = "github:Zebradil/kasha";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    kasha.url = "github:Zebradil/kasha";
     nix-darwin = {
       url = "github:LnL7/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";

@@ -8,7 +8,7 @@
   # box via nix-settings' extra-substituters, not `nixosModules.consumer`.
   flake-file.inputs.kasha = {
     url = "github:Zebradil/kasha";
-    inputs.nixpkgs.follows = "nixpkgs";
+    # Don't follow nixpkgs or kasha will alway be built.
   };
 
   perSystem =
