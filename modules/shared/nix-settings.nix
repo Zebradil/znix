@@ -29,6 +29,9 @@ let
     trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw="
+      # kasha's CI signs its published builds with its own key, so hosts can
+      # substitute kasha instead of building it.
+      "kasha-ci-1:KNW/sz+Zz800U/IFZ38vH5rvlHtM3Fb0Q/wmDJquG+U="
     ];
     # Bounds the off-LAN tax: the box connection fails this fast on roaming
     # hosts before nix tries the next substituter.
