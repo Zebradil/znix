@@ -110,9 +110,12 @@ Append one rule as the last `packageRules` entry, so it wins over an existing gi
 
 ```json5
 // docs/package.json and .github/workflows/docs.yml pin the same docs-kit tag: the workflow
-// runs the help2md the package installs. Last, so it wins over other groups.
-{ description: "Bump the docs-kit package and its reusable workflow together", matchPackageNames: ["@zebradil/docs-kit", "Zebradil/docs-kit"], groupName: "docs-kit" },
+// runs the help2md the package installs. Last, so it wins over other groups. No release-age
+// delay: an npm-only delay would let the workflow bump land without the package.
+{ description: "Bump the docs-kit package and its reusable workflow together", matchPackageNames: ["@zebradil/docs-kit", "Zebradil/docs-kit"], groupName: "docs-kit", minimumReleaseAge: "0 days" },
 ```
+
+Keep `minimumReleaseAge` even when the config sets no delay of its own: a group only bundles updates ready in the same run, and `config:best-practices` (via `security:minimumReleaseAgeNpm`) holds npm releases for 3 days while the github-tags bump goes out at once, so the group PR would carry the workflow bump alone.
 
 Validate: `npx --yes --package renovate -- renovate-config-validator <config file>`.
 
