@@ -73,6 +73,13 @@ let
           type = lib.types.attrs;
           default = {
             agentPushNotifEnabled = true;
+            # Empty strings rather than `attribution = false`: versions before
+            # 2.1.281 reject `false` and skip the whole settings file.
+            attribution = {
+              commit = "";
+              pr = "";
+              sessionUrl = false;
+            };
             editorMode = "vim";
             # LSP tool is opt-in even on 2.x; servers wired via the local
             # znix-lsp @skills-dir plugin (see znix.lsp.servers), not a marketplace.
