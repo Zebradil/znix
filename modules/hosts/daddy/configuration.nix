@@ -4,10 +4,12 @@
   # builder now; kasha box and Jellyfin later. Durable data stays on the
   # Synology; the single HDD here holds only what can be lost or re-fetched.
   flake.modules.nixos.daddy =
-    { config, ... }:
+    { config, lib, ... }:
     let
       ip = "192.168.0.101";
       iface = "enp6s0";
+      kashaHost = "kasha.lan.zebradil.dev";
+      secrets = ../../../secrets/hosts/daddy.yaml;
     in
     {
       imports =
@@ -53,6 +55,13 @@
                 inherit iface;
                 stack = "ipv4";
               };
+              # Beats the *.lan.zebradil.dev wildcard (junior's traefik).
+              # LAN resolvers see it only because AdGuard exempts the name.
+              kasha = {
+                domains = [ kashaHost ];
+                inherit iface;
+                stack = "ipv4";
+              };
               ts = {
                 domains = [
                   "${n}.ts.zebradil.dev"
@@ -65,15 +74,66 @@
         };
       };
 
-      sops.secrets.tailscale-authkey.sopsFile = ../../../secrets/hosts/k3s.yaml;
-      sops.secrets.kasha-env = {
-        sopsFile = ../../../secrets/hosts/daddy.yaml;
-        restartUnits = [ "kasha.service" ];
+      # One sops key per value; env files are assembled here, so a value never
+      # has to be edited as part of a multi-line blob.
+      sops.secrets =
+        lib.genAttrs
+          [
+            "aws-access-key-id"
+            "aws-secret-access-key"
+            "kasha-token"
+            "kasha-remote"
+            "acme-email"
+            "acme-cloudflare-token"
+          ]
+          (_: {
+            sopsFile = secrets;
+          })
+        // {
+          tailscale-authkey.sopsFile = ../../../secrets/hosts/k3s.yaml;
+        };
+      sops.templates = with config.sops.placeholder; {
+        kasha-env = {
+          # KASHA_REMOTE is here too: its endpoint names the R2 account.
+          content = ''
+            AWS_ACCESS_KEY_ID=${aws-access-key-id}
+            AWS_SECRET_ACCESS_KEY=${aws-secret-access-key}
+            KASHA_TOKEN=${kasha-token}
+            KASHA_REMOTE=${kasha-remote}
+          '';
+          restartUnits = [ "kasha.service" ];
+        };
+        acme-env.content = ''
+          LEGO_EMAIL=${acme-email}
+          CLOUDFLARE_DNS_API_TOKEN=${acme-cloudflare-token}
+        '';
       };
 
-      # The LAN kasha box, served as kasha.lan.zebradil.dev through traefik on
-      # junior (a selector-less k3s Service points at this host). The store is
-      # rebuildable from the remote cache and upstreams, so it lives on the HDD.
+      # The LAN kasha box, served directly as kasha.lan.zebradil.dev: caddy
+      # terminates TLS and streams to kasha without buffering NARs on the SSD.
+      # The store is rebuildable from the remote cache and upstreams, so it
+      # lives on the HDD.
+      security.acme = {
+        acceptTerms = true;
+        certs.${kashaHost} = {
+          dnsProvider = "cloudflare";
+          # Check propagation at the zone's authoritative server: the LAN split
+          # horizon hides _acme-challenge TXTs, and a public recursive resolver
+          # caches an early NXDOMAIN for the SOA's 1800 s negative TTL, far past
+          # lego's 2-minute wait.
+          dnsResolver = "lee.ns.cloudflare.com:53";
+          environmentFile = config.sops.templates.acme-env.path;
+        };
+      };
+      services.caddy = {
+        enable = true;
+        virtualHosts.${kashaHost} = {
+          useACMEHost = kashaHost;
+          extraConfig = "reverse_proxy ${config.services.kasha-box.listen}";
+        };
+      };
+      networking.firewall.allowedTCPPorts = [ 443 ];
+
       services.kasha-box = {
         enable = true;
         # A btrfs subvolume made by hand: tmpfiles creates subvolumes only when
@@ -98,14 +158,13 @@
           KASHA_PULL_THROUGH = "true";
           KASHA_REENCODE = "true";
         };
-        # KASHA_TOKEN, AWS_* and KASHA_REMOTE (its endpoint names the R2 account).
-        environmentFile = config.sops.secrets.kasha-env.path;
+        environmentFile = config.sops.templates.kasha-env.path;
       };
       systemd.services.kasha.serviceConfig.MemoryMax = "3G";
-      # Only the k3s nodes (junior, d1-d3) reach the box directly: traefik
-      # proxies kasha.lan.zebradil.dev to it and vmagent scrapes it, both
-      # masqueraded to their node IP. Clients go through traefik's HTTPS, so the
-      # write token never crosses the LAN in plain HTTP.
+      # Plain HTTP only for the k3s nodes (junior, d1-d3): vmagent scrapes the
+      # box by IP, masqueraded to its node IP, so monitoring does not depend on
+      # DNS or caddy. Clients use caddy's HTTPS, so the write token never
+      # crosses the LAN in plain HTTP.
       networking.firewall.extraCommands = ''
         for ip in 192.168.0.100 192.168.0.111 192.168.0.112 192.168.0.113; do
           iptables -A nixos-fw -p tcp -s "$ip" --dport 5000 -j nixos-fw-accept
