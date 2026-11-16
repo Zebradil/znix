@@ -24,7 +24,10 @@
           suok
           tailscale
         ])
-        ++ [ inputs.disko.nixosModules.disko ];
+        ++ [
+          inputs.disko.nixosModules.disko
+          inputs.kasha.nixosModules.box
+        ];
 
       znix = {
         boot.enable = true;
@@ -63,6 +66,51 @@
       };
 
       sops.secrets.tailscale-authkey.sopsFile = ../../../secrets/hosts/k3s.yaml;
+      sops.secrets.kasha-env = {
+        sopsFile = ../../../secrets/hosts/daddy.yaml;
+        restartUnits = [ "kasha.service" ];
+      };
+
+      # The LAN kasha box, served as kasha.lan.zebradil.dev through traefik on
+      # junior (a selector-less k3s Service points at this host). The store is
+      # rebuildable from the remote cache and upstreams, so it lives on the HDD.
+      services.kasha-box = {
+        enable = true;
+        # A btrfs subvolume made by hand: tmpfiles creates subvolumes only when
+        # / is one, and here / is ext4, so on a fresh disk it would be a plain
+        # directory.
+        dataDir = "/srv/hdd/kasha";
+        trustedKeys = [
+          "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+          "kasha-ci-1:KNW/sz+Zz800U/IFZ38vH5rvlHtM3Fb0Q/wmDJquG+U="
+          "znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw="
+          "cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM="
+          "cache.flakehub.com-4:Asi8qIv291s0aYLyH6IOnr5Kf6+OF14WVjkE6t3xMio="
+          "cache.flakehub.com-5:zB96CRlL7tiPtzA9/WKyPkp3A2vqxqgdgyTVNGShPDU="
+          "cache.flakehub.com-6:W4EGFwAGgBj3he7c5fNh9NkOXw0PUVaxygCVKeuvaqU="
+          "cache.flakehub.com-7:mvxJ2DZVHn/kRxlIaxYNMuDG1OvMckZu32um1TadOR8="
+          "cache.flakehub.com-8:moO+OVS0mnTjBTcOUh2kYLQEd59ExzyoW1QgQ8XAARQ="
+          "cache.flakehub.com-9:wChaSeTI6TeCuV/Sg2513ZIM9i0qJaYsF+lZCXg0J6o="
+          "cache.flakehub.com-10:2GqeNlIp6AKp4EF2MVbE1kBOp9iBSyo0UPR9KoR0o1Y="
+        ];
+        environment = {
+          KASHA_UPSTREAMS = "https://cache.nixos.org,https://install.determinate.systems";
+          KASHA_PULL_THROUGH = "true";
+          KASHA_REENCODE = "true";
+        };
+        # KASHA_TOKEN, AWS_* and KASHA_REMOTE (its endpoint names the R2 account).
+        environmentFile = config.sops.secrets.kasha-env.path;
+      };
+      systemd.services.kasha.serviceConfig.MemoryMax = "3G";
+      # Only the k3s nodes (junior, d1-d3) reach the box directly: traefik
+      # proxies kasha.lan.zebradil.dev to it and vmagent scrapes it, both
+      # masqueraded to their node IP. Clients go through traefik's HTTPS, so the
+      # write token never crosses the LAN in plain HTTP.
+      networking.firewall.extraCommands = ''
+        for ip in 192.168.0.100 192.168.0.111 192.168.0.112 192.168.0.113; do
+          iptables -A nixos-fw -p tcp -s "$ip" --dport 5000 -j nixos-fw-accept
+        done
+      '';
 
       # RAM is unverified (only half of the installed 48 GB maps); memtest from
       # the boot menu avoids needing a USB stick on the headless box.

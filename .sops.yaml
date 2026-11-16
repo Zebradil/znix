@@ -37,6 +37,11 @@ creation_rules:
           - *d3
           - *junior
           - *daddy
+  - path_regex: secrets/hosts/daddy\.ya?ml$
+    key_groups:
+      - age:
+          - *zebradil
+          - *daddy
   - path_regex: secrets/cache\.ya?ml$
     key_groups:
       - age:
