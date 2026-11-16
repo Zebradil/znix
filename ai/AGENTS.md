@@ -42,6 +42,18 @@ Personal and employer-internal work are separate worlds and never mix.
   (company-related scripts, an internal fork, an OSS project touched for work) is still employer work.
 - When the classification is not obvious, ask the user.
 
+## Secrets in tool output
+
+Never print a decrypted secret, even filtered or "redacted" with sed or a regex: pattern redaction fails on values you
+have not seen (multi-line values, colons inside URLs).
+
+- To see what a sops YAML, JSON or dotenv file holds, read the key names from the encrypted file itself, since sops
+  encrypts values only: `yq 'del(.sops) | keys' file.yaml`. Decrypt only to list the names inside a multi-line value,
+  and print names only (`sed 's/=.*//'`).
+- To use or compare a value, keep it inside the pipeline: pipe it into the consumer (`sops set --value-stdin`,
+  `gh secret set NAME`, which reads stdin), or reduce it to something non-secret before printing (an equality check,
+  a length, an ID an API returns for it).
+
 ## Knowledge base capture
 
 Most sessions produce nothing worth keeping: routine edits, review passes, one-shot questions, anything whose whole
