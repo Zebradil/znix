@@ -29,7 +29,6 @@ let
     trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw="
-      "fluffy-nix-cache-01-1:i+jKT07GaI6rxKCct/m+NnHQyinTXc0V67WnHMrhjps="
     ];
     # Bounds the off-LAN tax: the box connection fails this fast on roaming
     # hosts before nix tries the next substituter.
@@ -40,6 +39,13 @@ let
     { config, lib, ... }:
     let
       usingDeterminate = config.determinate.enable or false;
+      # NixOS's own nix module appends cache.nixos.org and its key whenever it
+      # manages nix.conf; repeating them here would list both twice.
+      nixosDefaults = [
+        "https://cache.nixos.org/"
+        "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      ];
+      withoutNixosDefaults = lib.filter (x: usingDeterminate || !lib.elem x nixosDefaults);
     in
     {
       nixpkgs = {
@@ -57,12 +63,9 @@ let
           # Always apply cache settings: on Determinate NixOS, nix.settings routes
           # to /etc/nix/nix.custom.conf which is included by Determinate Nixd.
           settings = {
-            inherit (nixSettings)
-              substituters
-              trusted-public-keys
-              connect-timeout
-              warn-dirty
-              ;
+            inherit (nixSettings) connect-timeout warn-dirty;
+            substituters = withoutNixosDefaults nixSettings.substituters;
+            trusted-public-keys = withoutNixosDefaults nixSettings.trusted-public-keys;
           };
         }
         (lib.mkIf (!usingDeterminate) {
