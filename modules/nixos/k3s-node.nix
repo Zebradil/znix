@@ -158,6 +158,9 @@ _: {
         services.prometheus.exporters.smartctl = {
           enable = true;
           openFirewall = true;
+          # Autodiscovery would also probe the synology-csi iSCSI LUNs, which
+          # show up as sdX next to a SATA boot disk.
+          devices = lib.mapAttrsToList (_: disk: disk.device) config.disko.devices.disk;
         };
 
         # Open kubelet (server -> agent), metrics and flannel VXLAN, and trust the CNI/overlay interfaces.
