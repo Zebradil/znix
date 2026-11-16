@@ -92,6 +92,9 @@
         node = {
           enable = true;
           openFirewall = true;
+          # Unit states feed NodeSystemdServiceFailed, the signal for a failed
+          # monthly btrfs scrub.
+          enabledCollectors = [ "systemd" ];
         };
         smartctl = {
           enable = true;
