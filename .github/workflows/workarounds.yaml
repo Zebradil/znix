@@ -31,7 +31,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Nix
-        uses: zebradil/nix-ci/.github/actions/setup-nix@405263c66e68a1335c4b5e0f4c4646f31a5fed23 # v3.0.0
+        uses: zebradil/nix-ci/.github/actions/setup-nix@4051cac72e577a0903ecbcee2ffedb4e9f6ac9f1 # v3.1.0
 
       - name: Update inputs
         run: nix flake update
@@ -71,7 +71,7 @@ jobs:
           name: candidate-lock
 
       - name: Setup Nix
-        uses: zebradil/nix-ci/.github/actions/setup-nix@405263c66e68a1335c4b5e0f4c4646f31a5fed23 # v3.0.0
+        uses: zebradil/nix-ci/.github/actions/setup-nix@4051cac72e577a0903ecbcee2ffedb4e9f6ac9f1 # v3.1.0
         with:
           extra-substituters: https://znix.zebradil.dev
           extra-trusted-public-keys: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
@@ -147,7 +147,7 @@ jobs:
           path: ${{ runner.temp }}/verdicts
 
       - name: Setup Nix
-        uses: zebradil/nix-ci/.github/actions/setup-nix@405263c66e68a1335c4b5e0f4c4646f31a5fed23 # v3.0.0
+        uses: zebradil/nix-ci/.github/actions/setup-nix@4051cac72e577a0903ecbcee2ffedb4e9f6ac9f1 # v3.1.0
         with:
           extra-substituters: https://znix.zebradil.dev
           extra-trusted-public-keys: znix.zebradil.dev:nvr0OQFRddbHGopQbyLbLXQnntFBDKp23tqQq+msppw=
