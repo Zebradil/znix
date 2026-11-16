@@ -117,9 +117,11 @@
         acceptTerms = true;
         certs.${kashaHost} = {
           dnsProvider = "cloudflare";
-          # The LAN split horizon rewrites every zebradil.dev name, hiding the
-          # _acme-challenge TXT from local resolvers.
-          dnsResolver = "1.1.1.1:53";
+          # Check propagation at the zone's authoritative server: the LAN split
+          # horizon hides _acme-challenge TXTs, and a public recursive resolver
+          # caches an early NXDOMAIN for the SOA's 1800 s negative TTL, far past
+          # lego's 2-minute wait.
+          dnsResolver = "lee.ns.cloudflare.com:53";
           environmentFile = config.sops.templates.acme-env.path;
         };
       };
