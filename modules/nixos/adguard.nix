@@ -188,7 +188,8 @@ _: {
             #
             # The rewrites *table* can't express exclusions, so these are
             # AdBlock-style $dnsrewrite rules. @@ exempts names that must resolve
-            # normally: znix (CNAME to R2) and the .ts debug names. No other
+            # normally: znix (CNAME to R2), kasha.lan (served by daddy, not
+            # the LAN ingress) and the .ts debug names. No other
             # resolver in this class can express the exemption — blocky's
             # customDNS covers subdomains with no way to carve names back out
             # (0xERR0R/blocky#1631, closed as not planned), which is why this
@@ -197,6 +198,7 @@ _: {
               "||zebradil.dev^$dnsrewrite=NOERROR;CNAME;lan.zebradil.dev"
               "@@|zebradil.dev^$dnsrewrite"
               "@@||znix.zebradil.dev^$dnsrewrite"
+              "@@||kasha.lan.zebradil.dev^$dnsrewrite"
               "@@||ts.zebradil.dev^$dnsrewrite"
             ];
 
