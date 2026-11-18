@@ -8,7 +8,12 @@ _: {
     }:
     let
       base = {
-        home.packages = [ pkgs.gh ];
+        home.packages = [
+          pkgs.diffnav
+          pkgs.gh
+          pkgs.gh-dash
+          pkgs.gh-enhance
+        ];
       };
       impermanence = lib.mkIf config.znix.impermanence.enable {
         home.persistence."/persist".directories = [ ".config/gh" ];
