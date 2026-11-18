@@ -12,13 +12,20 @@ _: {
       fontSize = if isDarwin then 18.0 else 12.0;
       tabMod = if isDarwin then "cmd" else "ctrl";
       themeDir = "${pkgs.kitty-themes}/share/kitty-themes/themes";
-      assertTheme =
-        name:
-        assert lib.assertMsg (builtins.pathExists "${themeDir}/${name}.conf")
-          "kitty: theme '${name}' not found in kitty-themes";
-        name;
+      themes = {
+        dark = "ayu";
+        light = "ayu_light";
+        noPreference = "ayu";
+      };
     in
     {
+      # Checked in the generation builder, not with pathExists during evaluation:
+      # that would build kitty-themes at eval time, which breaks read-only and
+      # IFD-free evaluation (nix eval --read-only, CI cache probes).
+      home.extraBuilderCommands = lib.concatMapStrings (name: ''
+        test -f ${themeDir}/${name}.conf || { echo "kitty: theme '${name}' not found in kitty-themes" >&2; exit 1; }
+      '') (lib.unique (lib.attrValues themes));
+
       programs.kitty = {
         enable = true;
         font = {
@@ -39,11 +46,7 @@ _: {
 
           macos_option_as_alt = true;
         };
-        autoThemeFiles = {
-          dark = assertTheme "ayu";
-          light = assertTheme "ayu_light";
-          noPreference = assertTheme "ayu";
-        };
+        autoThemeFiles = themes;
         keybindings = {
           "ctrl+a>c" = "new_tab_with_cwd";
           "ctrl+a>x" = "close_window";
