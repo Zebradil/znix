@@ -3,12 +3,16 @@ _: {
     {
       lib,
       config,
+      pkgs,
       ...
     }:
     let
       hasOptinPersistence = config.znix.impermanence.enable or false;
     in
     {
+      # SSH forwards the client's TERM; kitty clients need its terminfo here.
+      environment.systemPackages = [ pkgs.kitty.terminfo ];
+
       services.openssh = {
         enable = true;
         settings = {
