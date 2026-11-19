@@ -4,6 +4,8 @@ name: Test Flake
 # system and publish what was built.
 # nix-ci's `build` action follows every push with the kasha generation manifest that keeps it
 # alive through kasha's GC.
+# `build` waits for `discover` only: it uses nothing `check` produces, and `check` takes minutes.
+# `required-checks` still fails the run when `check` fails.
 
 on:
   pull_request:
@@ -80,7 +82,7 @@ jobs:
             aarch64-darwin:macos-26
 
   build:
-    needs: [check, discover]
+    needs: discover
     if: ${{ needs.discover.outputs.has-targets == 'true' }}
     strategy:
       fail-fast: false
