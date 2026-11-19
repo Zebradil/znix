@@ -213,7 +213,7 @@ in
             file = lib.mkOption {
               type = lib.types.str;
               default = "modules/flake/workarounds/${name}.nix";
-              description = "Repo-relative path the removal PR deletes.";
+              description = "Repo-relative file or directory the removal PR deletes.";
             };
           };
         }

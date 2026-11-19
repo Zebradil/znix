@@ -163,7 +163,7 @@ propose_removal() {
 	fi
 
 	if ! {
-		git rm --quiet -- "$file" &&
+		git rm -r --quiet -- "$file" &&
 			{ ! has_write_flake || { nix run .#write-flake && git add flake.nix; }; } &&
 			nix flake lock && git add flake.lock &&
 			git commit --quiet -m "chore: drop the ${name} workaround" \

@@ -171,8 +171,7 @@
         done
       '';
 
-      # RAM is unverified (only half of the installed 48 GB maps); memtest from
-      # the boot menu avoids needing a USB stick on the headless box.
+      # memtest from the boot menu avoids needing a USB stick on the headless box.
       boot.loader.systemd-boot.memtest86.enable = true;
 
       # Whole-disk btrfs (no partition table) carried over from the old desktop.

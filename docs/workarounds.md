@@ -41,6 +41,11 @@ One entry per file. The file holds everything the entry needs, including a pin's
 flake input, so removal is a single `git rm`. The default location is
 `modules/flake/workarounds/<name>.nix`; set `file` when it lives elsewhere.
 
+An entry that needs a second file, such as a vendored copy of an upstream
+module, becomes a directory: `<name>/default.nix` declares the entry, the extra
+file takes a `_` name so import-tree skips it, and `file` points at the
+directory.
+
 ### `override`: patch a package
 
 ```nix
@@ -116,7 +121,7 @@ Write probes so that a failing command fails the build. The builder runs with
 | `override` | `null` | `pkgs: old: attrs` for `overrideAttrs`. |
 | `module` | `{ }` | Modules keyed by class: `nixos`, `darwin`, `homeManager`. |
 | `fixed` | see below | `pkgs: drv`, the probe. It receives the probe pkgs. |
-| `file` | `modules/flake/workarounds/<name>.nix` | Repo-relative path that the removal PR deletes. |
+| `file` | `modules/flake/workarounds/<name>.nix` | Repo-relative file or directory that the removal PR deletes. |
 
 Rules, checked by `nix flake check`:
 
