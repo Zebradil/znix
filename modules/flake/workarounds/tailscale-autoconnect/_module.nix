@@ -190,10 +190,10 @@ in
       ++ (lib.optionals (cfg.permitCertUid != null) [
         "TS_PERMIT_CERT_UID=${cfg.permitCertUid}"
       ])
-      ++ (lib.optionals (cfg.disableTaildrop) [
+      ++ (lib.optionals cfg.disableTaildrop [
         "TS_DISABLE_TAILDROP=true"
       ])
-      ++ (lib.optionals (cfg.disableUpstreamLogging) [
+      ++ (lib.optionals cfg.disableUpstreamLogging [
         "TS_NO_LOGS_NO_SUPPORT=true"
       ]);
       # Restart tailscaled with a single `systemctl restart` at the

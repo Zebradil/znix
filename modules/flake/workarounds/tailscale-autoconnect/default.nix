@@ -4,7 +4,7 @@ _: {
     systems = [ "x86_64-linux" ];
     reason = "tailscaled-autoconnect leaks the auth key, cannot log in again past prefs from extraSetFlags, and exits on a cached netmap before control accepts the node (NixOS/nixpkgs#589793, #589794, #589795).";
     # _module.nix is nixpkgs' tailscale.nix at 2074cc6 with the three PRs
-    # applied, kept unformatted so it diffs cleanly against upstream.
+    # applied, plus two statix fixes (redundant parentheses).
     module.nixos = {
       disabledModules = [ "services/networking/tailscale.nix" ];
       imports = [ ./_module.nix ];

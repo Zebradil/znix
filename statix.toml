@@ -1,3 +1,1 @@
 disabled = ["repeated_keys"]
-# Vendored upstream modules stay byte-identical to upstream so they diff cleanly.
-ignore = ["**/modules/flake/workarounds/*/_*.nix"]
