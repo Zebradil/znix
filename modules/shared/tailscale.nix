@@ -16,9 +16,14 @@ _: {
           type = lib.types.nullOr lib.types.path;
           default = null;
           description = ''
-            Path to a file holding a Tailscale auth key or OAuth client secret.
-            When set, the node authenticates unattended on first boot. Point it at
-            a sops-rendered secret (see the k3s hosts).
+            Path to a file holding a Tailscale OAuth client secret. When set,
+            the node authenticates unattended on first boot. Point it at a
+            sops-rendered secret (see the k3s hosts).
+
+            The node registers non-ephemeral and pre-approved: OAuth secrets
+            default to ephemeral, and an ephemeral node offline for 30-60
+            minutes is deleted from the tailnet and needs a new registration
+            with a new IP.
           '';
         };
 
@@ -70,15 +75,24 @@ _: {
         services.tailscale = {
           enable = true;
           inherit (cfg) authKeyFile;
+          authKeyParameters = {
+            ephemeral = false;
+            preauthorized = true;
+          };
 
           # Sets net.ipv4/ipv6 forwarding. Without it the node advertises routes
           # but silently drops every forwarded packet.
           useRoutingFeatures = lib.mkIf (cfg.advertiseRoutes != [ ]) "server";
 
           # Tags are fixed at registration; `tailscale set` cannot change them.
-          extraUpFlags = lib.mkIf (cfg.advertiseTags != [ ]) [
-            "--advertise-tags=${lib.concatStringsSep "," cfg.advertiseTags}"
-          ];
+          # --reset lets autoconnect log in again although the set flags below
+          # differ from `up`'s defaults; autoconnect then reapplies them
+          # (NixOS/nixpkgs#589794, carried by the tailscale-autoconnect workaround).
+          extraUpFlags =
+            lib.optional (
+              cfg.advertiseTags != [ ]
+            ) "--advertise-tags=${lib.concatStringsSep "," cfg.advertiseTags}"
+            ++ [ "--reset" ];
 
           # Routes go through `tailscale set`, not `up`: extraUpFlags only fire
           # while the node is unauthenticated, so an already-registered host
