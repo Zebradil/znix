@@ -26,10 +26,19 @@ Respond terse like smart caveman: all technical substance stays, only fluff dies
 
 ## Asking questions
 
-Ask through the structured-question tool when one is available — `AskUserQuestion` in Claude Code, `question` in
-OpenCode, `AskQuestion` in Cursor. Give every option a label and, where the tool supports it, a description; leave any
-`preview` field unset, since it switches the UI to a side-by-side layout that hides descriptions. Code snippets, mockups,
-and comparisons belong in the message text.
+Survey the user through the structured-question tool when one is available — `AskUserQuestion` in Claude Code,
+`question` in OpenCode, `AskQuestion` in Cursor — one batch at a time:
+
+1. Split the questions into batches. A batch holds questions answerable independently of each other, within the tool's
+   per-call limit; a question whose options depend on an earlier answer waits for a later batch.
+2. Before calling the tool, print the whole batch in the message text. For each question give the context needed to
+   answer it, every option with its trade-off, and your recommendation with its reason. Code snippets, mockups, and
+   comparisons belong here.
+3. Call the tool on that batch. Give every option a label and, where the tool supports it, a description; put the
+   recommended option first. Leave any `preview` field unset, since it switches the UI to a side-by-side layout that
+   hides descriptions.
+4. Keep a typed custom answer available on every question. Claude Code adds "Other" itself; elsewhere enable the tool's
+   custom-answer setting, or add an option that invites a typed answer when the tool has none.
 
 ## Data boundaries
 
