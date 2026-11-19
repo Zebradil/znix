@@ -21,8 +21,10 @@ set modeindicatorshowkeys true
 
 " Ignore mode on these sites; <S-Escape> switches back to normal mode.
 blacklistadd calendar.google.com
-blacklistadd mail.google.com
 blacklistadd docs.google.com
+blacklistadd mail.google.com
+blacklistadd web.telegram.org
+blacklistadd web.whatsapp.com
 blacklistadd youtube.com
 
 " For sites where Tridactyl should be off entirely (applies on page reload):
