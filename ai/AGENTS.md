@@ -4,8 +4,8 @@ Mark every claim not backed by evidence as unverified; keep assumptions visibly 
 
 ## Response style
 
-Respond terse like smart caveman: all technical substance stays, only fluff dies. Pattern: `[thing] [action] [reason].
-[next step].` Example: "Bug in auth middleware. Token expiry check uses `<` not `<=`. Fix:"
+Respond terse like smart caveman: all technical substance stays, only fluff dies. Pattern:
+`[thing] [action] [reason]. [next step].` Example: "Bug in auth middleware. Token expiry check uses `<` not `<=`. Fix:"
 
 - Drop articles, filler (just/really/basically/actually/simply), pleasantries, hedging. Fragments OK. Short synonyms
   (big, not extensive; fix, not "implement a solution for").
@@ -60,40 +60,8 @@ have not seen (multi-line values, colons inside URLs).
   encrypts values only: `yq 'del(.sops) | keys' file.yaml`. Decrypt only to list the names inside a multi-line value,
   and print names only (`sed 's/=.*//'`).
 - To use or compare a value, keep it inside the pipeline: pipe it into the consumer (`sops set --value-stdin`,
-  `gh secret set NAME`, which reads stdin), or reduce it to something non-secret before printing (an equality check,
-  a length, an ID an API returns for it).
-
-## Knowledge base capture
-
-Most sessions produce nothing worth keeping: routine edits, review passes, one-shot questions, anything whose whole
-content is the diff. A few produce a durable fact — a decision with its rationale, a root cause, a researched trade-off,
-a recipe that works. Those should be captured using the tools of the `personal-knowledge-base` MCP server
-(`inbox_capture`, `kb_search`, `reference_create`, …) — a knowledge base named for a company is a different
-server and never receives personal-KB content, or the reverse.
-
-Test: **would this be worth having in a few months, and is it unrecoverable from git history or the worklog?** Evaluate
-from the end of the first exchange onward; a single research reply can qualify.
-
-When it passes, append one line to the end of the response — never a blocking question:
-
-> Worth keeping in the knowledge base? **yes** / **no** / **continuous** — personal because <one clause>.
-
-- **yes** — capture once, now, with `inbox_capture`.
-- **no** — drop the subject for the rest of this session.
-- **continuous** — create the note in `reference/` or the matching project, then append each further durable fact to it
-  as the session goes. Same test per fact; never append per response.
-
-Rules:
-
-- If the knowledge base tools are not available in this session, never offer. That is the entire gate.
-- Never offer for employer-classified work. Name the classification in the offer line so a wrong call is visible.
-- Offer at most once per session; a second offer only for a materially different artifact; never after a **no**.
-- Only agent-authored text leaves the session. Never write a transcript, a raw session export, or quoted conversation
-  into the knowledge base.
-- Compress prose, carry data verbatim: tables, commands, config snippets, exact figures and their uncertainty markers
-  ("estimate", "unverified", "verify") cross over unchanged.
-- `/save-convo` remains the deliberate full-synthesis path, invoked by name. This offer is one cheap capture, not a
-  session artifact.
+  `gh secret set NAME`, which reads stdin), or reduce it to something non-secret before printing (an equality check, a
+  length, an ID an API returns for it).
 
 ## Code
 
@@ -113,8 +81,8 @@ the code: a why, a constraint, a non-obvious consequence, a link.
 ## Git and GitHub
 
 - Repositories live in a GOPATH-style tree rooted at `~/code`, without `src/`: `~/code/github.com/<owner>/<repo>`,
-  `~/code/gitlab.com/<group>/<subgroup>/<repo>`. Look there for an existing checkout
-  before cloning, and clone into that location.
+  `~/code/gitlab.com/<group>/<subgroup>/<repo>`. Look there for an existing checkout before cloning, and clone into that
+  location.
 - Work in a git worktree, one per branch, under `.worktrees/` in the main checkout. Name a new branch
   `wt/<yymmdd>-<HHMMSS>-<slug>` (slug: lowercase, non-alphanumeric runs collapsed to `-`); use an existing branch by its
   own name. The directory is the branch name with `/` replaced by `-`:
@@ -164,6 +132,6 @@ Default template (fill in only what's relevant, remove empty sections):
 
 ### tmux
 
-- Run commands that need interactive input you cannot supply (an SSH password prompt, for example) in a tmux session
-  and give the user the exact attach command (`tmux attach -t <name>`) to type it.
+- Run commands that need interactive input you cannot supply (an SSH password prompt, for example) in a tmux session and
+  give the user the exact attach command (`tmux attach -t <name>`) to type it.
 - Prefer a shared tmux session for long or remote work the user may want to follow live.
