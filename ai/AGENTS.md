@@ -112,6 +112,9 @@ the code: a why, a constraint, a non-obvious consequence, a link.
 
 ## Git and GitHub
 
+- Repositories live in a GOPATH-style tree rooted at `~/code`, without `src/`: `~/code/github.com/<owner>/<repo>`,
+  `~/code/gitlab.com/<group>/<subgroup>/<repo>`. Look there for an existing checkout
+  before cloning, and clone into that location.
 - Work in a git worktree, one per branch, under `.worktrees/` in the main checkout. Name a new branch
   `wt/<yymmdd>-<HHMMSS>-<slug>` (slug: lowercase, non-alphanumeric runs collapsed to `-`); use an existing branch by its
   own name. The directory is the branch name with `/` replaced by `-`:
