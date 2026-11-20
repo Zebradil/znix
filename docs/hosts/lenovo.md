@@ -14,7 +14,8 @@ are not configured. The battery holds about half its design capacity.
 - Host SSH key is pre-generated: private half in `secrets/hosts/lenovo/ssh_host_ed25519.key` (encrypted to the
   `zebradil` key only), public half beside it. Its age key is the `lenovo` recipient in `.sops.yaml`.
 - `secrets/hosts/lenovo.yaml` holds `alis-password`, the hash carried over from the Arch install.
-- WiFi: `DUST`, `DUSTY`, `DUSTIER`, all from the `wireless` key in `secrets/hosts/common.yaml`.
+- WiFi: `DUST`, from the `wireless` key in `secrets/hosts/common.yaml`.
+- Reachable as `lenovo.local` (avahi publishes it); the router's `lenovo.lan` follows whichever lease it saw last.
 
 ## Install
 
@@ -53,7 +54,7 @@ Back up everything worth keeping first: the install wipes the disk. Pick a time 
 4. After the first boot, restore her files into `/home/alis` (owned by `alis`), then let her sign in to Chrome,
    Telegram and Zoom.
 
-Later changes: `colmena apply --on lenovo`.
+Later changes: `colmena apply --on lenovo` (targets `lenovo.local`).
 
 ## Printer
 
