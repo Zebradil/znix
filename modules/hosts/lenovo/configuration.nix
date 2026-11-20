@@ -38,6 +38,8 @@
       };
 
       zramSwap.enable = true;
+      # BIOS, NVMe and Thunderbolt firmware come from LVFS.
+      services.fwupd.enable = true;
 
       # A home laptop: a fixed zone beats GeoClue lookups, which time out here
       # and leave the clock on UTC. locale's default Europe/Berlin applies.
