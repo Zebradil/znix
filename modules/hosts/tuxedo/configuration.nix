@@ -73,6 +73,8 @@
     # of their corresponding modules because `environment.persistence` only exists
     # on impermanence hosts, evaluation on other hosts would fail otherwise.
     environment.persistence."/persist".directories = [
+      "/etc/NetworkManager/system-connections"
+      "/var/lib/bluetooth"
       "/var/lib/tailscale"
       # DynamicUser cache root, for sito's vmagent queue (modules/shared/sito.nix)
       # to survive a reboot while offline. Persisted whole because impermanence
