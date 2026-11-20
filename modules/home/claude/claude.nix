@@ -80,6 +80,8 @@ let
               pr = "";
               sessionUrl = false;
             };
+            # Session recap shown after 5+ minutes away.
+            awaySummaryEnabled = false;
             editorMode = "vim";
             # LSP tool is opt-in even on 2.x; servers wired via the local
             # znix-lsp @skills-dir plugin (see znix.lsp.servers), not a marketplace.
