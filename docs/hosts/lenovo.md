@@ -34,16 +34,21 @@ Back up everything worth keeping first: the install wipes the disk. Pick a time 
    ```
 
 3. Install. `--build-on remote` builds in the kexec environment on the laptop itself, so the closure is not built on
-   macOS:
+   macOS. Target the IP, not `lenovo.lan`: the kexec installer takes a new DHCP lease under the hostname
+   `nixos-installer`, so the router's name for the laptop disappears mid-run.
 
    ```bash
    nix run github:nix-community/nixos-anywhere -- \
      --flake .#lenovo --build-on remote \
      --extra-files "$tmp/root" \
      --disk-encryption-keys /tmp/disk.key "$tmp/disk.key" \
-     --target-host root@lenovo.lan
+     --target-host root@<ip>
    rm -rf "$tmp"
    ```
+
+   The installer's own address can differ from the one used for kexec; find it in the router's lease list. If a run
+   dies after kexec, the disk is still untouched: rerun against the installer's address with
+   `--phases disko,install,reboot`.
 
 4. After the first boot: `ssh suok@lenovo.lan sudo tailscale up`, restore her files into `/home/alis` (owned by
    `alis`), then let her sign in to Chrome, Telegram and Zoom.
