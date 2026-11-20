@@ -3,7 +3,12 @@
   # lenovo — ThinkPad T480s, a family laptop for video calls and browsing.
   # One desktop user (alis) on GNOME; administered over SSH as suok.
   flake.modules.nixos.lenovo =
-    { config, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       imports =
         (with inputs.self.modules.nixos; [
@@ -19,7 +24,6 @@
           pki
           sops
           suok
-          tailscale
           wireless
         ])
         ++ [ inputs.disko.nixosModules.disko ];
@@ -30,7 +34,6 @@
       znix = {
         boot.enable = true;
         laptop.enable = true;
-        tailscale.enable = true;
         wireless = {
           enable = true;
           # All three SSIDs share the passphrase in secrets/hosts/common.yaml.
@@ -42,6 +45,10 @@
       };
 
       zramSwap.enable = true;
+
+      # A home laptop: a fixed zone beats GeoClue lookups, which time out here
+      # and leave the clock on UTC. locale's default Europe/Berlin applies.
+      services.automatic-timezoned.enable = lib.mkForce false;
 
       i18n.extraLocales = [ "ru_RU.UTF-8/UTF-8" ];
       services.xserver.xkb.layout = "us,ru";

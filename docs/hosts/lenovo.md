@@ -50,8 +50,8 @@ Back up everything worth keeping first: the install wipes the disk. Pick a time 
    dies after kexec, the disk is still untouched: rerun against the installer's address with
    `--phases disko,install,reboot`.
 
-4. After the first boot: `ssh suok@lenovo.lan sudo tailscale up`, restore her files into `/home/alis` (owned by
-   `alis`), then let her sign in to Chrome, Telegram and Zoom.
+4. After the first boot, restore her files into `/home/alis` (owned by `alis`), then let her sign in to Chrome,
+   Telegram and Zoom.
 
 Later changes: `colmena apply --on lenovo`.
 
