@@ -49,4 +49,6 @@ sops secrets/hosts/tuxedo/ssh_host_ed25519.key
 | `secrets/users/zebradil.yaml`               | `password`, `u2f_keys/*`                                                                               |
 | `secrets/hosts/common.yaml`                 | `wireless` (PSK)                                                                                       |
 | `secrets/hosts/tuxedo/ssh_host_ed25519.key` | Host SSH private key                                                                                   |
+| `secrets/hosts/lenovo/ssh_host_ed25519.key` | Pre-generated host SSH private key for nixos-anywhere (see [hosts/lenovo.md](hosts/lenovo.md))         |
+| `secrets/hosts/lenovo.yaml`                 | `alis-password` (hash)                                                                                 |
 | `secrets/cache.yaml`                        | `CACHE_S3_URL`, `SIGNING_KEY`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (see [cache.md](cache.md)) |

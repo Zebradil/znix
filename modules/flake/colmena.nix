@@ -32,6 +32,12 @@ let
       targetUser = "suok";
       tags = [ "appliance" ];
     };
+    # DHCP on WiFi; the router resolves the hostname.
+    lenovo = {
+      targetHost = "lenovo.lan";
+      targetUser = "suok";
+      tags = [ "desktop" ];
+    };
   }
   // lib.genAttrs [ "d1" "d2" "d3" ] (host: {
     targetHost = lib.head (
