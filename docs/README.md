@@ -13,6 +13,7 @@ configures no darwin host.
 | daddy     | x86_64-linux   | -           | Nix remote builder / kasha box        |
 | d1-d3     | x86_64-linux   | -           | k3s agents                            |
 | toddler   | aarch64-linux  | -           | Raspberry Pi                          |
+| lenovo    | x86_64-linux   | alis        | ThinkPad T480s, family laptop (GNOME) |
 
 ## Architecture
 

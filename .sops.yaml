@@ -8,6 +8,7 @@ keys:
       - &d3 age1xvracjzswt8l8tefkzreqj2wyf7ht3cqdsjel34svnep2vvhrpnsq9zqnz
       - &junior age1cdrsgrxdhhxzj8gzpdfw5n57w2lfzavrqjg8p968z82pjur0f5ss0t34d7
       - &daddy age1awknhznlmhdpydp2ee7zv0jz524tfr5cpdyp5puvc8ka762vsgks3288tc
+      - &lenovo age1ynw94l82kww4yeq8rekek6yt66ds3axdtfnljxzamp5rdf8kvydszfm4ju
   # CI (GitHub Actions); private key stored as the SOPS_AGE_KEY repo secret
   - ci:
       - &github-ci age1avy74tmpl5tws934r0rs9rxgcul2k3d942xmn4heh4t0xuf584msr7cewl
@@ -23,6 +24,7 @@ creation_rules:
       - age:
           - *tuxedo
           - *zebradil
+          - *lenovo
   - path_regex: secrets/hosts/tuxedo/ssh_host_ed25519\.key$
     key_groups:
       - age:
@@ -37,6 +39,17 @@ creation_rules:
           - *d3
           - *junior
           - *daddy
+  - path_regex: secrets/hosts/lenovo\.ya?ml$
+    key_groups:
+      - age:
+          - *zebradil
+          - *lenovo
+  # Pre-generated host key, handed to nixos-anywhere via --extra-files; the host
+  # never decrypts it itself.
+  - path_regex: secrets/hosts/lenovo/ssh_host_ed25519\.key$
+    key_groups:
+      - age:
+          - *zebradil
   - path_regex: secrets/hosts/daddy\.ya?ml$
     key_groups:
       - age:
