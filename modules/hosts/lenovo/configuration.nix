@@ -34,14 +34,7 @@
       znix = {
         boot.enable = true;
         laptop.enable = true;
-        wireless = {
-          enable = true;
-          # All three SSIDs share the passphrase in secrets/hosts/common.yaml.
-          networks = {
-            DUSTY.pskSecret = "wireless";
-            DUSTIER.pskSecret = "wireless";
-          };
-        };
+        wireless.enable = true;
       };
 
       zramSwap.enable = true;
@@ -74,10 +67,15 @@
         enable = true;
         drivers = [ pkgs.brlaser ];
       };
-      # Driverless discovery as a fallback to the declared queue below.
+      # Driverless printer discovery, and lenovo.local for colmena: the
+      # router names only one of the laptop's DHCP leases.
       services.avahi = {
         enable = true;
         nssmdns4 = true;
+        settings.publish = {
+          disable-publishing = false;
+          publish-addresses = true;
+        };
       };
       hardware.printers.ensurePrinters = [
         {

@@ -32,9 +32,10 @@ let
       targetUser = "suok";
       tags = [ "appliance" ];
     };
-    # DHCP on WiFi; the router resolves the hostname.
+    # DHCP on WiFi or ethernet; the router's lenovo.lan follows only one
+    # lease, so use the mDNS name the host publishes.
     lenovo = {
-      targetHost = "lenovo.lan";
+      targetHost = "lenovo.local";
       targetUser = "suok";
       tags = [ "desktop" ];
     };
