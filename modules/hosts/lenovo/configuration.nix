@@ -15,6 +15,7 @@
           audio
           boot
           gnome
+          home-manager
           laptop
           lenovo-disko
           lenovo-hardware
@@ -46,10 +47,6 @@
       services.automatic-timezoned.enable = lib.mkForce false;
 
       i18n.extraLocales = [ "ru_RU.UTF-8/UTF-8" ];
-      # Declarative locales export LANG via /etc/set-environment, which the
-      # GNOME session sources after GDM sets her AccountsService language.
-      # Imperative mode leaves LANG/LC_* to /etc/locale.conf instead.
-      i18n.imperativeLocale = true;
       services.xserver.xkb.layout = "us,ru";
 
       # Her login and UI language carry over from the previous install.
@@ -63,11 +60,22 @@
         hashedPasswordFile = config.sops.secrets.alis-password.path;
         extraGroups = [ "networkmanager" ];
       };
-      # `f` writes only when the file is missing, so a language she picks
-      # later in Settings sticks.
+      # Keeps GNOME Settings showing her language; GDM's LANG from it loses to
+      # /etc/set-environment, so the session language comes from home-manager.
       systemd.tmpfiles.rules = [
         ''f /var/lib/AccountsService/users/alis 0600 root root - [User]\nLanguages=ru_RU.UTF-8;\n''
       ];
+      home-manager = {
+        # Moves aside the skeleton dotfiles carried over from the old install.
+        backupFileExtension = "pre-hm";
+        users.alis = {
+          home.stateVersion = "26.11";
+          home.language.base = "ru_RU.UTF-8";
+          # The GNOME session starts through a login shell, which reads
+          # home.language only from the ~/.profile bash management writes.
+          programs.bash.enable = true;
+        };
+      };
 
       services.printing = {
         enable = true;
