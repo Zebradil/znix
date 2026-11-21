@@ -32,8 +32,11 @@ in
   # flake-parts.nix can contribute its own <user>@<host> key. flake-parts
   # leaves it in the non-merging freeform bucket otherwise, and two hosts
   # defining it collide ("Define the value only once").
+  # lazyAttrsOf, as home-manager's own flake module declares it: attrsOf
+  # forces every value to check it is defined, so listing the keys would run
+  # each home configuration's full assertion and warning checks.
   options.flake.homeConfigurations = lib.mkOption {
-    type = lib.types.attrsOf lib.types.unspecified;
+    type = lib.types.lazyAttrsOf lib.types.raw;
     default = { };
   };
 
