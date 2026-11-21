@@ -11,11 +11,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795162171,
-        "narHash": "sha256-8T3z+6VpTMrRVSMeI5pst3MibQi1lKV3N8a+mZ7j5mE=",
+        "lastModified": 1795262394,
+        "narHash": "sha256-wFB445c8j7AFfh8X7VlaQojowu9uLCFIslkN4C+1w3Y=",
         "owner": "MalpenZibo",
         "repo": "ashell",
-        "rev": "6104eee0ad00e2f1dbbb4b6818e728c9c007fdaa",
+        "rev": "105aee54b5c7c7d509982c5e63166d1c677c24b5",
         "type": "github"
       },
       "original": {
@@ -482,11 +482,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795230616,
-        "narHash": "sha256-nAz8ohjjw0iUsKo4D38lyr3UtEkfuuEAanyrvnZw4jc=",
+        "lastModified": 1795278514,
+        "narHash": "sha256-GYLpqOchELSiQt7Jc1qCR6HzM7m5dBRgutVJsGQs9ok=",
         "owner": "Zebradil",
         "repo": "gke-kubeconfiger",
-        "rev": "3d1fd096e82bc4a14ffbef5404cc12bbdd1e5b43",
+        "rev": "a2b3dcc78af3e8f12eb46ff3c67fa8b0733058e8",
         "type": "github"
       },
       "original": {
@@ -520,11 +520,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794963576,
-        "narHash": "sha256-+CPrP74GDJ63f7bgEFC9Av4hbxc7K9WUNv1ZVRifRe8=",
+        "lastModified": 1795268568,
+        "narHash": "sha256-1RJm4DEu7YHJv94sjSY7sjqT+kHx/AUwmtUN4dtFBUo=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "2b13c9cb3aa20653e6f8ee0b7f8331a53ea9b0a9",
+        "rev": "6857c7f7c338ad181729c52071386b0d3afa24bc",
         "type": "github"
       },
       "original": {
@@ -616,11 +616,11 @@
         "nixpkgs": "nixpkgs_6"
       },
       "locked": {
-        "lastModified": 1795191884,
-        "narHash": "sha256-SXGJ+YpkxY40NLYvwfodfhf5iBMdp8XWMH0aGz+BZVs=",
+        "lastModified": 1795272042,
+        "narHash": "sha256-QNtu7T89wy1/x0+g4lIpsq2AYIX16JC/T4VPyqc5f4Y=",
         "owner": "Zebradil",
         "repo": "kasha",
-        "rev": "921831eb23f282c7875755497b8be41e329731c2",
+        "rev": "4c308a4e6383f45ab8bc36aa08f188672ce89d7a",
         "type": "github"
       },
       "original": {
@@ -900,11 +900,11 @@
     },
     "nixpkgs_7": {
       "locked": {
-        "lastModified": 1795187554,
-        "narHash": "sha256-5q5/viwCcXSA4S2cSaKdjdYrHhk64qFbjLhCMlJnyeM=",
+        "lastModified": 1795217999,
+        "narHash": "sha256-Z5mAFcY8XTAaWe+RwTchz4Fx1gwaeQ2WD8A8bKX7njY=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "9996594bd38077de6a018ec17453ba3d99182787",
+        "rev": "680275f0bb6afce84fbac3e75fc47c5f2272400b",
         "type": "github"
       },
       "original": {
@@ -975,11 +975,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795103574,
-        "narHash": "sha256-8RebczevIQDM2Sd66GVmwzJ3B+RSsMdc4UljY7B2Q9Q=",
+        "lastModified": 1795278021,
+        "narHash": "sha256-Zd+//PGh5abgWBkveCflp+sgNkJ+e/gzTioGUZ17JGY=",
         "owner": "Zebradil",
         "repo": "pr-autopilot",
-        "rev": "60bfad5c204171522bbdf417a9246b4c5c5993f9",
+        "rev": "a761424fd158c8a104e9b03fc77df1eb61df01bc",
         "type": "github"
       },
       "original": {
@@ -1027,11 +1027,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795168384,
-        "narHash": "sha256-aQ4Ns5O78Pg6B1i2hNRbI1HpRtnZst/jW34MSOOeaX4=",
+        "lastModified": 1795253373,
+        "narHash": "sha256-Vg6Sg8gJCDG9qpVEdOZX+72Z50MLwdnwtfZ8FNBwiYI=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "a5c999945da3991d7aa3cc2a6075cfd22bd387e9",
+        "rev": "52db20539ec0ba063479d66092992d9efcf456ff",
         "type": "github"
       },
       "original": {
@@ -1067,11 +1067,11 @@
         "nixpkgs": "nixpkgs_8"
       },
       "locked": {
-        "lastModified": 1795179575,
-        "narHash": "sha256-D5RBDhnsM3BE7vUTSRnLBChygu3SEUBU9wNsjFiuRIo=",
+        "lastModified": 1795271806,
+        "narHash": "sha256-Te75VVsecgm9ezGEcRDB52zg5HGkhsEtsLXMUr486hE=",
         "owner": "Zebradil",
         "repo": "sito",
-        "rev": "f1977403b594c0890e21dc0c734fd6e9308efb68",
+        "rev": "810aefc2437378b4046eff3070942391b55aedc4",
         "type": "github"
       },
       "original": {
@@ -1089,11 +1089,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795016592,
-        "narHash": "sha256-vgdlt+1bxYxSBSpBU2vtTQPc4H1zf/SgJd2SRjv98Nw=",
+        "lastModified": 1795256894,
+        "narHash": "sha256-hE8BXO1jIpkv0mOyLM60JCHiTNeFlu0XCTXzMJAvtOQ=",
         "owner": "nklmilojevic",
         "repo": "sofka",
-        "rev": "b0c7e75b4925b3a4882ff1fc885287974f878b18",
+        "rev": "ea36c6dbd9ec4e3c2c63af558a04fe2abfabff5d",
         "type": "github"
       },
       "original": {
@@ -1236,11 +1236,11 @@
         "nixpkgs": "nixpkgs_9"
       },
       "locked": {
-        "lastModified": 1774625383,
-        "narHash": "sha256-thfb9ZFs4xSwJfK7X0tFTVQuO8rIBWmwoCkywrde3e0=",
+        "lastModified": 1795277973,
+        "narHash": "sha256-18KOQdZZfo4QljBCZGiJDQL7/8GLnzuiCDFU85nmU5o=",
         "owner": "zebradil",
         "repo": "tree-sitter-queries",
-        "rev": "16e54e2a04c59e6afb97a2fbf5dae7ffcd579df2",
+        "rev": "72919b0911d433d7f1fb38a50b70ea2ddd99e2e4",
         "type": "github"
       },
       "original": {
@@ -1255,11 +1255,11 @@
         "nixpkgs": "nixpkgs_10"
       },
       "locked": {
-        "lastModified": 1774625397,
-        "narHash": "sha256-SdCKolWaIIu1r2kY487Nnkoa9Uf5shH6vLdmoCGieQg=",
+        "lastModified": 1795277938,
+        "narHash": "sha256-ll1BWW1K8AXzq2r6J+Cx1/Jy4N1jArYcuWOmHHSx7xo=",
         "owner": "zebradil",
         "repo": "tree-sitter-test_highlights",
-        "rev": "f9f0ca4a2fc5135d931a18eecbe16442e271d03d",
+        "rev": "c1ae77bb89133f85a08f95bcfab37ce1b0847cec",
         "type": "github"
       },
       "original": {
@@ -1274,11 +1274,11 @@
         "nixpkgs": "nixpkgs_11"
       },
       "locked": {
-        "lastModified": 1774625428,
-        "narHash": "sha256-VQwigJAHE1Kg2yffPOX5C8M45QRGslz+6HorPHfSMFo=",
+        "lastModified": 1795277863,
+        "narHash": "sha256-WatfwY8hobmebhGlj7hCFgvjt2MpFFdsxIdm6HR1a9k=",
         "owner": "zebradil",
         "repo": "tree-sitter-ytt_annotation",
-        "rev": "23ec6ec90341ecaa0f7e52512d1b5691e46466ce",
+        "rev": "ff7d28f31e83710bfcb8ab13fa6ed7e003501d9f",
         "type": "github"
       },
       "original": {
