@@ -5,7 +5,6 @@ _: {
       i18n = {
         defaultLocale = lib.mkDefault "en_US.UTF-8";
         extraLocaleSettings = {
-          LC_MESSAGES = lib.mkDefault "en_US.UTF-8";
           LC_TIME = lib.mkDefault "en_IE.UTF-8";
           LC_NUMERIC = lib.mkDefault "de_DE.UTF-8";
           LC_MEASUREMENT = lib.mkDefault "de_DE.UTF-8";
