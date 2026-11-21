@@ -24,6 +24,7 @@
         impermanence
         laptop
         locale
+        metrics-push
         nix-builder-client
         nix-settings
         openssh

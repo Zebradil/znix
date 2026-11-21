@@ -20,6 +20,7 @@
           lenovo-disko
           lenovo-hardware
           locale
+          metrics-push
           nix-settings
           openssh
           pki
