@@ -76,23 +76,20 @@ in
       imports = [ inputs.sito.nixosModules.default ];
       services.sito = service;
 
-      # sito's own vmagent options are darwin-only; NixOS has a stock module.
-      services.vmagent = {
-        enable = true;
-        remoteWrite.url = remoteWriteUrl;
-        prometheusConfig.scrape_configs = [
-          {
-            job_name = "sito";
-            scrape_interval = scrapeInterval;
-            static_configs = [ { targets = [ (config.services.sito.settings.listen or "127.0.0.1:5001") ]; } ];
-          }
-        ];
-        extraArgs = [
-          (hostLabel config.networking.hostName)
-          "-remoteWrite.maxDiskUsagePerURL=${maxDiskUsage}"
-          # The default listens on every interface; its pages are for this host only.
-          "-httpListenAddr=127.0.0.1:8429"
-        ];
-      };
+      # sito's own vmagent options are darwin-only; on NixOS the shared
+      # vmagent from metrics-push ships this job too.
+      services.vmagent.prometheusConfig.scrape_configs = [
+        {
+          job_name = "sito";
+          scrape_interval = scrapeInterval;
+          static_configs = [ { targets = [ (config.services.sito.settings.listen or "127.0.0.1:5001") ]; } ];
+        }
+      ];
+      assertions = [
+        {
+          assertion = config.services.vmagent.remoteWrite.url != null;
+          message = "sito: import the metrics-push module, it ships sito's metrics.";
+        }
+      ];
     };
 }
