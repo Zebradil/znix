@@ -46,6 +46,10 @@
       services.automatic-timezoned.enable = lib.mkForce false;
 
       i18n.extraLocales = [ "ru_RU.UTF-8/UTF-8" ];
+      # Declarative locales export LANG via /etc/set-environment, which the
+      # GNOME session sources after GDM sets her AccountsService language.
+      # Imperative mode leaves LANG/LC_* to /etc/locale.conf instead.
+      i18n.imperativeLocale = true;
       services.xserver.xkb.layout = "us,ru";
 
       # Her login and UI language carry over from the previous install.
