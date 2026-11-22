@@ -2,7 +2,7 @@
 {
   # Shared base for the Dell XPS 9380 machines.
   flake.modules.nixos.dell-xps-9380 =
-    { config, ... }:
+    { config, pkgs, ... }:
     {
       imports =
         (with inputs.self.modules.nixos; [
@@ -57,9 +57,21 @@
       i18n.defaultLocale = "en_US.UTF-8";
 
       # Headless: the panel is otherwise never idle-blanked, so it stays lit
-      # 24/7 behind the closed lid. Blank the console after 60s of inactivity,
-      # which powers the internal backlight off.
+      # 24/7 behind the closed lid. Blank the console after 60s of inactivity.
       boot.kernelParams = [ "consoleblank=60" ];
+
+      # The kernel's default VT blank level only blacks out the framebuffer:
+      # i915 keeps the eDP pipe and backlight running. VESA powerdown mode makes
+      # the idle blank turn the pipe and backlight off. A keypress on the
+      # console wakes it.
+      systemd.services.console-powerdown = {
+        description = "Power the panel down when the console blanks";
+        wantedBy = [ "multi-user.target" ];
+        path = [ pkgs.util-linux ];
+        serviceConfig.Type = "oneshot";
+        # vesa_blank_mode is global, but the ioctl must target a VT.
+        script = "setterm --powersave powerdown </dev/tty1 >/dev/tty1";
+      };
 
       # Headless with the lid closed: nothing must ever suspend. Mask the sleep
       # targets and tell logind to ignore the lid on every power source.
