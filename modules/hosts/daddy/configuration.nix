@@ -18,6 +18,7 @@
           cloudflare-dynamic-dns
           daddy-disko
           daddy-hardware
+          gdrive-nas-sync
           nix-builder-server
           nix-settings
           openssh
@@ -38,6 +39,17 @@
           enable = true;
           advertiseTags = [ "tag:k3s" ];
           authKeyFile = config.sops.secrets.tailscale-authkey.path;
+        };
+
+        # Google Drive copy on the Synology, browsed and searched there; the
+        # share keeps history with daily NAS-side Btrfs snapshots.
+        gdriveNasSync = {
+          enable = true;
+          sopsFile = secrets;
+          host = "192.168.0.30";
+          user = "gdrive-sync";
+          hostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICAaNQAP193p1z1JbT/AfWlEg0h6mUcY78J4rr7hRSoU";
+          target = "/gdrive";
         };
 
         cloudflareDynamicDns = {
