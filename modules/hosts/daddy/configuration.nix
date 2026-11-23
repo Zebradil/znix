@@ -183,6 +183,44 @@
         done
       '';
 
+      # The k3s ingress keeps Jellyfin's URLs and TLS and forwards to :8096.
+      # The library lives on the HDD, re-fetchable like everything there.
+      services.jellyfin = {
+        enable = true;
+        openFirewall = true;
+        hardwareAcceleration = {
+          enable = true;
+          type = "nvenc";
+          device = "/dev/nvidia0";
+        };
+        # The config migrated from k3s carries junior's Intel encoding.xml.
+        forceEncodingConfig = true;
+        # What the GTX 1070 Ti (GP104) decodes and encodes in hardware.
+        transcoding = {
+          enableHardwareEncoding = true;
+          hardwareDecodingCodecs = {
+            h264 = true;
+            hevc = true;
+            hevc10bit = true;
+            mpeg2 = true;
+            vc1 = true;
+            vp8 = true;
+            vp9 = true;
+          };
+          hardwareEncodingCodecs.hevc = true;
+        };
+      };
+      systemd.services.jellyfin.serviceConfig = {
+        # CUDA filters and NVENC open these besides the card node.
+        DeviceAllow = [
+          "/dev/nvidiactl rw"
+          "/dev/nvidia-uvm rw"
+          "/dev/nvidia-uvm-tools rw"
+        ];
+        # The migrated library database stores the container's /media paths.
+        BindPaths = [ "/srv/hdd/junior/jellyfin:/media" ];
+      };
+
       # memtest from the boot menu avoids needing a USB stick on the headless box.
       boot.loader.systemd-boot.memtest86.enable = true;
 
