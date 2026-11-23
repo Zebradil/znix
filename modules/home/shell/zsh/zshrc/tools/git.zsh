@@ -232,6 +232,21 @@ function wtg() {
     | fzf --query="$1" --no-sort --select-1 --exit-0) && cd "$dir"
 }
 
+# Pick worktrees other than the main one with fzf, showing their wt_status;
+# arguments go to fzf. Prints the picked z::git:wt_list lines, nothing when
+# fzf is aborted.
+function z::git:wt_pick() {
+  lib::check_commands fzf || return 1
+  local i lines=(${(f)"$(z::git:wt_list)"}) rows=(${(f)"$(z::git:wt_status 1)"})
+  # fzf hands back row numbers: rows are padded with spaces, so a directory
+  # containing spaces cannot be cut out of a row.
+  for i in ${(f)"$(print -rl -- ${rows[2,-1]} | awk '{print NR+1 "\t" $0}' \
+    | fzf "$@" --exit-0 --ansi --header="$(z::git:wt_legend 1)" \
+      --delimiter='\t' --with-nth=2.. | cut -f1)"}; do
+    print -r -- "${lines[i]}"
+  done
+}
+
 # Remove the worktree at $2 and its branches: the one checked out in it and the
 # one its directory is named after, which differ once another branch was checked
 # out inside the worktree. The main branch is never deleted. $1 is --force or
@@ -302,14 +317,10 @@ function wtrm() {
     done
     ((${#dirs})) || log::info "no merged worktrees"
   elif [[ $1 == - ]]; then
-    lib::check_commands fzf || return 1
-    local i lines=(${(f)"$(z::git:wt_list)"}) rows=(${(f)"$(z::git:wt_status 1)"})
-    # fzf hands back row numbers: rows are padded with spaces, so a directory
-    # containing spaces cannot be cut out of a row.
-    for i in ${(f)"$(print -rl -- ${rows[2,-1]} | awk '{print NR+1 "\t" $0}' \
-      | fzf --multi --exit-0 --ansi --header="$(z::git:wt_legend 1)" \
-        --delimiter='\t' --with-nth=2.. | cut -f1)"}; do
-      dirs+=(${lines[i]%%$'\t'*})
+    local picked line
+    picked=$(z::git:wt_pick --multi) || return
+    for line in ${(f)picked}; do
+      dirs+=(${line%%$'\t'*})
     done
   elif [[ -n $1 ]]; then
     dir=$(z::git:wt_find "$1")
@@ -327,6 +338,42 @@ function wtrm() {
     z::git:wt_remove "$force" "$dir" || ret=1
   done
   return $ret
+}
+
+# wtm [branch | -]: fast-forward the main branch to a worktree branch with git
+# merge --ff-only, run in the worktree that has the main branch checked out.
+# The branch is chosen like in wtrm: without an argument the current
+# worktree's; "-", or no argument in the main checkout, picks one with fzf.
+function wtm() {
+  local branch=$1 root dir main target
+  root=$(z::git:wt_root) || return
+  if [[ -z $branch ]]; then
+    dir=$(git rev-parse --show-toplevel) || return
+    if [[ ${dir:A} == ${root:A} ]]; then
+      branch=-
+    elif ! branch=$(git symbolic-ref -q --short HEAD); then
+      log::error "${dir:t} has a detached HEAD"
+      return 1
+    fi
+  fi
+  if [[ $branch == - ]]; then
+    local picked
+    picked=$(z::git:wt_pick) || return
+    [[ -n $picked ]] || return 1
+    branch=${picked#*$'\t'}
+    if [[ -z $branch ]]; then
+      log::error "${picked%%$'\t'*} has a detached HEAD"
+      return 1
+    fi
+  fi
+
+  main=$(z::git:main_branch)
+  target=$(z::git:wt_find "$main")
+  if [[ -z $target ]]; then
+    log::error "$main is not checked out in any worktree"
+    return 1
+  fi
+  git -C "$target" merge --ff-only "$branch"
 }
 
 alias grt='cd "$(git rev-parse --show-toplevel || echo .)"'
