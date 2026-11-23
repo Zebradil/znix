@@ -252,6 +252,11 @@
           enable = true;
           openFirewall = true;
         };
+        # GPU load, NVENC/NVDEC use and power draw while Jellyfin transcodes.
+        nvidia-gpu = {
+          enable = true;
+          openFirewall = true;
+        };
       };
 
       networking = {
