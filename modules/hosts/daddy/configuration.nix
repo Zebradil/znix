@@ -193,7 +193,7 @@
           type = "nvenc";
           device = "/dev/nvidia0";
         };
-        # The config migrated from k3s carries junior's Intel encoding.xml.
+        # Transcoding is set here, not in the dashboard.
         forceEncodingConfig = true;
         # What the GTX 1070 Ti (GP104) decodes and encodes in hardware.
         transcoding = {
@@ -210,16 +210,12 @@
           hardwareEncodingCodecs.hevc = true;
         };
       };
-      systemd.services.jellyfin.serviceConfig = {
-        # CUDA filters and NVENC open these besides the card node.
-        DeviceAllow = [
-          "/dev/nvidiactl rw"
-          "/dev/nvidia-uvm rw"
-          "/dev/nvidia-uvm-tools rw"
-        ];
-        # The migrated library database stores the container's /media paths.
-        BindPaths = [ "/srv/hdd/junior/jellyfin:/media" ];
-      };
+      # CUDA filters and NVENC open these besides the card node.
+      systemd.services.jellyfin.serviceConfig.DeviceAllow = [
+        "/dev/nvidiactl rw"
+        "/dev/nvidia-uvm rw"
+        "/dev/nvidia-uvm-tools rw"
+      ];
 
       # memtest from the boot menu avoids needing a USB stick on the headless box.
       boot.loader.systemd-boot.memtest86.enable = true;
