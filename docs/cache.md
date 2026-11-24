@@ -49,6 +49,16 @@ nix run .#cache-push
 `cache-push` decrypts `secrets/cache.yaml` with your personal age key, then hands off to
 `kasha-cache-push`. Partial builds are fine — only store-valid paths are published.
 
+Add `--via-box` to push to the LAN kasha box (`https://kasha.lan.zebradil.dev`) instead of R2:
+
+```bash
+nix run .#cache-push -- --via-box checks.x86_64-linux.tuxedo-build
+```
+
+The push finishes at LAN speed; the box's mirror-up uploads the generation to R2 on its next
+sync pass (every 5 minutes by default). The box token comes from `secrets/hosts/daddy.yaml`.
+Nix honours the temporary netrc that carries it only for a trusted user.
+
 ## Compression
 
 Nix compresses each NAR at push time and the **downloading side decompresses
