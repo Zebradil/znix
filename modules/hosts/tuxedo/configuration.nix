@@ -45,6 +45,7 @@
     system.stateVersion = "25.11";
 
     determinate.enable = true;
+    znix.nixBuilder.roaming = true;
 
     # sito fronts every cache from localhost (modules/shared/sito.nix), so the
     # shared static list would only double-query the remotes on a miss. The

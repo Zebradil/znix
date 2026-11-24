@@ -25,26 +25,15 @@ let
   };
 in
 {
-  flake.lib.sshHosts = hosts;
+  flake.lib = {
+    sshHosts = hosts;
 
-  # `ssh <host>` reaches a homelab host over the tailnet when it answers there
-  # and over the LAN otherwise, so it works away from home and at home while
-  # Tailscale is down. Probing the LAN address first would, on a foreign LAN
-  # in the same range, reach a stranger's host; no client accepts the tailnet's
-  # subnet routes, so the LAN address is reachable only from the LAN itself.
-  # The key is pinned under the alias, so both paths check the same key.
-  flake.modules.nixos.ssh-hosts =
-    { pkgs, ... }:
-    {
-      programs.ssh.extraConfig = lib.concatStrings (
-        lib.mapAttrsToList (name: h: ''
-          Match originalhost ${name} exec "${pkgs.netcat}/bin/nc -z -w1 ${h.tailnet} 22"
-            HostName ${h.tailnet}
-          Host ${name}
-            HostName ${h.lan}
-            HostKeyAlias ${name}
-        '') hosts
-      );
-      programs.ssh.knownHosts = lib.mapAttrs (_: h: { publicKey = h.hostKey; }) hosts;
-    };
+    # Opens an ssh_config block that applies only while the host's tailnet IP
+    # answers. Probing the LAN address instead would, on a foreign LAN in the
+    # same range, reach a stranger's host; no client accepts the tailnet's
+    # subnet routes, so the LAN address is reachable only from the LAN itself.
+    sshTailnetMatch =
+      pkgs: name: h:
+      ''Match originalhost ${name} exec "${pkgs.netcat}/bin/nc -z -w1 ${h.tailnet} 22"'';
+  };
 }

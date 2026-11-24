@@ -1,7 +1,7 @@
 { config, lib, ... }:
 let
-  inherit (config.flake.lib) sshHosts;
-  inherit (config.flake.modules.nixos) ssh-hosts;
+  inherit (config.flake.lib) sshHosts sshTailnetMatch;
+  daddy = sshHosts.daddy;
 
   # Clients authenticate with their own SSH host key, so no extra secret has
   # to be distributed: the nix daemon runs as root and can read it.
@@ -33,17 +33,27 @@ in
     };
 
   flake.modules.nixos.nix-builder-client =
-    { config, lib, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
+      cfg = config.znix.nixBuilder;
       sshKey = (lib.head (lib.filter (k: k.type == "ed25519") config.services.openssh.hostKeys)).path;
     in
     {
-      imports = [ ssh-hosts ];
+      options.znix.nixBuilder.roaming = lib.mkEnableOption ''
+        reaching the builder over the tailnet while it answers there, and over
+        the LAN otherwise, for a client that leaves the LAN
+      '';
 
+      config = {
       nix.distributedBuilds = true;
       nix.buildMachines = [
         {
-          hostName = "daddy";
+          hostName = if cfg.roaming then "daddy" else daddy.lan;
           protocol = "ssh-ng";
           sshUser = "nixremote";
           inherit sshKey;
@@ -63,5 +73,19 @@ in
       # Let the builder fetch dependencies from its own caches instead of
       # receiving them over the client's uplink.
       nix.settings.builders-use-substitutes = true;
+
+      programs.ssh.knownHosts.daddy = {
+        hostNames = [ daddy.lan ];
+        publicKey = daddy.hostKey;
+      };
+      # The nix daemon runs as root and reads only the system ssh_config.
+      programs.ssh.extraConfig = lib.mkIf cfg.roaming ''
+        ${sshTailnetMatch pkgs "daddy" daddy}
+          HostName ${daddy.tailnet}
+        Host daddy
+          HostName ${daddy.lan}
+          HostKeyAlias ${daddy.lan}
+      '';
+      };
     };
 }
