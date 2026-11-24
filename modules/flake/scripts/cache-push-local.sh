@@ -10,6 +10,8 @@ set -euo pipefail
 # Usage:
 #   nix run .#cache-push                  # publish every checks.<system>.* output
 #   nix run .#cache-push -- ATTR [ATTR…]  # publish specific flake attrs
+#   nix run .#cache-push -- --via-box …   # push to the LAN kasha box instead of R2;
+#                                         # the box uploads to R2 in the background
 
 flake="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 flake="${flake:-$PWD}"
@@ -20,6 +22,12 @@ if [[ ! -f "$sops_file" ]]; then
   exit 1
 fi
 
+via_box=""
+args=()
+for a in "$@"; do
+  if [[ "$a" == --via-box ]]; then via_box=1; else args+=("$a"); fi
+done
+
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
@@ -29,10 +37,18 @@ key_file="$workdir/signing.key"
   sops decrypt --extract '["SIGNING_KEY"]' "$sops_file" >"$key_file"
 )
 
-CACHE_S3_URL="$(sops decrypt --extract '["CACHE_S3_URL"]' "$sops_file")"
-AWS_ACCESS_KEY_ID="$(sops decrypt --extract '["AWS_ACCESS_KEY_ID"]' "$sops_file")"
-AWS_SECRET_ACCESS_KEY="$(sops decrypt --extract '["AWS_SECRET_ACCESS_KEY"]' "$sops_file")"
-export CACHE_S3_URL AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
 export CACHE_SIGNING_KEY_FILE="$key_file"
 
-exec kasha-cache-push "$@"
+if [[ -n "$via_box" ]]; then
+  # The box (daddy) serves this host name; see modules/hosts/daddy/configuration.nix.
+  KASHA_BOX_URL="https://kasha.lan.zebradil.dev"
+  KASHA_TOKEN="$(sops decrypt --extract '["kasha-token"]' "$flake/secrets/hosts/daddy.yaml")"
+  export KASHA_BOX_URL KASHA_TOKEN
+else
+  CACHE_S3_URL="$(sops decrypt --extract '["CACHE_S3_URL"]' "$sops_file")"
+  AWS_ACCESS_KEY_ID="$(sops decrypt --extract '["AWS_ACCESS_KEY_ID"]' "$sops_file")"
+  AWS_SECRET_ACCESS_KEY="$(sops decrypt --extract '["AWS_SECRET_ACCESS_KEY"]' "$sops_file")"
+  export CACHE_S3_URL AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
+fi
+
+exec kasha-cache-push ${args[@]+"${args[@]}"}
