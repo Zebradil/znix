@@ -1,15 +1,14 @@
-_:
+{ config, lib, ... }:
 let
-  # The builder is reached over the tailnet name so roaming clients work too;
-  # on the LAN Tailscale connects directly.
-  builderHost = "daddy.ts.zebradil.dev";
-  builderHostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIunTmGGD83WKotySV3vBD5aD/luU8p1sYCu8UxlyvwK";
+  inherit (config.flake.lib) sshHosts sshTailnetMatch;
+  inherit (sshHosts) daddy;
 
   # Clients authenticate with their own SSH host key, so no extra secret has
   # to be distributed: the nix daemon runs as root and can read it.
   clientHostKeys = {
     tuxedo = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPuIvTIOpTTmf/v7zyZXQrDQwcce3VKR86IEn2IjsVS8";
-  };
+  }
+  // lib.genAttrs [ "junior" "d1" "d2" "d3" ] (host: sshHosts.${host}.hostKey);
 in
 {
   flake.modules.nixos.nix-builder-server =
@@ -34,34 +33,65 @@ in
     };
 
   flake.modules.nixos.nix-builder-client =
-    { config, lib, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
+      cfg = config.znix.nixBuilder;
       sshKey = (lib.head (lib.filter (k: k.type == "ed25519") config.services.openssh.hostKeys)).path;
     in
     {
-      nix.distributedBuilds = true;
-      nix.buildMachines = [
-        {
-          hostName = builderHost;
-          protocol = "ssh-ng";
-          sshUser = "nixremote";
-          inherit sshKey;
-          systems = [
-            "x86_64-linux"
-            "aarch64-linux"
-          ];
-          maxJobs = 8;
-          speedFactor = 2;
-          supportedFeatures = [
-            "big-parallel"
-            "kvm"
-            "nixos-test"
-          ];
-        }
-      ];
-      # Let the builder fetch dependencies from its own caches instead of
-      # receiving them over the client's uplink.
-      nix.settings.builders-use-substitutes = true;
-      programs.ssh.knownHosts.${builderHost}.publicKey = builderHostKey;
+      options.znix.nixBuilder.roaming = lib.mkEnableOption ''
+        reaching the builder over the tailnet while it answers there, and over
+        the LAN otherwise, for a client that leaves the LAN
+      '';
+
+      config = {
+        nix.distributedBuilds = true;
+        nix.buildMachines = [
+          {
+            hostName = if cfg.roaming then "daddy" else daddy.lan;
+            protocol = "ssh-ng";
+            sshUser = "nixremote";
+            inherit sshKey;
+            systems = [
+              "x86_64-linux"
+              "aarch64-linux"
+            ];
+            maxJobs = 8;
+            speedFactor = 2;
+            supportedFeatures = [
+              "big-parallel"
+              "kvm"
+              "nixos-test"
+            ];
+          }
+        ];
+        # Let the builder fetch dependencies from its own caches instead of
+        # receiving them over the client's uplink.
+        nix.settings.builders-use-substitutes = true;
+
+        programs.ssh.knownHosts.daddy = {
+          hostNames = [ daddy.lan ];
+          publicKey = daddy.hostKey;
+        };
+        # The nix daemon runs as root and reads only the system ssh_config.
+        # Root's writable known_hosts is ignored, so only the key above passes.
+        programs.ssh.extraConfig =
+          lib.optionalString cfg.roaming ''
+            ${sshTailnetMatch pkgs "daddy" daddy}
+              HostName ${daddy.tailnet}
+          ''
+          + ''
+            Host daddy ${daddy.lan}
+              HostName ${daddy.lan}
+              HostKeyAlias ${daddy.lan}
+              UserKnownHostsFile /dev/null
+              StrictHostKeyChecking yes
+          '';
+      };
     };
 }

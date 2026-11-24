@@ -1,11 +1,20 @@
-_: {
+{ config, ... }:
+let
+  inherit (config.flake.lib) sshHosts sshTailnetMatch;
+in
+{
   flake.modules.homeManager.ssh =
     {
       config,
       lib,
+      pkgs,
       ...
     }:
     let
+      knownHosts = pkgs.writeText "homelab-known-hosts" (
+        lib.concatLines (lib.mapAttrsToList (name: h: "${name} ${h.hostKey}") sshHosts)
+      );
+
       base = {
         programs.ssh = {
           enable = true;
@@ -21,9 +30,37 @@ _: {
           UserKnownHostsFile /persist${config.home.homeDirectory}/.ssh/known_hosts
         '';
       };
+      # `ssh <host>` goes over the tailnet while the host answers there and
+      # over the LAN otherwise, so it works away from home and at home while
+      # Tailscale is down. Tailnet IPs rather than names: the ts.zebradil.dev
+      # wildcard resolves an unpublished host to junior.
+      homelab = lib.mkIf config.znix.ssh.homelab.enable {
+        programs.ssh.settings = lib.concatMapAttrs (name: h: {
+          "${name}-tailnet" = lib.hm.dag.entryBefore [ name ] {
+            header = sshTailnetMatch pkgs name h;
+            HostName = h.tailnet;
+          };
+          ${name} = {
+            HostName = h.lan;
+            User = "suok";
+            # One pinned key for both paths. The writable known_hosts is
+            # ignored, so only the pinned key passes and nothing prompts.
+            HostKeyAlias = name;
+            GlobalKnownHostsFile = "${knownHosts}";
+            UserKnownHostsFile = "/dev/null";
+            StrictHostKeyChecking = "yes";
+          };
+        }) sshHosts;
+      };
     in
-    lib.mkMerge [
-      base
-      impermanence
-    ];
+    {
+      options.znix.ssh.homelab.enable =
+        lib.mkEnableOption "ssh aliases for the homelab hosts, reached over the tailnet or the LAN";
+
+      config = lib.mkMerge [
+        base
+        impermanence
+        homelab
+      ];
+    };
 }

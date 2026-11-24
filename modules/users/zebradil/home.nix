@@ -38,6 +38,7 @@
       znix = {
         impermanence.enable = true;
         kube.homelab.enable = true;
+        ssh.homelab.enable = true;
         mcpServers.personal-knowledge-base = self.lib.claude.personalKnowledgeBase;
         claude = {
           ponytail.enable = true;
