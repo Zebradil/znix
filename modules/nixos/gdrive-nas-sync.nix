@@ -106,7 +106,10 @@ _: {
           # a writable copy; the refresh token in sops stays valid.
           script = ''
             install -m 600 "$CREDENTIALS_DIRECTORY/rclone.conf" "$RUNTIME_DIRECTORY/rclone.conf"
+            # Synology shows its read-only Btrfs snapshots at the share root as #snapshot;
+            # without the exclude, sync walks every snapshot and fails deleting from them.
             exec ${lib.getExe pkgs.rclone} sync gdrive: nas:${cfg.target} \
+              --exclude "/#snapshot/**" \
               --config "$RUNTIME_DIRECTORY/rclone.conf" \
               --drive-acknowledge-abuse --fast-list --stats 10m --stats-log-level NOTICE -v
           '';
