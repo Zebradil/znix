@@ -21,6 +21,7 @@
           junior-disko
           junior-hardware
           k3s-node
+          nix-builder-client
           nix-settings
           openssh
           pki
