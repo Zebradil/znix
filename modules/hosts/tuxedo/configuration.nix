@@ -46,9 +46,6 @@
 
     determinate.enable = true;
 
-    # Roams off the LAN; see the nix-builder-client module.
-    znix.nixBuilder.host = "daddy.ts.zebradil.dev";
-
     # sito fronts every cache from localhost (modules/shared/sito.nix), so the
     # shared static list would only double-query the remotes on a miss. The
     # force drops every other definition, hence hyprland's cachix is restated

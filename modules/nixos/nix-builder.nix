@@ -1,5 +1,8 @@
 _:
 let
+  builderAlias = "daddy-builder";
+  builderTailnet = "daddy.ts.zebradil.dev";
+  builderLan = "daddy.lan.zebradil.dev";
   builderHostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIunTmGGD83WKotySV3vBD5aD/luU8p1sYCu8UxlyvwK";
 
   # Clients authenticate with their own SSH host key, so no extra secret has
@@ -35,47 +38,53 @@ in
     };
 
   flake.modules.nixos.nix-builder-client =
-    { config, lib, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
-      cfg = config.znix.nixBuilder;
       sshKey = (lib.head (lib.filter (k: k.type == "ed25519") config.services.openssh.hostKeys)).path;
     in
     {
-      # The LAN name resolves to daddy's LAN address everywhere, but no client
-      # accepts the tailnet's subnet routes, so a roaming client must use the
-      # tailnet name instead.
-      options.znix.nixBuilder.host = lib.mkOption {
-        type = lib.types.str;
-        default = "daddy.lan.zebradil.dev";
-        example = "daddy.ts.zebradil.dev";
-        description = "Address clients reach the remote builder (daddy) at.";
-      };
+      nix.distributedBuilds = true;
+      nix.buildMachines = [
+        {
+          hostName = builderAlias;
+          protocol = "ssh-ng";
+          sshUser = "nixremote";
+          inherit sshKey;
+          systems = [
+            "x86_64-linux"
+            "aarch64-linux"
+          ];
+          maxJobs = 8;
+          speedFactor = 2;
+          supportedFeatures = [
+            "big-parallel"
+            "kvm"
+            "nixos-test"
+          ];
+        }
+      ];
+      # Let the builder fetch dependencies from its own caches instead of
+      # receiving them over the client's uplink.
+      nix.settings.builders-use-substitutes = true;
 
-      config = {
-        nix.distributedBuilds = true;
-        nix.buildMachines = [
-          {
-            hostName = cfg.host;
-            protocol = "ssh-ng";
-            sshUser = "nixremote";
-            inherit sshKey;
-            systems = [
-              "x86_64-linux"
-              "aarch64-linux"
-            ];
-            maxJobs = 8;
-            speedFactor = 2;
-            supportedFeatures = [
-              "big-parallel"
-              "kvm"
-              "nixos-test"
-            ];
-          }
-        ];
-        # Let the builder fetch dependencies from its own caches instead of
-        # receiving them over the client's uplink.
-        nix.settings.builders-use-substitutes = true;
-        programs.ssh.knownHosts.${cfg.host}.publicKey = builderHostKey;
-      };
+      # The address is picked per connection. The tailnet is preferred because
+      # it also works away from home; the LAN fallback keeps builds working at
+      # home while Tailscale is down. Probing the LAN address first would, on
+      # a foreign LAN in the same range, reach a stranger's host. No client
+      # accepts the tailnet's subnet routes, so the LAN address is reachable
+      # only from the LAN itself.
+      programs.ssh.extraConfig = ''
+        Match originalhost ${builderAlias} exec "${pkgs.netcat}/bin/nc -z -w1 ${builderTailnet} 22"
+          HostName ${builderTailnet}
+        Host ${builderAlias}
+          HostName ${builderLan}
+          HostKeyAlias ${builderAlias}
+      '';
+      programs.ssh.knownHosts.${builderAlias}.publicKey = builderHostKey;
     };
 }
