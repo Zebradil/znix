@@ -1,4 +1,9 @@
-{ inputs, pkgs, ... }:
+{
+  config,
+  inputs,
+  pkgs,
+  ...
+}:
 {
   programs.ashell = {
     enable = true;
@@ -8,7 +13,13 @@
       appearance = {
         font_name = "IosevkaTerm Nerd Font";
         scale_factor = 1.3;
-        style = "Solid";
+        bar = {
+          surface = "solid";
+          padding = [
+            "none"
+            "xxs"
+          ];
+        };
 
         success_color = "#a6e3a1";
         text_color = "#cdd6f4";
@@ -32,11 +43,6 @@
           base = "#1e1e2e";
           weak = "#313244";
           strong = "#45475a";
-        };
-
-        secondary_color = {
-          base = "#11111b";
-          strong = "#1b1b25";
         };
       };
       keyboard_layout.labels = {
@@ -68,4 +74,9 @@
       };
     };
   };
+
+  # Hot-reload does not apply bar surface/layout changes; restart on any config change.
+  systemd.user.services.ashell.Unit.X-Restart-Triggers = [
+    config.xdg.configFile."ashell/config.toml".source
+  ];
 }
