@@ -52,7 +52,8 @@ in
       };
     in
     {
-      options.znix.ssh.homelab.enable = lib.mkEnableOption "ssh aliases for the homelab hosts, reached over the tailnet or the LAN";
+      options.znix.ssh.homelab.enable =
+        lib.mkEnableOption "ssh aliases for the homelab hosts, reached over the tailnet or the LAN";
 
       config = lib.mkMerge [
         base
