@@ -43,10 +43,12 @@ in
           ${name} = {
             HostName = h.lan;
             User = "suok";
-            # One pinned key for both paths, kept out of the writable
-            # known_hosts so a changed key fails instead of prompting.
+            # One pinned key for both paths. The writable known_hosts is
+            # ignored, so only the pinned key passes and nothing prompts.
             HostKeyAlias = name;
             GlobalKnownHostsFile = "${knownHosts}";
+            UserKnownHostsFile = "/dev/null";
+            StrictHostKeyChecking = "yes";
           };
         }) sshHosts;
       };

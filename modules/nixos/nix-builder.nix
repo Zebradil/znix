@@ -79,13 +79,19 @@ in
           publicKey = daddy.hostKey;
         };
         # The nix daemon runs as root and reads only the system ssh_config.
-        programs.ssh.extraConfig = lib.mkIf cfg.roaming ''
-          ${sshTailnetMatch pkgs "daddy" daddy}
-            HostName ${daddy.tailnet}
-          Host daddy
-            HostName ${daddy.lan}
-            HostKeyAlias ${daddy.lan}
-        '';
+        # Root's writable known_hosts is ignored, so only the key above passes.
+        programs.ssh.extraConfig =
+          lib.optionalString cfg.roaming ''
+            ${sshTailnetMatch pkgs "daddy" daddy}
+              HostName ${daddy.tailnet}
+          ''
+          + ''
+            Host daddy ${daddy.lan}
+              HostName ${daddy.lan}
+              HostKeyAlias ${daddy.lan}
+              UserKnownHostsFile /dev/null
+              StrictHostKeyChecking yes
+          '';
       };
     };
 }
