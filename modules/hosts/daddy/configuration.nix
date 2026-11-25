@@ -21,6 +21,7 @@
         (with inputs.self.modules.nixos; [
           boot
           cloudflare-dynamic-dns
+          daddy-buildkit
           daddy-disko
           daddy-hardware
           gdrive-nas-sync
