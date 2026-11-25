@@ -4,7 +4,12 @@
   # builder now; kasha box and Jellyfin later. Durable data stays on the
   # Synology; the single HDD here holds only what can be lost or re-fetched.
   flake.modules.nixos.daddy =
-    { config, lib, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
       ip = "192.168.0.101";
       iface = "enp6s0";
@@ -216,6 +221,61 @@
         "/dev/nvidia-uvm rw"
         "/dev/nvidia-uvm-tools rw"
       ];
+
+      # Nightly copy of what cannot be downloaded again (own recordings, music,
+      # Jellyfin's state) to the Synology share `jellyfin`, reusing the Drive
+      # sync's SFTP account; history comes from NAS-side Btrfs snapshots.
+      # movies/ and shows/ are left out: re-fetchable and too big for the NAS.
+      systemd.services.jellyfin-nas-backup =
+        let
+          nas = config.znix.gdriveNasSync;
+          rclone = "${lib.getExe pkgs.rclone} sync --config /dev/null -v --stats 10m --stats-log-level NOTICE";
+          systemctl = "${config.systemd.package}/bin/systemctl";
+        in
+        {
+          description = "rclone Jellyfin state and own media to NAS";
+          after = [ "network-online.target" ];
+          wants = [ "network-online.target" ];
+          environment = {
+            RCLONE_SFTP_HOST = nas.host;
+            RCLONE_SFTP_USER = nas.user;
+            RCLONE_SFTP_KEY_FILE = "%d/nas-key";
+            RCLONE_SFTP_KNOWN_HOSTS_FILE = "${pkgs.writeText "jellyfin-nas-known-hosts" "${nas.host} ${nas.hostKey}\n"}";
+            RCLONE_SFTP_HOST_KEY_ALGORITHMS = lib.head (lib.splitString " " nas.hostKey);
+            # Synology SFTP gives the account no shell.
+            RCLONE_SFTP_SHELL_TYPE = "none";
+          };
+          serviceConfig = {
+            Type = "oneshot";
+            # Reads the state directory as its owner; Jellyfin itself needs the library world-readable.
+            User = config.services.jellyfin.user;
+            Group = config.services.jellyfin.group;
+            LoadCredential = [ "nas-key:${config.sops.secrets.gdrive-nas-ssh-key.path}" ];
+            # The SQLite databases are copied only while Jellyfin is stopped;
+            # ExecStopPost brings it back also when the state copy fails.
+            ExecStartPre = "+${systemctl} stop jellyfin.service";
+            ExecStart = [
+              "${rclone} /var/lib/jellyfin :sftp:/jellyfin/state"
+              "+${systemctl} start jellyfin.service"
+              "${rclone} /srv/hdd/jellyfin :sftp:/jellyfin/media --filter '+ /other/**' --filter '+ /music/**' --filter '- **'"
+            ];
+            ExecStopPost = "+${systemctl} start jellyfin.service";
+            Nice = 10;
+            IOSchedulingClass = "idle";
+            NoNewPrivileges = true;
+            PrivateTmp = true;
+            ProtectSystem = "strict";
+            ProtectHome = true;
+          };
+        };
+      systemd.timers.jellyfin-nas-backup = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          # After the 03:00 Drive sync.
+          OnCalendar = "04:30";
+          Persistent = true;
+        };
+      };
 
       # memtest from the boot menu avoids needing a USB stick on the headless box.
       boot.loader.systemd-boot.memtest86.enable = true;
