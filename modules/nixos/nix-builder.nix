@@ -9,6 +9,14 @@ let
     tuxedo = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPuIvTIOpTTmf/v7zyZXQrDQwcce3VKR86IEn2IjsVS8";
   }
   // lib.genAttrs [ "junior" "d1" "d2" "d3" ] (host: sshHosts.${host}.hostKey);
+
+  # CI runners build here without being able to inject unsigned paths.
+  ciKeys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB0iD34JlFWilQpD1kreFa1K3O22ZFKTERsKA2CJqp74 nixci-spike"
+  ];
+
+  # The forced command limits a leaked key to talking to the store.
+  storeOnly = nix: k: ''restrict,command="${nix}/bin/nix-daemon --stdio" ${k}'';
 in
 {
   flake.modules.nixos.nix-builder-server =
@@ -19,13 +27,19 @@ in
         isSystemUser = true;
         group = "nixremote";
         useDefaultShell = true;
-        # The forced command limits a leaked client key to talking to the store.
-        openssh.authorizedKeys.keys = map (
-          k: ''restrict,command="${config.nix.package}/bin/nix-daemon --stdio" ${k}''
-        ) (lib.attrValues clientHostKeys);
+        openssh.authorizedKeys.keys = map (storeOnly config.nix.package) (lib.attrValues clientHostKeys);
       };
 
-      # Trusted so clients can upload their unsigned build inputs.
+      users.groups.nixci = { };
+      users.users.nixci = {
+        isSystemUser = true;
+        group = "nixci";
+        useDefaultShell = true;
+        openssh.authorizedKeys.keys = map (storeOnly config.nix.package) ciKeys;
+      };
+
+      # Trusted so clients can upload their unsigned build inputs. nixci stays
+      # untrusted: a CI job must not poison the store other clients use.
       nix.settings.trusted-users = [ "nixremote" ];
 
       # Lets clients offload builds for the aarch64 RPi (toddler); emulated, slow.
