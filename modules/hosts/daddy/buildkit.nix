@@ -2,12 +2,20 @@
 let
   inherit (config.flake.lib) sshHosts;
   port = 1234;
-  clients = map (h: sshHosts.${h}.lan) [
+  nodes = [
     "junior"
     "d1"
     "d2"
     "d3"
   ];
+  # A node that fails over to Wi-Fi masquerades pod traffic to its fallback address.
+  fallback =
+    h:
+    let
+      dualNet = config.flake.nixosConfigurations.${h}.config.znix.dualNet or { };
+    in
+    lib.optional (dualNet.enable or false) (lib.head (lib.splitString "/" dualNet.fallbackAddress));
+  clients = map (h: sshHosts.${h}.lan) nodes ++ lib.concatMap fallback nodes;
 in
 {
   # Rootless BuildKit for the homelab CI runner pods (buildx `remote` driver).
@@ -39,6 +47,46 @@ in
           maxUsedSpace = "100GB";
           minFreeSpace = "50GB";
         };
+      };
+
+      # Build containers must not reach the LAN, the tailnet or daddy itself:
+      # that would bypass the runner pods' NetworkPolicy. Their connections are
+      # made by slirp4netns as the buildkit user, so an owner match covers
+      # them; DNS to the router is the one exception. Replies to the nodes on
+      # the published port pass as established.
+      egress = pkgs.writeShellApplication {
+        name = "buildkit-egress";
+        runtimeInputs = [ config.networking.firewall.package ];
+        text = ''
+          down() {
+            for t in iptables ip6tables; do
+              while "$t" -w -D OUTPUT -m owner --uid-owner buildkit -j buildkit-egress 2>/dev/null; do :; done
+              "$t" -w -F buildkit-egress 2>/dev/null || true
+              "$t" -w -X buildkit-egress 2>/dev/null || true
+            done
+          }
+          up() {
+            down
+            for t in iptables ip6tables; do
+              "$t" -w -N buildkit-egress
+              "$t" -w -A buildkit-egress -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+            done
+            for proto in udp tcp; do
+              iptables -w -A buildkit-egress -p "$proto" -d 192.168.0.1 --dport 53 -j RETURN
+            done
+            for net in 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16; do
+              iptables -w -A buildkit-egress -d "$net" -j REJECT
+            done
+            for net in ::1/128 fc00::/7 fe80::/10; do
+              ip6tables -w -A buildkit-egress -d "$net" -j REJECT
+            done
+            # Jump last, so traffic never meets a half-built chain.
+            for t in iptables ip6tables; do
+              "$t" -w -I OUTPUT -m owner --uid-owner buildkit -j buildkit-egress
+            done
+          }
+          "$1"
+        '';
       };
     in
     {
@@ -87,6 +135,12 @@ in
           StateDirectory = "buildkit";
           RuntimeDirectory = "buildkit";
           LoadCredential = [ "server-key:${config.sops.secrets.buildkit-server-key.path}" ];
+          # The egress chain lives exactly as long as the unit's processes: it
+          # is in place before rootlesskit starts and removed only after the
+          # last build process is gone. Firewall reloads run extraStopCommands,
+          # so the firewall's hooks would leave a gap.
+          ExecStartPre = "+${egress}/bin/buildkit-egress up";
+          ExecStopPost = "+${egress}/bin/buildkit-egress down";
           # The port driver listens on the host and forwards into the
           # namespace; slirp4netns gives it outbound network only.
           ExecStart = lib.concatStringsSep " " [
@@ -112,37 +166,10 @@ in
 
       # The port is open to the k3s nodes only (pod traffic leaves masqueraded
       # to its node IP); the certificate check is the real gate.
-      #
-      # Build containers must not reach the LAN, the tailnet or daddy itself:
-      # that would bypass the runner pods' NetworkPolicy. Their connections are
-      # made by slirp4netns as the buildkit user, so an owner match covers
-      # them; DNS to the router is the one exception. Replies to the nodes on
-      # the published port pass as established.
-      networking.firewall = {
-        extraCommands = ''
-          for ip in ${toString clients}; do
-            iptables -A nixos-fw -p tcp -s "$ip" --dport ${toString port} -j nixos-fw-accept
-          done
-
-          ip46tables -N buildkit-egress 2>/dev/null || ip46tables -F buildkit-egress
-          ip46tables -C OUTPUT -m owner --uid-owner buildkit -j buildkit-egress 2>/dev/null \
-            || ip46tables -I OUTPUT -m owner --uid-owner buildkit -j buildkit-egress
-          ip46tables -A buildkit-egress -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
-          for proto in udp tcp; do
-            iptables -A buildkit-egress -p "$proto" -d 192.168.0.1 --dport 53 -j RETURN
-          done
-          for net in 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16; do
-            iptables -A buildkit-egress -d "$net" -j REJECT
-          done
-          for net in ::1/128 fc00::/7 fe80::/10; do
-            ip6tables -A buildkit-egress -d "$net" -j REJECT
-          done
-        '';
-        extraStopCommands = ''
-          ip46tables -D OUTPUT -m owner --uid-owner buildkit -j buildkit-egress 2>/dev/null || true
-          ip46tables -F buildkit-egress 2>/dev/null || true
-          ip46tables -X buildkit-egress 2>/dev/null || true
-        '';
-      };
+      networking.firewall.extraCommands = ''
+        for ip in ${toString clients}; do
+          iptables -A nixos-fw -p tcp -s "$ip" --dport ${toString port} -j nixos-fw-accept
+        done
+      '';
     };
 }
