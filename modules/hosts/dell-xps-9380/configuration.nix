@@ -71,7 +71,15 @@
         path = [ pkgs.util-linux ];
         serviceConfig.Type = "oneshot";
         # vesa_blank_mode is global, but the ioctl must target a VT.
-        script = "setterm --powersave powerdown </dev/tty1 >/dev/tty1";
+        # setterm refuses to run without a terminal type; units get no $TERM.
+        # A console already blanked keeps its old blank mode until it is
+        # unblanked, so poke it awake and force a fresh powerdown blank.
+        script = ''
+          s() { setterm --term linux "$@" </dev/tty1 >/dev/tty1; }
+          s --powersave powerdown
+          s --blank poke
+          s --blank force
+        '';
       };
 
       # Headless with the lid closed: nothing must ever suspend. Mask the sleep
