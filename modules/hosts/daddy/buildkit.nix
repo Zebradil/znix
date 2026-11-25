@@ -74,6 +74,9 @@ in
           "/run/wrappers"
           pkgs.rootlesskit
           pkgs.slirp4netns
+          # rootlesskit sets up slirp4netns's tap device with nsenter and ip.
+          pkgs.util-linux
+          pkgs.iproute2
           pkgs.runc
           pkgs.git
         ];
