@@ -131,6 +131,11 @@
           "--disable=servicelb"
           "--kube-controller-manager-arg=bind-address=${ip}"
           "--kube-scheduler-arg=bind-address=${ip}"
+          # The control plane runs in the k3s process beside the pods on this
+          # 4-CPU/8-GiB node; reserving room for it keeps scheduled workloads
+          # (CI runner pods included) from starving the apiserver.
+          "--kubelet-arg=kube-reserved=cpu=500m,memory=1Gi"
+          "--kubelet-arg=system-reserved=cpu=250m,memory=512Mi"
         ];
       };
 
