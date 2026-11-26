@@ -40,7 +40,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Nix
-        uses: zebradil/nix-ci/.github/actions/setup-nix@4051cac72e577a0903ecbcee2ffedb4e9f6ac9f1 # v3.1.0
+        uses: zebradil/nix-ci/.github/actions/setup-nix@a5b2fc6d96564331945420d60cd884aa71f47277 # v3.2.0
         with:
           extra-substituters: ${{ env.CACHE_PULL_URL }}
           extra-trusted-public-keys: ${{ env.CACHE_PUBLIC_KEY }}
@@ -76,11 +76,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Nix
-        uses: zebradil/nix-ci/.github/actions/setup-nix@4051cac72e577a0903ecbcee2ffedb4e9f6ac9f1 # v3.1.0
+        uses: zebradil/nix-ci/.github/actions/setup-nix@a5b2fc6d96564331945420d60cd884aa71f47277 # v3.2.0
 
       - name: Discover build targets
         id: discover
-        uses: zebradil/nix-ci/.github/actions/discover@4051cac72e577a0903ecbcee2ffedb4e9f6ac9f1 # v3.1.0
+        uses: zebradil/nix-ci/.github/actions/discover@a5b2fc6d96564331945420d60cd884aa71f47277 # v3.2.0
         with:
           discovery-types: |
             checks
@@ -113,14 +113,14 @@ jobs:
           name: flake-lock
 
       - name: Setup Nix
-        uses: zebradil/nix-ci/.github/actions/setup-nix@4051cac72e577a0903ecbcee2ffedb4e9f6ac9f1 # v3.1.0
+        uses: zebradil/nix-ci/.github/actions/setup-nix@a5b2fc6d96564331945420d60cd884aa71f47277 # v3.2.0
         with:
           extra-substituters: ${{ env.CACHE_PULL_URL }}
           extra-trusted-public-keys: ${{ env.CACHE_PUBLIC_KEY }}
           signing-key: ${{ secrets.CACHE_SIGNING_KEY }}
 
       - name: Build attr
-        uses: zebradil/nix-ci/.github/actions/build@4051cac72e577a0903ecbcee2ffedb4e9f6ac9f1 # v3.1.0
+        uses: zebradil/nix-ci/.github/actions/build@a5b2fc6d96564331945420d60cd884aa71f47277 # v3.2.0
         with:
           attr: ${{ matrix.attr }}
           strategy: uncached-leaves
