@@ -18,7 +18,7 @@
           }
           ''
             statix check --config ${inputs.self}/statix.toml ${inputs.self}
-            actionlint -color ${inputs.self}/.github/workflows/*.y*ml
+            actionlint -config-file ${inputs.self}/.github/actionlint.yaml -color ${inputs.self}/.github/workflows/*.y*ml
             shellcheck ${inputs.self}/hack/*.sh
 
             # assets/bin takes whatever scripts land there, so lint by shebang
