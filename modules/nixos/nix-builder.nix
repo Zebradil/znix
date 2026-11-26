@@ -7,6 +7,7 @@ let
   # to be distributed: the nix daemon runs as root and can read it.
   clientHostKeys = {
     tuxedo = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPuIvTIOpTTmf/v7zyZXQrDQwcce3VKR86IEn2IjsVS8";
+    lenovo = lib.fileContents ../../secrets/hosts/lenovo/ssh_host_ed25519.key.pub;
   }
   // lib.genAttrs [ "junior" "d1" "d2" "d3" ] (host: sshHosts.${host}.hostKey);
 

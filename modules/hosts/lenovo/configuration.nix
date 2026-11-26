@@ -21,6 +21,7 @@
           lenovo-hardware
           locale
           metrics-push
+          nix-builder-client
           nix-settings
           openssh
           pki
