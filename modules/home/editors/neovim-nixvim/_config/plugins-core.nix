@@ -141,7 +141,7 @@
         };
         emmet_language_server.enable = true;
         html.enable = true;
-        marksman.enable = true;
+        markdown_oxide.enable = true;
         nushell.enable = true;
         basedpyright.enable = true;
         ruff.enable = true;
