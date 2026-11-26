@@ -21,6 +21,7 @@
         (with inputs.self.modules.nixos; [
           boot
           cloudflare-dynamic-dns
+          daddy-builder-metrics
           daddy-buildkit
           daddy-disko
           daddy-hardware
