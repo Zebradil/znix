@@ -49,6 +49,10 @@
               experimental-features = nix-command flakes
               # Single-user store owned by the runner user.
               build-users-group =
+              # daddy's daemon takes cores from the client, even an untrusted one,
+              # so this caps each build there. The default 0 lets every build use
+              # all 16 threads, and 11 concurrent jobs then reach a load of 185.
+              cores = 4
             '';
 
             nss = pkgs.dockerTools.fakeNss.override {
